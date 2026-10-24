@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.8.7" />
-  <link rel="stylesheet" href="css/components.css?v=2.8.7" />
+  <link rel="stylesheet" href="css/app.css?v=2.8.8" />
+  <link rel="stylesheet" href="css/components.css?v=2.8.8" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -754,6 +754,18 @@
               </div>
               <div class="game-card-title">Karışık Quiz</div>
               <div class="game-card-desc">Tüm konulardan karma test</div>
+
+            <!-- 7. Ayrılabilen & Dönüşlü Fiil Testi (Reflexiv / Trennbar / Beide) -->
+            <div class="game-card" data-game-type="REFLEXIV_TRENNBAR">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4;">
+                  <svg class="svg-icon"><use href="#icon-repeat"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">Trennbar &amp; Reflexiv</div>
+              <div class="game-card-desc">Ayrılabilen ve dönüşlü fiil testi</div>
+            </div>
             </div>
           </div>
         </div>
@@ -805,6 +817,30 @@
         <div class="search-input-wrapper" style="margin-bottom: 14px;">
           <svg class="svg-icon search-lead-icon"><use href="#icon-search"></use></svg>
           <input type="text" id="cards-filter-input" class="search-input" placeholder="Kayıtlı kartlarda ara..." />
+        </div>
+
+        <!-- KELİME TÜRLERİ SEKMELERİ (Android Parity) -->
+        <div class="pos-filter-bar" id="cards-pos-filter-bar">
+          <button type="button" class="pos-filter-pill active" data-pos="ALL">
+            <span>Tümü</span>
+            <span class="pill-count" id="count-pos-all">0</span>
+          </button>
+          <button type="button" class="pos-filter-pill" data-pos="NOUN">
+            <span>İsimler</span>
+            <span class="pill-count" id="count-pos-noun">0</span>
+          </button>
+          <button type="button" class="pos-filter-pill" data-pos="VERB">
+            <span>Fiiller</span>
+            <span class="pill-count" id="count-pos-verb">0</span>
+          </button>
+          <button type="button" class="pos-filter-pill" data-pos="ADJECTIVE">
+            <span>Sıfatlar</span>
+            <span class="pill-count" id="count-pos-adjective">0</span>
+          </button>
+          <button type="button" class="pos-filter-pill" data-pos="PHRASE">
+            <span>Kalıplar</span>
+            <span class="pill-count" id="count-pos-phrase">0</span>
+          </button>
         </div>
 
         <div id="all-cards-list"></div>
@@ -1051,6 +1087,15 @@
             <svg class="svg-icon" style="color:var(--palette-yellow); width:13px; height:13px;"><use href="#icon-bolt"></use></svg>
             <span id="game-quiz-streak-count">0 Seri</span>
           </div>
+
+          <div id="game-score-badge" class="game-score-badge">
+            <span>⭐</span>
+            <span id="game-quiz-score-val">0</span>
+          </div>
+          <div id="game-timer-badge" class="game-timer-badge hidden">
+            <span>⏱️</span>
+            <span id="game-quiz-timer-val">00:00</span>
+          </div>
         </div>
         <button id="btn-close-game-quiz" class="icon-btn-ghost" aria-label="Oyundan Çık">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
@@ -1148,6 +1193,28 @@
 
         <div id="gds-deck-list" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; padding-right:4px;">
           <!-- JS ile doldurulacak -->
+        </div>
+      </div>
+
+      <!-- SÜRE AYARI & ZAMANLA YARIŞ MODU -->
+      <div class="gds-settings-box" style="margin-top:14px; padding:12px; background:rgba(255,255,255,0.04); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:0.82rem; font-weight:800; color:var(--text-primary); display:flex; align-items:center; gap:6px;">
+            <svg class="svg-icon" style="width:14px;height:14px;color:var(--brand-blue);"><use href="#icon-clock"></use></svg>
+            <span>Süre Modu (Zamanla Yarış)</span>
+          </span>
+          <span id="gds-time-label" style="font-size:0.75rem; color:var(--text-muted);">Süresiz</span>
+        </div>
+        <div class="time-pills-row" id="gds-time-pills">
+          <button type="button" class="time-pill active" data-time="0">Süresiz</button>
+          <button type="button" class="time-pill" data-time="30">30 sn</button>
+          <button type="button" class="time-pill" data-time="60">1 dk</button>
+          <button type="button" class="time-pill" data-time="120">2 dk</button>
+          <button type="button" class="time-pill" data-time="180">3 dk</button>
+        </div>
+        <div style="font-size:0.74rem; color:var(--text-muted); margin-top:8px; display:flex; align-items:center; gap:4px;">
+          <span>🔥</span>
+          <span>Doğru cevaplar +100P, seri kombolar x2.5 kata kadar katlar!</span>
         </div>
       </div>
 
@@ -1261,16 +1328,17 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.8.7"></script>
-  <script src="js/verbHelper.js?v=2.8.7"></script>
-  <script src="js/offlineDictionary.js?v=2.8.7"></script>
-  <script src="js/dictionary.js?v=2.8.7"></script>
-  <script src="js/seeder.js?v=2.8.7"></script>
-  <script src="js/tts.js?v=2.8.7"></script>
-  <script src="js/translator.js?v=2.8.7"></script>
-  <script src="js/game.js?v=2.8.7"></script>
-  <script src="js/study.js?v=2.8.7"></script>
-  <script src="js/stats.js?v=2.8.7"></script>
-  <script src="js/app.js?v=2.8.7"></script>
+  <script src="js/db.js?v=2.8.8"></script>
+  <script src="js/verbHelper.js?v=2.8.8"></script>
+  <script src="js/offlineDictionary.js?v=2.8.8"></script>
+  <script src="js/dictionary.js?v=2.8.8"></script>
+  <script src="js/curatedPacks.js?v=2.8.8"></script>
+  <script src="js/seeder.js?v=2.8.8"></script>
+  <script src="js/tts.js?v=2.8.8"></script>
+  <script src="js/translator.js?v=2.8.8"></script>
+  <script src="js/game.js?v=2.8.8"></script>
+  <script src="js/study.js?v=2.8.8"></script>
+  <script src="js/stats.js?v=2.8.8"></script>
+  <script src="js/app.js?v=2.8.8"></script>
 </body>
 </html>

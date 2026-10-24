@@ -4,25 +4,26 @@
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v2.8.7';
+const CACHE_NAME = 'wortcoach-v2.8.8';
 
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=2.8.7',
-  './css/components.css?v=2.8.7',
-  './js/db.js?v=2.8.7',
-  './js/verbHelper.js?v=2.8.7',
-  './js/offlineDictionary.js?v=2.8.7',
-  './js/dictionary.js?v=2.8.7',
-  './js/seeder.js?v=2.8.7',
-  './js/tts.js?v=2.8.7',
-  './js/translator.js?v=2.8.7',
-  './js/game.js?v=2.8.7',
-  './js/study.js?v=2.8.7',
-  './js/stats.js?v=2.8.7',
-  './js/app.js?v=2.8.7',
+  './css/app.css?v=2.8.8',
+  './css/components.css?v=2.8.8',
+  './js/db.js?v=2.8.8',
+  './js/verbHelper.js?v=2.8.8',
+  './js/offlineDictionary.js?v=2.8.8',
+  './js/dictionary.js?v=2.8.8',
+  './js/curatedPacks.js?v=2.8.8',
+  './js/seeder.js?v=2.8.8',
+  './js/tts.js?v=2.8.8',
+  './js/translator.js?v=2.8.8',
+  './js/game.js?v=2.8.8',
+  './js/study.js?v=2.8.8',
+  './js/stats.js?v=2.8.8',
+  './js/app.js?v=2.8.8',
   './icons/icon-192.svg',
   './icons/icon-512.svg'
 ];

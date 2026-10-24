@@ -1,13 +1,15 @@
 /**
- * WortMeister — Kelime Oyunları & Testler Motoru (GameService)
- * Android GameModels.kt & GameQuestionGenerator.kt %100 Birebir Portu
- * 6 Oyun Modu:
+ * WortCoach — Kelime Oyunları & Testler Motoru (GameService v2.8.8)
+ * 7 Güçlü Oyun Modu:
  * 1. ARTICLE (Artikel Testi - der · die · das)
  * 2. VERB (Fiil Testi - Partizip II & Zamanlar)
  * 3. NOUN (İsim Testi - Çoğullar & Anlam)
  * 4. ADJECTIVE (Sıfat Testi - Komparativ & Sıfatlar)
  * 5. PHRASE (Kalıp Testi - Deyimler & Kalıplar)
- * 6. MIXED (Karma Test - Tüm Konular)
+ * 6. REFLEXIV_TRENNBAR (Ayrılabilen / Dönüşlü / Beide Fiil Testi)
+ * 7. MIXED (Karma Test - Tüm Konular)
+ * + CABLE_MATCH (Kablo ile Anlam Eşleştirme)
+ * + Zamanla Yarış (Timer Mode) & Puanlama / Combo Sistemi
  */
 
 class WordGameService {
@@ -15,10 +17,18 @@ class WordGameService {
     this.currentGameType = null;
     this.questions = [];
     this.currentIndex = 0;
-    this.score = { correct: 0, wrong: 0, streak: 0 };
+    this.score = { correct: 0, wrong: 0, streak: 0, maxStreak: 0, points: 0 };
+    this.durationSeconds = 0; // 0: Süresiz, 30, 60, 120, 180
+    this.remainingSeconds = 0;
     this.isAnswerRevealed = false;
     this.selectedOptionIndex = null;
+    this.questionStartTime = Date.now();
     this.poolCards = [];
+  }
+
+  setDuration(seconds = 0) {
+    this.durationSeconds = Number(seconds) || 0;
+    this.remainingSeconds = this.durationSeconds;
   }
 
   async initPool(selectedDeckIds = null) {
@@ -36,11 +46,20 @@ class WordGameService {
       userCards = userCards.filter((c) => numIds.includes(Number(c.deckId)));
     }
 
-    // Sözlük ve varsayılan kartlar (Eğer tümü seçilmişse veya kullanıcı kartı azsa)
-    const fallbackCards = (typeof window !== 'undefined' && window.DEFAULT_SEEDER_CARDS ? window.DEFAULT_SEEDER_CARDS : []).map((c, idx) => ({
-      ...c,
-      id: 900000 + idx
-    }));
+    // Küratörlü hazır destelerden kelime havuzunu zenginleştir
+    const curatedCards = [];
+    if (typeof window !== 'undefined' && Array.isArray(window.CURATED_CEFR_PACKS)) {
+      window.CURATED_CEFR_PACKS.forEach((pack, pIdx) => {
+        if (Array.isArray(pack.cards)) {
+          pack.cards.forEach((c, cIdx) => {
+            curatedCards.push({
+              ...c,
+              id: 950000 + (pIdx * 100) + cIdx
+            });
+          });
+        }
+      });
+    }
 
     const dictSource = (typeof window !== 'undefined' && (window.VERIFIED_CORE_VOCABULARY || window.OFFLINE_DICTIONARY)) || {};
     const dictCards = Object.values(dictSource).map((item, idx) => ({
@@ -56,13 +75,14 @@ class WordGameService {
       praeteritum: item.praeteritum || '',
       partizipZwei: item.partizipZwei || '',
       hilfsverb: item.hilfsverb || 'hat',
-      isSeparable: Boolean(item.isSeparable)
+      isSeparable: Boolean(item.isSeparable),
+      isReflexive: Boolean(item.isReflexive)
     }));
 
     const seen = new Set();
     const combined = [];
 
-    // Seçili desteler varsa öncelikle o destelerdeki kartları ekle
+    // 1. Kullanıcı kartlarını öncelikli ekle
     for (const c of userCards) {
       const key = (c.germanWord || '').trim().toLowerCase();
       if (key && !seen.has(key)) {
@@ -71,9 +91,9 @@ class WordGameService {
       }
     }
 
-    // Tümü seçilmişse veya deste filtrelenmemişse sözlük ve seeder kartlarını da dahil et
-    if (!isFiltered || combined.length < 5) {
-      for (const c of [...fallbackCards, ...dictCards]) {
+    // 2. Deste filtrelenmemişse veya kullanıcı kartı azsa hazır küratörlü ve sözlük kartlarını da ekle
+    if (!isFiltered || combined.length < 10) {
+      for (const c of [...curatedCards, ...dictCards]) {
         const key = (c.germanWord || '').trim().toLowerCase();
         if (key && !seen.has(key)) {
           seen.add(key);
@@ -137,6 +157,13 @@ class WordGameService {
     };
   }
 
+  /**
+   * KESİN TÜR FİLTRELEMESİ:
+   * Kullanıcının isteği: Bir oyunda asla o türe ait olmayan kartlar sorulamaz.
+   * Örneğin Artikel testinde sadece İSİMLER (der/die/das),
+   * Fiil testinde sadece FİİLLER,
+   * Ayrılabilen & Dönüşlü testinde sadece FİİLLER sorulur.
+   */
   filterEligibleCards(gameType) {
     const cards = this.poolCards;
     switch (gameType) {
@@ -171,6 +198,12 @@ class WordGameService {
           return pos === 'PHRASE' || pos === 'OTHER' || hasSpace;
         });
 
+      case 'REFLEXIV_TRENNBAR':
+        return cards.filter((c) => {
+          const isVerb = (c.partOfSpeech || '').toUpperCase() === 'VERB';
+          return isVerb || Boolean(c.partizipZwei);
+        });
+
       case 'MIXED':
       default:
         return cards.filter((c) => Boolean(c.meaningsTr || c.meaningsEn));
@@ -179,19 +212,56 @@ class WordGameService {
 
   startNewGame(gameType, maxQuestions = 15) {
     this.currentGameType = gameType;
-    this.score = { correct: 0, wrong: 0, streak: 0 };
+    this.score = { correct: 0, wrong: 0, streak: 0, maxStreak: 0, points: 0 };
     this.currentIndex = 0;
     this.isAnswerRevealed = false;
     this.selectedOptionIndex = null;
+    this.questionStartTime = Date.now();
+    this.remainingSeconds = this.durationSeconds;
 
-    const eligible = this.filterEligibleCards(gameType);
-    if (eligible.length === 0) {
-      // Havuz boşsa tüm kartlardan karma soru üret
-      this.questions = this.generateQuestions(this.poolCards.slice(0, 10), gameType, maxQuestions);
-    } else {
-      this.questions = this.generateQuestions(eligible, gameType, maxQuestions);
+    let eligible = this.filterEligibleCards(gameType);
+
+    // Güvenlik Kalkanı: Eğer seçili destede bu türe ait yeterli kart yoksa,
+    // ASLA yanlış türden kart sorma! Küratörlü kütüphaneden sadece o türe uygun kartları tamamla.
+    if (eligible.length < 5) {
+      const allSources = [];
+      if (typeof window !== 'undefined' && Array.isArray(window.CURATED_CEFR_PACKS)) {
+        window.CURATED_CEFR_PACKS.forEach((p) => {
+          if (Array.isArray(p.cards)) allSources.push(...p.cards);
+        });
+      }
+      const extraMatching = allSources.filter((c) => {
+        if (gameType === 'ARTICLE') {
+          return (c.partOfSpeech || '').toUpperCase() === 'NOUN' && ['der', 'die', 'das'].includes((c.article || '').toLowerCase());
+        }
+        if (gameType === 'VERB' || gameType === 'REFLEXIV_TRENNBAR') {
+          return (c.partOfSpeech || '').toUpperCase() === 'VERB';
+        }
+        if (gameType === 'NOUN') {
+          return (c.partOfSpeech || '').toUpperCase() === 'NOUN';
+        }
+        if (gameType === 'ADJECTIVE') {
+          const pos = (c.partOfSpeech || '').toUpperCase();
+          return pos === 'ADJECTIVE' || pos === 'ADJ';
+        }
+        if (gameType === 'PHRASE') {
+          return (c.partOfSpeech || '').toUpperCase() === 'PHRASE' || (c.germanWord || '').includes(' ');
+        }
+        return Boolean(c.meaningsTr);
+      });
+
+      const seen = new Set(eligible.map((c) => (c.germanWord || '').toLowerCase()));
+      for (const extra of extraMatching) {
+        const k = (extra.germanWord || '').toLowerCase();
+        if (k && !seen.has(k)) {
+          seen.add(k);
+          eligible.push(extra);
+          if (eligible.length >= 20) break;
+        }
+      }
     }
 
+    this.questions = this.generateQuestions(eligible, gameType, maxQuestions);
     return this.questions;
   }
 
@@ -216,6 +286,9 @@ class WordGameService {
           break;
         case 'PHRASE':
           q = this.generatePhraseQuestion(card);
+          break;
+        case 'REFLEXIV_TRENNBAR':
+          q = this.generateReflexivTrennbarQuestion(card);
           break;
         case 'MIXED':
         default:
@@ -281,12 +354,85 @@ class WordGameService {
     return this.generateMeaningQuestion(card, 'Bu fiilin Türkçe karşılığı nedir?');
   }
 
+  /**
+   * YENİ OYUN: REFLEXIV ODER TRENNBAR ODER BEIDE ODER REGULÄR
+   * Almanca fiilin ayrılabilen, dönüşlü (sich), her ikisi birden veya normal/ayrılamayan olup olmadığını sorgular.
+   */
+  generateReflexivTrennbarQuestion(card) {
+    const raw = (card.germanWord || '').trim();
+    const cleanWord = raw.replace(/^sich\s+/i, '').trim();
+
+    // 1. Dönüşlülük (Reflexiv) Tespiti
+    const isReflexive = raw.toLowerCase().startsWith('sich ') ||
+      raw.toLowerCase().includes(' sich') ||
+      Boolean(card.isReflexive) ||
+      (typeof window !== 'undefined' && window.GermanVerbHelper && window.GermanVerbHelper.detectReflexive(raw).isReflexive);
+
+    // 2. Ayrılabilirlik (Trennbar) Tespiti
+    let isSeparable = Boolean(card.isSeparable);
+    if (!isSeparable && typeof window !== 'undefined' && window.GermanVerbHelper) {
+      const splitInfo = window.GermanVerbHelper.splitVerbPrefix(cleanWord);
+      isSeparable = Boolean(splitInfo.isSeparable);
+    }
+    // Bilinen ayrılabilen ön ekler kuralı
+    if (!isSeparable) {
+      const sepPrefixes = ['ab', 'an', 'auf', 'aus', 'ein', 'mit', 'vor', 'zu', 'nach', 'fern', 'teil', 'statt', 'um', 'zurück', 'weg', 'her', 'hin'];
+      const low = cleanWord.toLowerCase();
+      for (const p of sepPrefixes) {
+        if (low.startsWith(p) && low.length > p.length + 2) {
+          isSeparable = true;
+          break;
+        }
+      }
+    }
+
+    // 4 Seçenek:
+    // 0: Trennbar (Ayrılabilen)
+    // 1: Reflexiv (Dönüşlü - sich)
+    // 2: Beide (Ayrılabilen & Dönüşlü)
+    // 3: Regulär / Untrennbar (Normal)
+    const options = [
+      'Trennbar (Ayrılabilen)',
+      'Reflexiv (Dönüşlü - sich)',
+      'Beide (Ayrılabilen & Dönüşlü)',
+      'Regulär / Untrennbar (Normal)'
+    ];
+
+    let correctIndex = 3; // Regulär varsayılan
+    let explanation = '';
+
+    if (isSeparable && isReflexive) {
+      correctIndex = 2; // Beide
+      explanation = `"${raw}" hem ayrılabilen bir ön eke hem de "sich" dönüşlü zamirine sahiptir. (Örn: Er bereitet sich vor)`;
+    } else if (isSeparable) {
+      correctIndex = 0; // Trennbar
+      explanation = `"${raw}" ayrılabilen (trennbar) bir fiildir. Ön ek cümle sonunda ayrılır. (Örn: Er steht auf)`;
+    } else if (isReflexive) {
+      correctIndex = 1; // Reflexiv
+      explanation = `"${raw}" dönüşlü (reflexiv) bir fiildir ve daima "sich" zamiri ile kullanılır. (Örn: Er freut sich)`;
+    } else {
+      correctIndex = 3; // Regulär
+      explanation = `"${raw}" normal / ayrılamayan düzenli bir fiildir. (Örn: Er lernt / Er versteht)`;
+    }
+
+    return {
+      card,
+      prompt: 'Bu fiilin dilbilgisi türü nedir?',
+      subject: raw,
+      subprompt: card.meaningsTr || card.meaningsEn || 'Fiil morfolojisini inceleyin',
+      options,
+      correctIndex,
+      explanation,
+      audioWord: raw
+    };
+  }
+
   generateNounQuestion(card) {
     // Çoğul form sorusu
-    if (card.pluralForm) {
+    if (card.pluralForm && card.pluralForm.trim() !== '-') {
       const correctPlural = card.pluralForm.trim();
       const otherPlurals = this.poolCards
-        .filter((c) => c.id !== card.id && c.pluralForm)
+        .filter((c) => c.id !== card.id && c.pluralForm && c.pluralForm !== '-')
         .map((c) => c.pluralForm.trim())
         .filter((p) => p !== correctPlural);
 
@@ -307,7 +453,7 @@ class WordGameService {
     }
 
     // Alternatif: Artikel sorusu
-    if (card.article) {
+    if (card.article && ['der', 'die', 'das'].includes(card.article.toLowerCase())) {
       return this.generateArticleQuestion(card);
     }
 
@@ -378,8 +524,10 @@ class WordGameService {
     if (pos === 'NOUN' && card.article) {
       return Math.random() > 0.5 ? this.generateArticleQuestion(card) : this.generateNounQuestion(card);
     }
-    if (pos === 'VERB' && card.partizipZwei) {
-      return this.generateVerbQuestion(card);
+    if (pos === 'VERB') {
+      const r = Math.random();
+      if (r > 0.6) return this.generateReflexivTrennbarQuestion(card);
+      if (r > 0.3 && card.partizipZwei) return this.generateVerbQuestion(card);
     }
     return this.generateMeaningQuestion(card, 'Bu kelimenin Türkçe karşılığı nedir?');
   }
@@ -388,6 +536,13 @@ class WordGameService {
     return this.questions[this.currentIndex] || null;
   }
 
+  /**
+   * Puanlama ve Kombo Mantığı:
+   * Temel Puan: 100 Puan
+   * Kombo Çarpanı: 1x, 1.3x, 1.6x, 2.0x, 2.5x (5 ve üzeri seride)
+   * Hız Bonusu: 3 sn içinde cevaplanırsa +50 puan, 5.5 sn içinde +25 puan
+   * Hatalı cevapta: -20 puan (Puan 0'ın altına düşmez), Süre Modunda -3 saniye ceza
+   */
   submitAnswer(optionIndex) {
     if (this.isAnswerRevealed) return null;
 
@@ -398,19 +553,51 @@ class WordGameService {
     this.selectedOptionIndex = optionIndex;
     const isCorrect = optionIndex === currentQ.correctIndex;
 
+    const elapsedSec = (Date.now() - this.questionStartTime) / 1000;
+    let gainedPoints = 0;
+    let speedBonus = 0;
+    let streakMultiplier = 1.0;
+
     if (isCorrect) {
       this.score.correct++;
       this.score.streak++;
+      this.score.maxStreak = Math.max(this.score.maxStreak, this.score.streak);
+
+      // Streak çarpanı
+      if (this.score.streak >= 5) streakMultiplier = 2.5;
+      else if (this.score.streak >= 4) streakMultiplier = 2.0;
+      else if (this.score.streak >= 3) streakMultiplier = 1.6;
+      else if (this.score.streak >= 2) streakMultiplier = 1.3;
+
+      // Hız bonusu
+      if (elapsedSec <= 3.0) speedBonus = 50;
+      else if (elapsedSec <= 5.5) speedBonus = 25;
+
+      gainedPoints = Math.round(100 * streakMultiplier) + speedBonus;
+      this.score.points += gainedPoints;
     } else {
       this.score.wrong++;
       this.score.streak = 0;
+      this.score.points = Math.max(0, this.score.points - 20);
+
+      // Zaman modunda 3 saniye süre cezası
+      if (this.durationSeconds > 0) {
+        this.remainingSeconds = Math.max(0, this.remainingSeconds - 3);
+      }
     }
+
+    this.saveHighScore(this.currentGameType, this.score.points);
 
     return {
       isCorrect,
       correctIndex: currentQ.correctIndex,
       explanation: currentQ.explanation,
-      streak: this.score.streak
+      streak: this.score.streak,
+      maxStreak: this.score.maxStreak,
+      points: this.score.points,
+      gainedPoints,
+      speedBonus,
+      streakMultiplier
     };
   }
 
@@ -418,11 +605,32 @@ class WordGameService {
     this.currentIndex++;
     this.isAnswerRevealed = false;
     this.selectedOptionIndex = null;
+    this.questionStartTime = Date.now();
     return this.getCurrentQuestion();
   }
 
   isFinished() {
+    if (this.durationSeconds > 0 && this.remainingSeconds <= 0) return true;
     return this.currentIndex >= this.questions.length;
+  }
+
+  getHighScore(gameType) {
+    try {
+      return Number(localStorage.getItem(`wortcoach_hs_${gameType}`)) || 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  saveHighScore(gameType, score) {
+    try {
+      const current = this.getHighScore(gameType);
+      if (score > current) {
+        localStorage.setItem(`wortcoach_hs_${gameType}`, String(score));
+        return true; // Yeni rekor
+      }
+    } catch (_) {}
+    return false;
   }
 }
 

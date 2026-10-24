@@ -89,7 +89,7 @@ const CURATED_CEFR_PACKS = [
 
 class DatabaseSeeder {
   static getAllPacks() {
-    return CURATED_CEFR_PACKS;
+    return (typeof window !== 'undefined' && window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : CURATED_CEFR_PACKS;
   }
 
   static async seedIfNeeded() {
@@ -131,7 +131,8 @@ class DatabaseSeeder {
   }
 
   static async importCuratedPack(packCode) {
-    const pack = CURATED_CEFR_PACKS.find((p) => p.code === packCode);
+    const packs = this.getAllPacks();
+    const pack = packs.find((p) => p.code === packCode);
     if (!pack) return null;
 
     // Aynı isimde deste var mı kontrol et, yoksa oluştur
@@ -141,20 +142,30 @@ class DatabaseSeeder {
       targetDeck = await window.wmDB.createDeck(pack.name);
     }
 
-    for (const w of pack.words) {
-      const synth = window.DictionaryService.synthesizeInstantEntry(w);
-      synth.cefr = pack.badge;
-      await window.wmDB.addCard({
-        ...synth,
-        deckId: targetDeck.id
-      });
+    if (Array.isArray(pack.cards) && pack.cards.length > 0) {
+      for (const cardData of pack.cards) {
+        await window.wmDB.addCard({
+          ...cardData,
+          deckId: targetDeck.id
+        });
+      }
+    } else if (Array.isArray(pack.words)) {
+      for (const w of pack.words) {
+        const synth = window.DictionaryService.synthesizeInstantEntry(w);
+        synth.cefr = pack.badge;
+        await window.wmDB.addCard({
+          ...synth,
+          deckId: targetDeck.id
+        });
+      }
     }
     return targetDeck;
   }
 
   static async importAllPacks() {
     const results = [];
-    for (const pack of CURATED_CEFR_PACKS) {
+    const packs = this.getAllPacks();
+    for (const pack of packs) {
       const res = await this.importCuratedPack(pack.code);
       results.push(res);
     }
@@ -162,5 +173,7 @@ class DatabaseSeeder {
   }
 }
 
-window.CURATED_CEFR_PACKS = CURATED_CEFR_PACKS;
+if (typeof window !== 'undefined' && !window.CURATED_CEFR_PACKS) {
+  window.CURATED_CEFR_PACKS = CURATED_CEFR_PACKS;
+}
 window.DatabaseSeeder = DatabaseSeeder;

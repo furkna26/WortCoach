@@ -15,3 +15,10 @@ argon_code/
 # Node
 node_modules/
 npm-debug.log*
+
+# One-off Build Scripts
+build_*.py
+generate_*.py
+assemble_*.py
+patch_*.py
+

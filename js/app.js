@@ -1010,6 +1010,10 @@ class WortCoachApp {
     });
 
     document.getElementById('btn-close-game-quiz')?.addEventListener('click', () => {
+      if (this.gameTimerInterval) {
+        clearInterval(this.gameTimerInterval);
+        this.gameTimerInterval = null;
+      }
       document.getElementById('modal-game-quiz')?.classList.add('hidden');
     });
 
@@ -1059,6 +1063,19 @@ class WortCoachApp {
       });
     });
 
+    // Süre Modu (Zamanla Yarış) Butonları
+    document.querySelectorAll('#gds-time-pills .time-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#gds-time-pills .time-pill').forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.selectedGameDuration = Number(pill.getAttribute('data-time')) || 0;
+        const lbl = document.getElementById('gds-time-label');
+        if (lbl) {
+          lbl.textContent = this.selectedGameDuration === 0 ? 'Süresiz' : `${this.selectedGameDuration} saniye`;
+        }
+      });
+    });
+
     document.getElementById('btn-gds-start-game')?.addEventListener('click', async () => {
       const cbs = document.querySelectorAll('.gds-deck-checkbox:checked');
       const selectedDeckIds = Array.from(cbs).map((cb) => cb.value);
@@ -1066,6 +1083,7 @@ class WortCoachApp {
       document.getElementById('modal-game-deck-select')?.classList.add('hidden');
 
       if (window.WordGameService) {
+        window.WordGameService.setDuration(this.selectedGameDuration || 0);
         await window.WordGameService.initPool(selectedDeckIds.length > 0 ? selectedDeckIds : 'all');
       }
 
@@ -1532,6 +1550,7 @@ class WortCoachApp {
       NOUN: 'İsim Testi (Çoğullar & Anlam)',
       ADJECTIVE: 'Sıfat Testi (Komparativ & Sıfatlar)',
       PHRASE: 'Kalıp Testi (Deyimler & İfadeler)',
+      REFLEXIV_TRENNBAR: 'Trennbar & Reflexiv Fiil Testi',
       MIXED: 'Karma Test (Tüm Konular)'
     };
 
@@ -1543,6 +1562,53 @@ class WortCoachApp {
 
     window.WordGameService.startNewGame(gameType, 15);
     modal.classList.remove('hidden');
+
+    // Canlı Puan Göstergesini Sıfırla
+    const scoreVal = document.getElementById('game-quiz-score-val');
+    if (scoreVal) scoreVal.textContent = '0';
+
+    // Zamanla Yarış Modu Sayacı
+    if (this.gameTimerInterval) {
+      clearInterval(this.gameTimerInterval);
+      this.gameTimerInterval = null;
+    }
+
+    const timerBadge = document.getElementById('game-timer-badge');
+    const timerVal = document.getElementById('game-quiz-timer-val');
+
+    if (window.WordGameService.durationSeconds > 0) {
+      if (timerBadge) {
+        timerBadge.classList.remove('hidden', 'timer-urgent');
+      }
+      const updateTimerDisplay = () => {
+        const rem = Math.max(0, window.WordGameService.remainingSeconds);
+        const mins = Math.floor(rem / 60);
+        const secs = rem % 60;
+        if (timerVal) {
+          timerVal.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        if (rem <= 10 && timerBadge) {
+          timerBadge.classList.add('timer-urgent');
+        } else if (timerBadge) {
+          timerBadge.classList.remove('timer-urgent');
+        }
+      };
+      updateTimerDisplay();
+
+      this.gameTimerInterval = setInterval(() => {
+        if (!window.WordGameService) return;
+        window.WordGameService.remainingSeconds--;
+        updateTimerDisplay();
+        if (window.WordGameService.remainingSeconds <= 0) {
+          clearInterval(this.gameTimerInterval);
+          this.gameTimerInterval = null;
+          this.showGameResults();
+        }
+      }, 1000);
+    } else {
+      if (timerBadge) timerBadge.classList.add('hidden');
+    }
+
     this.renderGameCurrentQuestion();
   }
 
@@ -1644,9 +1710,15 @@ class WortCoachApp {
             if (explEl) explEl.textContent = result.explanation || '';
           }
 
-          // Seri ve Skor güncelle
+          // Canlı Skor, Seri ve Puan güncelle
           if (streakCount) streakCount.textContent = `${result.streak} Seri`;
           if (scoreText) scoreText.textContent = `Doğru: ${svc.score.correct} • Yanlış: ${svc.score.wrong}`;
+          const liveScoreVal = document.getElementById('game-quiz-score-val');
+          if (liveScoreVal) liveScoreVal.textContent = result.points;
+
+          if (result.isCorrect && result.gainedPoints > 0) {
+            this.showToast(`+${result.gainedPoints} Puan! 🔥 x${result.streakMultiplier}`);
+          }
 
           // Sonraki soru butonunu göster
           document.getElementById('btn-game-next')?.classList.remove('hidden');
@@ -1676,8 +1748,17 @@ class WortCoachApp {
     const grWrong = document.getElementById('gr-wrong');
     if (grWrong) grWrong.textContent = wrong;
 
+    if (this.gameTimerInterval) {
+      clearInterval(this.gameTimerInterval);
+      this.gameTimerInterval = null;
+    }
+
     const grAcc = document.getElementById('gr-accuracy');
     if (grAcc) grAcc.textContent = `%${accuracy}`;
+
+    const highScore = svc.getHighScore(svc.currentGameType);
+    const grScoreEl = document.getElementById('gr-score');
+    if (grScoreEl) grScoreEl.textContent = `${svc.score.points} Puan`;
 
     const subtitle = document.getElementById('game-result-subtitle');
     if (subtitle) {
@@ -1825,7 +1906,7 @@ class WortCoachApp {
               <span class="cpc-title">${p.name}</span>
             </div>
             <div class="cpc-desc">${p.description}</div>
-            <div class="cpc-count">${p.words.length} Seçkin Kelime Kartı</div>
+            <div class="cpc-count">${p.cards ? p.cards.length : (p.words ? p.words.length : 60)} Seçkin Kelime Kartı</div>
           </div>
           <button class="cpc-btn ${isAlreadyImported ? 'imported' : ''}" data-pack-code="${p.code}">
             ${
@@ -1932,17 +2013,68 @@ class WortCoachApp {
     const container = document.getElementById('all-cards-list');
     const subtitle = document.getElementById('cards-total-subtitle');
 
-    if (subtitle) {
-      subtitle.textContent = `${cards.length} Kelime Kartı Kayıtlı`;
+    if (!this.activeCardsPosFilter) this.activeCardsPosFilter = 'ALL';
+
+    // 1. Canlı kategori sayaçlarını hesapla
+    const allCount = cards.length;
+    const nounCount = cards.filter((c) => (c.partOfSpeech || '').toUpperCase() === 'NOUN').length;
+    const verbCount = cards.filter((c) => (c.partOfSpeech || '').toUpperCase() === 'VERB').length;
+    const adjCount = cards.filter((c) => {
+      const pos = (c.partOfSpeech || '').toUpperCase();
+      return pos === 'ADJECTIVE' || pos === 'ADJ';
+    }).length;
+    const phraseCount = cards.filter((c) => {
+      const pos = (c.partOfSpeech || '').toUpperCase();
+      return pos === 'PHRASE' || (c.germanWord || '').includes(' ');
+    }).length;
+
+    const countAllEl = document.getElementById('count-pos-all');
+    if (countAllEl) countAllEl.textContent = allCount;
+    const countNounEl = document.getElementById('count-pos-noun');
+    if (countNounEl) countNounEl.textContent = nounCount;
+    const countVerbEl = document.getElementById('count-pos-verb');
+    if (countVerbEl) countVerbEl.textContent = verbCount;
+    const countAdjEl = document.getElementById('count-pos-adjective');
+    if (countAdjEl) countAdjEl.textContent = adjCount;
+    const countPhraseEl = document.getElementById('count-pos-phrase');
+    if (countPhraseEl) countPhraseEl.textContent = phraseCount;
+
+    // 2. Kategori Butonları Click Listener
+    document.querySelectorAll('#cards-pos-filter-bar .pos-filter-pill').forEach((pill) => {
+      pill.onclick = () => {
+        document.querySelectorAll('#cards-pos-filter-bar .pos-filter-pill').forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.activeCardsPosFilter = pill.getAttribute('data-pos') || 'ALL';
+        const currentQuery = document.getElementById('cards-filter-input')?.value || '';
+        this.renderCardsList(currentQuery);
+      };
+    });
+
+    // 3. Filtreleme: Hem Tür hem de Arama Sorgusu
+    let filtered = cards;
+    if (this.activeCardsPosFilter !== 'ALL') {
+      filtered = filtered.filter((c) => {
+        const pos = (c.partOfSpeech || '').toUpperCase();
+        if (this.activeCardsPosFilter === 'NOUN') return pos === 'NOUN';
+        if (this.activeCardsPosFilter === 'VERB') return pos === 'VERB';
+        if (this.activeCardsPosFilter === 'ADJECTIVE') return pos === 'ADJECTIVE' || pos === 'ADJ';
+        if (this.activeCardsPosFilter === 'PHRASE') return pos === 'PHRASE' || (c.germanWord || '').includes(' ');
+        return true;
+      });
     }
 
-    const filtered = filterQuery
-      ? cards.filter(
-          (c) =>
-            c.germanWord.toLowerCase().includes(filterQuery.toLowerCase()) ||
-            (c.meaningsTr && c.meaningsTr.toLowerCase().includes(filterQuery.toLowerCase()))
-        )
-      : cards;
+    if (filterQuery) {
+      const q = filterQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (c) =>
+          (c.germanWord || '').toLowerCase().includes(q) ||
+          (c.meaningsTr && c.meaningsTr.toLowerCase().includes(q))
+      );
+    }
+
+    if (subtitle) {
+      subtitle.textContent = `${filtered.length} / ${cards.length} Kelime Kartı Listeleniyor`;
+    }
 
     if (filtered.length === 0) {
       container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">Eşleşen kart bulunamadı.</div>`;
