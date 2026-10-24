@@ -2134,8 +2134,7 @@ class WortCoachApp {
               <span class="badge badge-pos-${c.partOfSpeech}">${c.partOfSpeech}</span>
               ${c.isReflexive ? `<span class="badge-reflexiv">Reflexiv</span>` : ''}
             </div>
-            <div style="font-size:0.85rem; color:var(--text-primary); margin-top:4px;">${trMeaning}</div>`;
-        }
+            <div style="font-size:0.85rem; color:var(--text-primary); margin-top:4px;">${trMeaning}</div>
             ${c.pluralForm ? `<div style="font-size:0.75rem; color:var(--text-secondary);">Çoğul: ${c.pluralForm}</div>` : ''}
           </div>
           <div class="deck-item-actions">
@@ -2150,8 +2149,8 @@ class WortCoachApp {
             </button>
           </div>
         </div>
-      `
-      )
+      `;
+        })
       .join('');
 
     // Kartın gövdesine tıklandığında doğrudan düzenleme modunu aç
