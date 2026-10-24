@@ -178,6 +178,10 @@
       <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
     </symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </symbol>
 
     <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -1077,6 +1081,105 @@
     </div>
   </div>
 
+
+  <!-- MODAL: DESTE PAYLAŞMA & DIŞA AKTARMA (modal-share-deck) -->
+  <div id="modal-share-deck" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:480px; border-radius:var(--radius-xl);">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size:1.18rem; font-weight:900; margin:0;" id="share-deck-title">Desteyi Paylaş</h3>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Arkadaşlarınızla veya başka cihazlarla paylaşın</p>
+        </div>
+        <button id="btn-close-share-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div style="padding: 14px 0;">
+        <div id="share-deck-preview-card" style="padding:14px; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong style="font-size:1.05rem;" id="share-deck-name-display">-</strong>
+            <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--brand-blue); font-weight:800;" id="share-deck-count-display">0 Kart</span>
+          </div>
+          <p style="font-size:0.8rem; color:var(--text-muted); margin-top:6px; margin-bottom:0;" id="share-deck-sample-words">-</p>
+        </div>
+
+        <!-- 3 Paylaşım Eylemi -->
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <!-- 1. Sistem Paylaşımı (WhatsApp / Telegram / vs.) -->
+          <button type="button" id="btn-share-native" class="btn-primary" style="width:100%; justify-content:center; padding:12px; font-weight:800; border-radius:var(--radius-md);">
+            <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-share"></use></svg>
+            <span>Uygulamalar ile Paylaş (WhatsApp / vb.)</span>
+          </button>
+
+          <!-- 2. Panoya Kopyala -->
+          <button type="button" id="btn-share-copy" class="btn-secondary-compact" style="width:100%; justify-content:center; padding:12px; font-weight:700; border-radius:var(--radius-md);">
+            <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-copy"></use></svg>
+            <span>Paylaşım Kodunu Kopyala</span>
+          </button>
+
+          <!-- 3. JSON Dosyası İndir -->
+          <button type="button" id="btn-share-download" class="btn-secondary-compact" style="width:100%; justify-content:center; padding:12px; font-weight:700; border-radius:var(--radius-md);">
+            <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-download"></use></svg>
+            <span>JSON Dosyası Olarak İndir (.json)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top:10px;">
+        <button type="button" id="btn-done-share-modal" class="btn-secondary-compact" style="width:100%;">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PAYLAŞILAN DESTEYİ İÇE AKTARMA (modal-import-deck) -->
+  <div id="modal-import-deck" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:500px; border-radius:var(--radius-xl);">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size:1.18rem; font-weight:900; margin:0;">Deste İçe Aktar</h3>
+          <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">JSON dosyası yükleyin veya paylaşılan kodu yapıştırın</p>
+        </div>
+        <button id="btn-close-import-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div style="padding:14px 0;">
+        <!-- Dosya Yükleme Alanı -->
+        <input type="file" id="import-deck-file-input" accept=".json,application/json" style="display:none;" />
+        <div id="import-deck-dropzone" style="border:2px dashed var(--border-subtle); border-radius:var(--radius-lg); padding:20px; text-align:center; cursor:pointer; background:rgba(255,255,255,0.02); transition:all 0.2s ease;">
+          <svg class="svg-icon" style="width:32px;height:32px;color:var(--brand-blue); margin-bottom:8px;"><use href="#icon-download"></use></svg>
+          <div style="font-size:0.92rem; font-weight:800; color:var(--text-primary);">JSON Dosyası Seç veya Sürükle</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">WortCoach deste paketleri (.json)</div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; margin:14px 0;">
+          <hr style="flex:1; border:none; border-top:1px solid var(--border-subtle);">
+          <span style="font-size:0.74rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">VEYA KOD YAPIŞTIRIN</span>
+          <hr style="flex:1; border:none; border-top:1px solid var(--border-subtle);">
+        </div>
+
+        <textarea id="import-deck-json-text" class="search-input" rows="4" style="width:100%; font-family:monospace; font-size:0.78rem; padding:10px; border-radius:var(--radius-md); resize:vertical;" placeholder='{"app":"WortCoach","deck":{"name":"..."},"cards":[...]}'></textarea>
+
+        <!-- Önizleme Kutusu -->
+        <div id="import-deck-preview-box" class="hidden" style="margin-top:12px; padding:12px; border-radius:var(--radius-md); background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong id="import-preview-name" style="color:var(--text-primary); font-size:0.95rem;">-</strong>
+            <span id="import-preview-count" class="badge" style="background:#10B981; color:#fff; font-weight:800;">0 Kart</span>
+          </div>
+          <p id="import-preview-sample" style="font-size:0.76rem; color:var(--text-secondary); margin-top:4px; margin-bottom:0;">-</p>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top:12px;">
+        <button type="button" id="btn-do-import-deck" class="btn-primary" style="width:100%; justify-content:center; padding:13px; font-weight:800; font-size:0.95rem;">
+          <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-check"></use></svg>
+          <span>Desteyi Veritabanına Yükle</span>
+        </button>
+      </div>
+    </div>
+  </div>
   <!-- MODAL 4: KELİME OYUNLARI & TESTLER MODALI (modal-game-quiz) -->
   <div id="modal-game-quiz" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="modal-sheet game-modal-sheet">

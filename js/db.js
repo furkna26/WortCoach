@@ -148,7 +148,25 @@ class WortMeisterDatabase {
     const store = await this._tx('cards', 'readonly');
     return new Promise((resolve, reject) => {
       const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => {
+        const raw = req.result || [];
+        const valid = [];
+        const badIds = [];
+        for (const c of raw) {
+          if (c && typeof c.germanWord === 'string' && c.germanWord.trim().length > 0) {
+            valid.push(c);
+          } else if (c && c.id) {
+            badIds.push(c.id);
+          }
+        }
+        if (badIds.length > 0) {
+          // Arka planda boş ve bozuk kartları temizle (uygulamayı buga sokmasını önler)
+          this._tx('cards', 'readwrite').then((rw) => {
+            badIds.forEach((id) => rw.delete(id));
+          }).catch(() => {});
+        }
+        resolve(valid);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -164,19 +182,27 @@ class WortMeisterDatabase {
   }
 
   async addCard(cardData) {
-    // Üst üste binmeyi ve mükerrer kart kaydını engelle
-    if (cardData && cardData.germanWord) {
-      const existing = await this.getCardByWord(cardData.germanWord);
-      if (existing) {
-        const merged = { ...existing, ...cardData, id: existing.id, updatedAt: Date.now() };
-        return this.updateCard(merged);
-      }
+    if (!cardData || typeof cardData !== 'object') {
+      return null;
     }
+    const cleanWord = (cardData.germanWord || '').trim();
+    if (!cleanWord) {
+      console.warn('[wmDB] Boş kelime kartı eklenemez!');
+      return null;
+    }
+
+    // Üst üste binmeyi ve mükerrer kart kaydını engelle
+    const existing = await this.getCardByWord(cleanWord);
+    if (existing) {
+      const merged = { ...existing, ...cardData, germanWord: cleanWord, id: existing.id, updatedAt: Date.now() };
+      return this.updateCard(merged);
+    }
+
     const store = await this._tx('cards', 'readwrite');
     const now = Date.now();
     const record = {
       deckId: Number(cardData.deckId) || 1,
-      germanWord: (cardData.germanWord || '').trim(),
+      germanWord: cleanWord,
       targetLanguage: cardData.targetLanguage || 'de',
       partOfSpeech: cardData.partOfSpeech || 'OTHER',
       article: cardData.article || '',
@@ -208,6 +234,13 @@ class WortMeisterDatabase {
   }
 
   async updateCard(card) {
+    if (!card || !card.id) return null;
+    const cleanWord = (card.germanWord || '').trim();
+    if (!cleanWord) {
+      console.warn('[wmDB] Boş kelime ile kart güncellenemez!');
+      return null;
+    }
+    card.germanWord = cleanWord;
     const store = await this._tx('cards', 'readwrite');
     return new Promise((resolve, reject) => {
       const req = store.put(card);

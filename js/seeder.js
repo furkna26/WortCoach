@@ -96,34 +96,11 @@ class DatabaseSeeder {
     const isSeeded = await window.wmDB.getSetting('initialSeedCompleted', false);
     if (isSeeded) return;
 
+    // Kullanıcının açık isteği: İlk açılışta otomatik kart yüklenmez (0 kart).
+    // Kullanıcı dilerse "Hazır Desteler" butonundan istediği seviyeyi seçerek ekler.
     const existingDecks = await window.wmDB.getAllDecks();
-    let defaultDeckId = 1;
-
     if (existingDecks.length === 0) {
-      const deck1 = await window.wmDB.createDeck('A1: Temel Almanca');
-      await window.wmDB.createDeck('Ayrılabilen Fiiller (Trennbar)');
-      defaultDeckId = deck1.id;
-    } else {
-      defaultDeckId = existingDecks[0].id;
-    }
-
-    const starterWords = [
-      'untergehen',
-      'aufstehen',
-      'verstehen',
-      'mitbringen',
-      'arbeiten',
-      'Haus',
-      'Wohnung',
-      'Entscheidung'
-    ];
-
-    for (const wordKey of starterWords) {
-      const synth = window.DictionaryService.synthesizeInstantEntry(wordKey);
-      await window.wmDB.addCard({
-        ...synth,
-        deckId: defaultDeckId
-      });
+      await window.wmDB.createDeck('Genel Deste');
     }
 
     await window.wmDB.setSetting('initialSeedCompleted', true);
