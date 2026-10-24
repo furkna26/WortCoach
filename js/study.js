@@ -33,9 +33,31 @@ class WortMeisterStudy {
       this.speakCurrentCard();
     });
 
+    document.getElementById('btn-fc-pronounce')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = this.getCurrentCard();
+      if (card && window.wmApp) {
+        window.wmApp.openPronunciationCoach(card, 'word');
+      }
+    });
+
     document.getElementById('btn-fc-tts-back')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.speakCurrentCard();
+      const card = this.getCurrentCard();
+      if (card && card.exampleSentence) {
+        const cleanEx = card.exampleSentence.replace(/\s*\(.*?\)\s*$/, '').trim();
+        window.wmTTS.speak(cleanEx || card.germanWord, 'de-DE');
+      } else {
+        this.speakCurrentCard();
+      }
+    });
+
+    document.getElementById('btn-fc-pronounce-back')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = this.getCurrentCard();
+      if (card && window.wmApp) {
+        window.wmApp.openPronunciationCoach(card, card.exampleSentence ? 'sentence' : 'word');
+      }
     });
 
     document.getElementById('btn-study-reset-session')?.addEventListener('click', () => {

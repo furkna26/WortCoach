@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.9.3" />
-  <link rel="stylesheet" href="css/components.css?v=2.9.3" />
+  <link rel="stylesheet" href="css/app.css?v=2.9.6" />
+  <link rel="stylesheet" href="css/components.css?v=2.9.6" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -151,6 +151,16 @@
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
       <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+    </symbol>
+
+    <symbol id="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+      <line x1="12" y1="19" x2="12" y2="22"></line>
+    </symbol>
+
+    <symbol id="icon-waveform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2"></path>
     </symbol>
 
     <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -624,6 +634,9 @@
                   <button id="btn-fc-tts" class="icon-btn-ghost" title="Dinle">
                     <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
                   </button>
+                  <button id="btn-fc-pronounce" class="icon-btn-ghost btn-mic-trigger" title="Telaffuzunu Test Et">
+                    <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
+                  </button>
                 </div>
 
                 <!-- İsim Detayı (Screenshot 5: [ DIE ] badge) -->
@@ -694,9 +707,14 @@
                 <div id="fc-back-example-card" class="scb-example-card hidden">
                   <div class="scb-example-header">
                     <span>ÖRNEK CÜMLE</span>
-                    <button id="btn-fc-tts-back" class="icon-btn-ghost" title="Örneği Dinle">
-                      <svg class="svg-icon" style="width:14px;height:14px;color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
-                    </button>
+                    <div style="display:inline-flex; align-items:center; gap:4px;">
+                      <button id="btn-fc-tts-back" class="icon-btn-ghost" title="Örneği Dinle">
+                        <svg class="svg-icon" style="width:14px;height:14px;color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
+                      </button>
+                      <button id="btn-fc-pronounce-back" class="icon-btn-ghost btn-mic-trigger" title="Cümle Telaffuzunu Test Et">
+                        <svg class="svg-icon" style="width:14px;height:14px;color:#10B981"><use href="#icon-mic"></use></svg>
+                      </button>
+                    </div>
                   </div>
                   <div id="fc-back-example" class="scb-example-text">-</div>
                 </div>
@@ -759,7 +777,19 @@
         </div>
 
         <div id="subview-games-content" class="games-subview-panel">
-          <!-- Featured Game: Kablo ile Anlam Eşleştirme -->
+          <!-- Featured Game 1: Telaffuz Koçu (Aussprache-Trainer) -->
+          <div class="game-card featured-game-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(10,132,255,0.14)); border: 1.5px solid rgba(16,185,129,0.38);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: linear-gradient(135deg, rgba(16,185,129,0.28), rgba(10,132,255,0.28)); color: #10B981;">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-waveform"></use></svg>
+              </div>
+              <span class="badge" style="background:rgba(16,185,129,0.2); color:#10B981; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AKUSTİK FONETİK KOÇ</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.15rem; font-weight: 900;">Telaffuz Koçu (Aussprache-Trainer)</div>
+            <div class="game-card-desc">Standart ses tanımanın kaçırdığı ince fonemleri (ch [ç/x], sch, sp/st, z [ts], ä/ö/ü ve ünlü uzunlukları) hece hece analiz edin ve gerçek doğruluk oranınızı görün!</div>
+          </div>
+
+          <!-- Featured Game 2: Kablo ile Anlam Eşleştirme -->
           <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer;">
             <div class="game-card-top">
               <div class="game-icon-box" style="background: linear-gradient(135deg, rgba(236,72,153,0.2), rgba(59,130,246,0.2)); color: #38BDF8;">
@@ -1499,6 +1529,30 @@
           </span>
         </div>
 
+        <!-- Telaffuz Motoru & Opsiyonel Microsoft Azure GOP API -->
+        <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label for="select-settings-phonetic-engine" style="font-size:0.86rem; font-weight:800; color:var(--text-primary);">Fonetik Motoru (Telaffuz Değerlendirme)</label>
+            <span id="azure-speech-status" style="font-size:0.72rem; color:#10B981; font-weight:700;">Aktif ✓</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <select id="select-settings-phonetic-engine" class="form-control" style="width:100%; font-size:0.83rem; font-weight:700;">
+              <option value="HYBRID_ENSEMBLE">Hibrit Ensemble (MFA Viterbi + Wav2Vec2 CTC + Akustik DSP) — Önerilen</option>
+              <option value="WAV2VEC2_CTC">Wav2Vec2 Neural CTC Posterior (Torchaudio / ONNX Yapay Zeka)</option>
+              <option value="MFA_FORCED_ALIGN">Montreal Forced Aligner (MFA / Kaldi Viterbi HMM-GOP)</option>
+              <option value="AZURE_CLOUD">Microsoft Azure Speech GOP (Bulut API)</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <input type="password" id="input-azure-speech-key" class="form-control" placeholder="Opsiyonel: Azure Speech Key (Aylık 5 saat ücretsiz)" style="flex:1; font-size:0.82rem;" />
+            <input type="text" id="input-azure-speech-region" class="form-control" placeholder="westeurope" value="westeurope" style="width:110px; font-size:0.82rem;" title="Azure Bölgesi (örn: westeurope, germanywestcentral)" />
+            <button type="button" id="btn-save-azure-key" class="btn-primary-compact">Kaydet</button>
+          </div>
+          <span style="font-size:0.72rem; color:var(--text-muted); display:block; line-height:1.4;">
+            <strong>Wav2Vec2 Neural CTC</strong> ve <strong>Montreal Forced Aligner (MFA Viterbi)</strong> motorları %100 ücretsiz ve tarayıcı içi çalışır. Dilerseniz Azure Speech anahtarıyla bulut GOP motorunu da kullanabilirsiniz.
+          </span>
+        </div>
+
         <!-- Örnek Verileri Yeniden Yükle -->
         <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
           <div style="font-size:0.86rem; font-weight:800; color:var(--text-primary); margin-bottom:4px;">Veritabanı &amp; Önbellek</div>
@@ -1516,21 +1570,178 @@
       </div>
     </div>
   </div>
+  <!-- MODAL: DETAYLI TELAFFUZ KOÇU & AKUSTİK FONETİK ANALİZÖR (modal-pronunciation-coach) -->
+  <div id="modal-pronunciation-coach" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet pron-modal-sheet">
+      <!-- Üst Başlık -->
+      <div class="game-modal-header" style="margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="pron-header-icon">
+            <svg class="svg-icon" style="width:20px; height:20px;"><use href="#icon-waveform"></use></svg>
+          </div>
+          <div>
+            <h3 id="pron-modal-title" style="font-size:1.12rem; font-weight:900; margin:0; color:var(--text-primary);">Telaffuz Koçu</h3>
+            <span id="pron-engine-badge" style="font-size:0.7rem; color:#10B981; font-weight:700;">Akustik Fonetik DSP • Hece &amp; Fonem Analizi</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="pron-trainer-counter" class="badge hidden" style="background:rgba(10,132,255,0.16); color:var(--brand-blue); font-weight:800; font-size:0.76rem; padding:5px 10px;">1 / 10</span>
+          <button id="btn-close-pron-modal" class="icon-btn-ghost" aria-label="Kapat">
+            <svg class="svg-icon"><use href="#icon-close"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- FONETİK MOTORU SEÇİCİ (Wav2Vec2 Neural CTC / Montreal Forced Aligner / Hibrit / Azure) -->
+      <div class="pron-engine-selector-bar">
+        <div class="pron-engine-selector-top">
+          <label for="select-pron-phonetic-engine" class="pron-engine-label">FONETİK MOTORU:</label>
+          <select id="select-pron-phonetic-engine" class="pron-engine-select">
+            <option value="HYBRID_ENSEMBLE">⚡ Hibrit Ensemble (MFA Viterbi + Wav2Vec2 + DSP)</option>
+            <option value="WAV2VEC2_CTC">🧠 Wav2Vec2 Neural CTC Posterior (Torchaudio / ONNX)</option>
+            <option value="MFA_FORCED_ALIGN">🎯 Montreal Forced Aligner (MFA / Kaldi Viterbi GOP)</option>
+            <option value="AZURE_CLOUD">☁️ Microsoft Azure Cloud GOP</option>
+          </select>
+        </div>
+        <div id="pron-engine-desc-row" class="pron-engine-desc-row">
+          <span id="pron-engine-desc-text">MFA Viterbi Zorlamalı Hizalama + Fiziksel Formant/VOT DSP + Wav2Vec2 CTC birleşimi</span>
+          <button type="button" id="btn-pron-preload-wav2vec2" class="pron-neural-load-btn hidden">🧠 Wav2Vec2 Modelini Yükle</button>
+        </div>
+      </div>
+
+      <!-- Kelime / Örnek Cümle Mod Seçici (Cümle varsa görünür) -->
+      <div id="pron-mode-switcher" class="pron-mode-switcher hidden">
+        <button type="button" class="pron-mode-btn active" data-mode="word" id="btn-pron-mode-word">Kelime Telaffuzu</button>
+        <button type="button" class="pron-mode-btn" data-mode="sentence" id="btn-pron-mode-sentence">Örnek Cümle Telaffuzu</button>
+      </div>
+
+      <!-- Hedef Kelime & Fonetik Harita Kartı -->
+      <div class="pron-target-card">
+        <div class="pron-target-top">
+          <span class="lang-badge lang-badge-de">
+            <svg class="flag-svg"><use href="#flag-de"></use></svg>
+            <span>DE</span>
+          </span>
+          <span id="pron-target-meaning" class="pron-target-meaning">-</span>
+        </div>
+
+        <div id="pron-target-text" class="pron-target-word">---</div>
+
+        <!-- IPA & Türkçe Okunuş Rehberi -->
+        <div class="pron-phonetic-row">
+          <span class="pron-ipa-pill" id="pron-target-ipa">/-/</span>
+          <span class="pron-tr-guide-pill" id="pron-target-tr-guide">Okunuş: -</span>
+        </div>
+
+        <!-- Hece & Fonem Kutuları (Kayıt öncesi nötr, kayıt sonrası Yeşil/Sarı/Kırmızı yüzdeli) -->
+        <div class="pron-syllables-label">HECE &amp; FONEM DOĞRULUK HARİTASI</div>
+        <div id="pron-syllables-container" class="pron-syllables-grid"></div>
+      </div>
+
+      <!-- Canlı Spektrum / Ses Dalga Formu & Mikrofon Kontrol Alanı -->
+      <div class="pron-recorder-box" id="pron-recorder-box">
+        <div class="pron-waveform-bars" id="pron-waveform-bars">
+          <!-- 20 Canlı Frekans Çubuğu -->
+          <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+          <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+          <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+          <span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span><span class="wf-bar"></span>
+        </div>
+
+        <div id="pron-status-hint" class="pron-status-hint">Mikrofona dokunun ve Almanca kelimeyi net bir şekilde okuyun</div>
+
+        <div class="pron-controls-row">
+          <button type="button" id="btn-pron-listen-native" class="pron-side-btn" title="Doğru Almanca Telaffuzu Dinle">
+            <svg class="svg-icon" style="color:var(--brand-blue); width:18px; height:18px;"><use href="#icon-volume"></use></svg>
+            <span>Doğrusunu Dinle</span>
+          </button>
+
+          <button type="button" id="btn-pron-record-toggle" class="pron-mic-main-btn" aria-label="Kaydı Başlat veya Durdur">
+            <svg class="svg-icon" style="width:28px; height:28px;"><use href="#icon-mic"></use></svg>
+          </button>
+
+          <button type="button" id="btn-pron-listen-self" class="pron-side-btn" disabled title="Kendi Ses Kaydınızı Dinleyin">
+            <svg class="svg-icon" style="color:#10B981; width:18px; height:18px;"><use href="#icon-waveform"></use></svg>
+            <span>Sesimi Dinle</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- DETAYLI ANALİZ SONUÇ PANELİ (Kayıt Tamamlandığında Açılır) -->
+      <div id="pron-result-panel" class="pron-result-panel hidden">
+        <div class="pron-score-overview">
+          <div class="pron-score-circle" id="pron-score-circle">
+            <span id="pron-overall-score-val" class="pron-overall-score-val">%0</span>
+            <span class="pron-overall-score-lbl">DOĞRULUK</span>
+          </div>
+          <div class="pron-submetrics-col">
+            <div class="pron-metric-item">
+              <div class="pron-metric-head">
+                <span>Fonetik Kalite (Ünlü/Ünsüz)</span>
+                <strong id="pron-metric-accuracy-val">%0</strong>
+              </div>
+              <div class="pron-metric-track"><div id="pron-metric-accuracy-bar" class="pron-metric-fill"></div></div>
+            </div>
+            <div class="pron-metric-item">
+              <div class="pron-metric-head">
+                <span>Vurgu &amp; Hece Ritmi</span>
+                <strong id="pron-metric-prosody-val">%0</strong>
+              </div>
+              <div class="pron-metric-track"><div id="pron-metric-prosody-bar" class="pron-metric-fill"></div></div>
+            </div>
+            <div class="pron-metric-item">
+              <div class="pron-metric-head">
+                <span>Akıcılık &amp; Netlik</span>
+                <strong id="pron-metric-fluency-val">%0</strong>
+              </div>
+              <div class="pron-metric-track"><div id="pron-metric-fluency-bar" class="pron-metric-fill"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fonem Kırılım Çipleri -->
+        <div id="pron-phoneme-breakdown" class="pron-phoneme-breakdown"></div>
+
+        <!-- Spesifik Türkçe Koçluk Geri Bildirimi -->
+        <div class="pron-coaching-box">
+          <div class="pron-coaching-title">AKUSTİK KOÇ GERİ BİLDİRİMİ</div>
+          <ul id="pron-feedback-list" class="pron-feedback-list"></ul>
+        </div>
+      </div>
+
+      <!-- Kelimeye Özel Almanca Fonetik İpuçları (Her zaman görünür) -->
+      <div id="pron-tips-box" class="pron-tips-box">
+        <div class="pron-tips-header">BU KELİMEDEKİ KRİTİK ALMANCA SES KURALLARI</div>
+        <div id="pron-tips-list" class="pron-tips-list"></div>
+      </div>
+
+      <!-- Trainer Modu Alt Navigasyon (Önceki / Sonraki Kelime) -->
+      <div id="pron-trainer-nav" class="pron-trainer-nav hidden">
+        <button type="button" id="btn-pron-prev-word" class="btn-secondary-compact" style="flex:1; padding:11px;">← Önceki</button>
+        <button type="button" id="btn-pron-next-word" class="btn-primary-compact" style="flex:1.4; padding:11px; justify-content:center;">
+          <span>Sonraki Kelime</span>
+          <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-arrow-right"></use></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST BİLDİRİM ALANI -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.9.3"></script>
-  <script src="js/verbHelper.js?v=2.9.3"></script>
-  <script src="js/offlineDictionary.js?v=2.9.3"></script>
-  <script src="js/dictionary.js?v=2.9.3"></script>
-  <script src="js/curatedPacks.js?v=2.9.3"></script>
-  <script src="js/seeder.js?v=2.9.3"></script>
-  <script src="js/tts.js?v=2.9.3"></script>
-  <script src="js/translator.js?v=2.9.3"></script>
-  <script src="js/game.js?v=2.9.3"></script>
-  <script src="js/study.js?v=2.9.3"></script>
-  <script src="js/stats.js?v=2.9.3"></script>
-  <script src="js/app.js?v=2.9.3"></script>
+  <script src="js/db.js?v=2.9.6"></script>
+  <script src="js/verbHelper.js?v=2.9.6"></script>
+  <script src="js/offlineDictionary.js?v=2.9.6"></script>
+  <script src="js/dictionary.js?v=2.9.6"></script>
+  <script src="js/curatedPacks.js?v=2.9.6"></script>
+  <script src="js/seeder.js?v=2.9.6"></script>
+  <script src="js/tts.js?v=2.9.6"></script>
+  <script src="js/pronunciation.js?v=2.9.6"></script>
+  <script src="js/translator.js?v=2.9.6"></script>
+  <script src="js/game.js?v=2.9.6"></script>
+  <script src="js/study.js?v=2.9.6"></script>
+  <script src="js/stats.js?v=2.9.6"></script>
+  <script src="js/app.js?v=2.9.6"></script>
 </body>
 </html>

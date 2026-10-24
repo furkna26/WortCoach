@@ -33,6 +33,7 @@ class WortCoachApp {
 
     this.bindSettingsModal();
     this.bindGames();
+    this.bindPronunciationCoach();
     if (window.WordGameService) {
       window.WordGameService.initPool();
     }
@@ -94,11 +95,64 @@ class WortCoachApp {
       }
       updateDeepLUI();
     });
+
+    // Opsiyonel Azure Speech Pronunciation Assessment Ayarı
+    const azureKeyInput = document.getElementById('input-azure-speech-key');
+    const azureRegionInput = document.getElementById('input-azure-speech-region');
+    const azureStatus = document.getElementById('azure-speech-status');
+    const azureSaveBtn = document.getElementById('btn-save-azure-key');
+    const settingsEngineSelect = document.getElementById('select-settings-phonetic-engine');
+
+    const updateAzureUI = () => {
+      const curKey = localStorage.getItem('azure_speech_key') || '';
+      const curReg = localStorage.getItem('azure_speech_region') || 'westeurope';
+      const curEng = window.wmPronunciation ? window.wmPronunciation.getSelectedEngine() : 'HYBRID_ENSEMBLE';
+      if (azureKeyInput) azureKeyInput.value = curKey;
+      if (azureRegionInput) azureRegionInput.value = curReg;
+      if (settingsEngineSelect) settingsEngineSelect.value = curEng;
+      if (azureStatus) {
+        const meta = window.wmPronunciation ? window.wmPronunciation.getSelectedEngineMeta() : null;
+        azureStatus.textContent = meta ? `${meta.shortLabel} ✓` : 'Aktif ✓';
+        azureStatus.style.color = '#10B981';
+      }
+    };
+    updateAzureUI();
+
+    settingsEngineSelect?.addEventListener('change', () => {
+      if (window.wmPronunciation) {
+        window.wmPronunciation.setSelectedEngine(settingsEngineSelect.value);
+        const meta = window.wmPronunciation.getSelectedEngineMeta();
+        this.showToast(`Fonetik Motoru: ${meta.shortLabel} seçildi.`);
+      }
+      updateAzureUI();
+      this.syncPronunciationEngineSelectorUI();
+    });
+
+    azureSaveBtn?.addEventListener('click', () => {
+      const keyVal = (azureKeyInput?.value || '').trim();
+      const regVal = (azureRegionInput?.value || 'westeurope').trim() || 'westeurope';
+      localStorage.setItem('azure_speech_region', regVal);
+      if (keyVal) {
+        localStorage.setItem('azure_speech_key', keyVal);
+        if (window.wmPronunciation) window.wmPronunciation.setSelectedEngine('AZURE_CLOUD');
+        this.showToast('Azure Speech GOP anahtarı kaydedildi ve aktif edildi! ✓');
+      } else {
+        localStorage.removeItem('azure_speech_key');
+        this.showToast('Yerleşik ücretsiz Fonetik Motoru aktif.');
+      }
+      updateAzureUI();
+      this.syncPronunciationEngineSelectorUI();
+    });
   }
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.update());
+        });
+      }
+      navigator.serviceWorker.register('./sw.js?v=2.9.6').then((reg) => reg.update()).catch(() => {});
     }
   }
 
@@ -771,9 +825,14 @@ class WortCoachApp {
                 <div class="example-de-text">${germanText}</div>
                 ${turkishText ? `<div class="example-tr-text">${turkishText}</div>` : ''}
               </div>
-              <button type="button" class="icon-btn-ghost btn-play-example" title="Seslendir" data-tts="${germanText.replace(/"/g, '&quot;')}">
-                <svg class="svg-icon" style="color:var(--brand-blue); width:16px; height:16px;"><use href="#icon-volume"></use></svg>
-              </button>
+              <div style="display:flex; align-items:center; gap:2px;">
+                <button type="button" class="icon-btn-ghost btn-play-example" title="Seslendir" data-tts="${germanText.replace(/"/g, '&quot;')}">
+                  <svg class="svg-icon" style="color:var(--brand-blue); width:16px; height:16px;"><use href="#icon-volume"></use></svg>
+                </button>
+                <button type="button" class="icon-btn-ghost btn-pronounce-example" title="Cümle Telaffuzunu Test Et" data-sentence="${germanText.replace(/"/g, '&quot;')}" data-tr="${turkishText.replace(/"/g, '&quot;')}">
+                  <svg class="svg-icon" style="color:#10B981; width:16px; height:16px;"><use href="#icon-mic"></use></svg>
+                </button>
+              </div>
             </div>
           `;
         }).join('')
@@ -812,6 +871,9 @@ class WortCoachApp {
             <span class="wdc-word">${cleanWord}</span>
             <button class="icon-btn-ghost" id="btn-res-tts" title="Dinle (TTS)">
               <svg class="svg-icon" style="color:var(--brand-blue); width:22px; height:22px;"><use href="#icon-volume"></use></svg>
+            </button>
+            <button class="icon-btn-ghost btn-mic-trigger" id="btn-res-pronounce" title="Telaffuzunu Test Et">
+              <svg class="svg-icon" style="color:#10B981; width:21px; height:21px;"><use href="#icon-mic"></use></svg>
             </button>
             ${reflexivBadge}
             ${posBadge}
@@ -874,12 +936,45 @@ class WortCoachApp {
       window.wmTTS.speak(spk, 'de-DE');
     });
 
+    document.getElementById('btn-res-pronounce')?.addEventListener('click', () => {
+      const firstEx = examples.length > 0 ? examples[0].replace(/\s*\(.*?\)\s*$/, '').trim() : '';
+      this.openPronunciationCoach(
+        {
+          germanWord: cleanWord,
+          article: isNoun ? canonicalArticle : '',
+          partOfSpeech: pos,
+          meaningsTr: trMeanings.join(', '),
+          exampleSentence: firstEx
+        },
+        'word'
+      );
+    });
+
     // Cümle Seslendirme Butonları
     container.querySelectorAll('.btn-play-example').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const tts = btn.getAttribute('data-tts');
         if (tts) window.wmTTS.speak(tts, 'de-DE');
+      });
+    });
+
+    // Cümle Telaffuz Testi Butonları
+    container.querySelectorAll('.btn-pronounce-example').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sent = btn.getAttribute('data-sentence') || '';
+        const tr = btn.getAttribute('data-tr') || trMeanings.join(', ');
+        this.openPronunciationCoach(
+          {
+            germanWord: cleanWord,
+            article: isNoun ? canonicalArticle : '',
+            partOfSpeech: pos,
+            meaningsTr: tr,
+            exampleSentence: sent
+          },
+          'sentence'
+        );
       });
     });
 
@@ -1098,6 +1193,8 @@ class WortCoachApp {
 
       if (this.pendingGameType === 'CABLE_MATCH') {
         this.openCableGameModal(selectedDeckIds);
+      } else if (this.pendingGameType === 'PRONUNCIATION_TRAINER') {
+        this.startPronunciationTrainerSession(selectedDeckIds);
       } else {
         this.openGameQuizModal(this.pendingGameType || 'MIXED');
       }
@@ -1116,6 +1213,9 @@ class WortCoachApp {
     if (gameType === 'CABLE_MATCH') {
       if (titleEl) titleEl.textContent = 'Kablo Eşleştirme — Deste Seçimi';
       if (subEl) subEl.textContent = 'Kablolarla bağlayacağınız kelimelerin destelerini seçin';
+    } else if (gameType === 'PRONUNCIATION_TRAINER') {
+      if (titleEl) titleEl.textContent = 'Telaffuz Koçu — Deste Seçimi';
+      if (subEl) subEl.textContent = 'Akustik ve fonetik telaffuz pratiği yapacağınız desteleri seçin';
     } else {
       if (titleEl) titleEl.textContent = 'Kelime Testi — Deste Seçimi';
       if (subEl) subEl.textContent = 'Test sorularında kullanılacak desteleri belirleyin';
@@ -2224,6 +2324,9 @@ class WortCoachApp {
             <button class="icon-btn-ghost btn-card-tts" data-word="${c.germanWord}" title="Dinle">
               <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
             </button>
+            <button class="icon-btn-ghost btn-card-pronounce btn-mic-trigger" data-id="${c.id}" title="Telaffuzunu Test Et">
+              <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
+            </button>
             <button class="icon-btn-ghost delete-btn btn-card-delete" data-id="${c.id}" title="Sil">
               <svg class="svg-icon"><use href="#icon-trash"></use></svg>
             </button>
@@ -2256,6 +2359,17 @@ class WortCoachApp {
       b.addEventListener('click', (e) => {
         e.stopPropagation();
         window.wmTTS.speak(b.getAttribute('data-word'), 'de-DE');
+      });
+    });
+
+    container.querySelectorAll('.btn-card-pronounce').forEach((b) => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cardId = Number(b.getAttribute('data-id'));
+        const card = cards.find((c) => c.id === cardId);
+        if (card) {
+          this.openPronunciationCoach(card, 'word');
+        }
       });
     });
 
@@ -2783,6 +2897,512 @@ ${jsonStr}`
         `;
       }
     });
+  }
+
+  // --- DETAYLI TELAFFUZ KOÇU (AUSSPRACHE-TRAINER & ÇOKLU FONETİK MOTORU) ---
+  bindPronunciationCoach() {
+    this.pronState = {
+      entry: null,
+      mode: 'word', // 'word' | 'sentence'
+      isTrainerSession: false,
+      trainerCards: [],
+      trainerIndex: 0
+    };
+
+    const modal = document.getElementById('modal-pronunciation-coach');
+    if (!modal) return;
+
+    document.getElementById('btn-close-pron-modal')?.addEventListener('click', async () => {
+      if (window.wmPronunciation && window.wmPronunciation.isRecording) {
+        await window.wmPronunciation.stopRecording();
+      }
+      this.resetPronunciationRecorderUI();
+      modal.classList.add('hidden');
+    });
+
+    // Fonetik Motoru Seçici (Hibrit / Wav2Vec2 CTC / MFA Viterbi / Azure)
+    const engineSelect = document.getElementById('select-pron-phonetic-engine');
+    engineSelect?.addEventListener('change', () => {
+      if (window.wmPronunciation) {
+        window.wmPronunciation.setSelectedEngine(engineSelect.value);
+        const meta = window.wmPronunciation.getSelectedEngineMeta();
+        this.showToast(`Fonetik Motoru: ${meta.shortLabel}`);
+      }
+      const settingsSelect = document.getElementById('select-settings-phonetic-engine');
+      if (settingsSelect) settingsSelect.value = engineSelect.value;
+      this.syncPronunciationEngineSelectorUI();
+    });
+
+    // Wav2Vec2 Neural CTC Modelini Ön Yükle / İndir Butonu
+    const preloadBtn = document.getElementById('btn-pron-preload-wav2vec2');
+    preloadBtn?.addEventListener('click', async () => {
+      if (!window.wmPronunciation) return;
+      preloadBtn.disabled = true;
+      await window.wmPronunciation.preloadWav2Vec2Model((pct, msg) => {
+        const descText = document.getElementById('pron-engine-desc-text');
+        if (descText) descText.textContent = msg;
+        preloadBtn.textContent = pct >= 100 ? '✓ Wav2Vec2 CTC Hazır' : `⏳ %${pct}`;
+      });
+      preloadBtn.disabled = false;
+      this.syncPronunciationEngineSelectorUI();
+    });
+
+    document.getElementById('btn-pron-mode-word')?.addEventListener('click', () => {
+      if (!this.pronState.entry) return;
+      this.pronState.mode = 'word';
+      this.renderPronunciationTarget();
+    });
+
+    document.getElementById('btn-pron-mode-sentence')?.addEventListener('click', () => {
+      if (!this.pronState.entry) return;
+      this.pronState.mode = 'sentence';
+      this.renderPronunciationTarget();
+    });
+
+    document.getElementById('btn-pron-listen-native')?.addEventListener('click', () => {
+      const targetText = this.getCurrentPronunciationTargetText();
+      if (targetText && window.wmTTS) {
+        window.wmTTS.speak(targetText, 'de-DE');
+      }
+    });
+
+    document.getElementById('btn-pron-listen-self')?.addEventListener('click', () => {
+      if (window.wmPronunciation) {
+        window.wmPronunciation.playLastRecording();
+      }
+    });
+
+    document.getElementById('btn-pron-record-toggle')?.addEventListener('click', () => {
+      this.togglePronunciationRecording();
+    });
+
+    document.getElementById('btn-pron-prev-word')?.addEventListener('click', async () => {
+      if (!this.pronState.isTrainerSession) return;
+      if (window.wmPronunciation && window.wmPronunciation.isRecording) {
+        await window.wmPronunciation.stopRecording();
+      }
+      if (this.pronState.trainerIndex > 0) {
+        this.pronState.trainerIndex--;
+        this.pronState.entry = this.pronState.trainerCards[this.pronState.trainerIndex];
+        this.pronState.mode = 'word';
+        this.renderPronunciationTarget();
+      }
+    });
+
+    document.getElementById('btn-pron-next-word')?.addEventListener('click', async () => {
+      if (!this.pronState.isTrainerSession) return;
+      if (window.wmPronunciation && window.wmPronunciation.isRecording) {
+        await window.wmPronunciation.stopRecording();
+      }
+      if (this.pronState.trainerIndex + 1 < this.pronState.trainerCards.length) {
+        this.pronState.trainerIndex++;
+        this.pronState.entry = this.pronState.trainerCards[this.pronState.trainerIndex];
+        this.pronState.mode = 'word';
+        this.renderPronunciationTarget();
+      } else {
+        this.showToast('Telaffuz antrenmanı tamamlandı! Harika pratik yaptınız. 🎉');
+        modal.classList.add('hidden');
+      }
+    });
+
+    this.syncPronunciationEngineSelectorUI();
+  }
+
+  syncPronunciationEngineSelectorUI() {
+    if (!window.wmPronunciation) return;
+    const selectedId = window.wmPronunciation.getSelectedEngine();
+    const meta = window.wmPronunciation.getSelectedEngineMeta();
+    const az = window.wmPronunciation.getAzureConfig();
+
+    const engineSelect = document.getElementById('select-pron-phonetic-engine');
+    if (engineSelect && engineSelect.value !== selectedId) {
+      engineSelect.value = selectedId;
+    }
+
+    const engineBadge = document.getElementById('pron-engine-badge');
+    if (engineBadge) {
+      if (selectedId === 'AZURE_CLOUD') {
+        engineBadge.textContent = az.isConfigured
+          ? `Azure Cloud GOP (${az.region}) Aktif`
+          : 'Azure Anahtarı Yok • MFA Viterbi Yedek Aktif';
+      } else {
+        engineBadge.textContent = meta.badgeText;
+      }
+    }
+
+    const descText = document.getElementById('pron-engine-desc-text');
+    const preloadBtn = document.getElementById('btn-pron-preload-wav2vec2');
+
+    if (descText) {
+      descText.textContent = meta.description;
+    }
+
+    if (preloadBtn) {
+      const showNeuralBtn = selectedId === 'WAV2VEC2_CTC' || selectedId === 'HYBRID_ENSEMBLE';
+      preloadBtn.classList.toggle('hidden', !showNeuralBtn);
+      if (window.wmPronunciation.wav2vec2Status === 'ready') {
+        preloadBtn.textContent = '✓ Wav2Vec2 CTC Aktif';
+        preloadBtn.classList.add('is-ready');
+      } else if (window.wmPronunciation.wav2vec2Status === 'loading') {
+        preloadBtn.textContent = `⏳ Yükleniyor (%${window.wmPronunciation.wav2vec2Progress || 0})`;
+        preloadBtn.classList.remove('is-ready');
+      } else {
+        preloadBtn.textContent = '🧠 Wav2Vec2 Modelini Yükle';
+        preloadBtn.classList.remove('is-ready');
+      }
+    }
+  }
+
+  async startPronunciationTrainerSession(selectedDeckIds = null) {
+    if (!window.WordGameService) return;
+    await window.WordGameService.initPool(selectedDeckIds && selectedDeckIds.length > 0 ? selectedDeckIds : 'all');
+    const pool = window.WordGameService.poolCards || [];
+    const shuffled = [...pool].sort(() => 0.5 - Math.random()).slice(0, 15);
+
+    if (shuffled.length === 0) {
+      this.showToast('Pratik yapılacak kelime bulunamadı.');
+      return;
+    }
+
+    this.pronState.isTrainerSession = true;
+    this.pronState.trainerCards = shuffled;
+    this.pronState.trainerIndex = 0;
+    this.pronState.entry = shuffled[0];
+    this.pronState.mode = 'word';
+
+    const modal = document.getElementById('modal-pronunciation-coach');
+    if (modal) modal.classList.remove('hidden');
+    this.renderPronunciationTarget();
+  }
+
+  openPronunciationCoach(entry, initialMode = 'word') {
+    if (!entry) return;
+    this.pronState.isTrainerSession = false;
+    this.pronState.trainerCards = [];
+    this.pronState.trainerIndex = 0;
+    this.pronState.entry = entry;
+    this.pronState.mode = initialMode === 'sentence' && entry.exampleSentence ? 'sentence' : 'word';
+
+    const modal = document.getElementById('modal-pronunciation-coach');
+    if (modal) modal.classList.remove('hidden');
+    this.renderPronunciationTarget();
+  }
+
+  getCurrentPronunciationTargetText() {
+    const entry = this.pronState?.entry;
+    if (!entry) return '';
+    if (this.pronState.mode === 'sentence' && entry.exampleSentence) {
+      return entry.exampleSentence.replace(/\s*\(.*?\)\s*$/, '').replace(/^\[.*?\]\s*/, '').trim();
+    }
+    const isNoun = (entry.partOfSpeech || '').toUpperCase() === 'NOUN' || Boolean(entry.article);
+    const cleanW = (entry.germanWord || '').replace(/^(der|die|das)\s+/i, '').trim();
+    return isNoun && entry.article
+      ? `${entry.article} ${cleanW.charAt(0).toUpperCase() + cleanW.slice(1)}`
+      : cleanW;
+  }
+
+  renderPronunciationTarget() {
+    const entry = this.pronState?.entry;
+    if (!entry) return;
+
+    this.resetPronunciationRecorderUI();
+
+    // Trainer sayaç ve alt navigasyon görünürlüğü
+    const counterEl = document.getElementById('pron-trainer-counter');
+    const navEl = document.getElementById('pron-trainer-nav');
+    const titleEl = document.getElementById('pron-modal-title');
+
+    if (this.pronState.isTrainerSession) {
+      if (titleEl) titleEl.textContent = 'Aussprache-Trainer';
+      if (counterEl) {
+        counterEl.classList.remove('hidden');
+        counterEl.textContent = `${this.pronState.trainerIndex + 1} / ${this.pronState.trainerCards.length}`;
+      }
+      if (navEl) navEl.classList.remove('hidden');
+      const prevBtn = document.getElementById('btn-pron-prev-word');
+      if (prevBtn) prevBtn.disabled = this.pronState.trainerIndex === 0;
+      const nextBtn = document.getElementById('btn-pron-next-word');
+      if (nextBtn) {
+        nextBtn.querySelector('span').textContent =
+          this.pronState.trainerIndex + 1 >= this.pronState.trainerCards.length ? 'Antrenmanı Bitir ✓' : 'Sonraki Kelime';
+      }
+    } else {
+      if (titleEl) titleEl.textContent = 'Telaffuz Koçu';
+      if (counterEl) counterEl.classList.add('hidden');
+      if (navEl) navEl.classList.add('hidden');
+    }
+
+    // Seçili Fonetik Motoru rozeti ve seçici senkronizasyonu
+    this.syncPronunciationEngineSelectorUI();
+
+    // Kelime / Cümle geçiş barı
+    const switcher = document.getElementById('pron-mode-switcher');
+    const hasSentence = Boolean(entry.exampleSentence && entry.exampleSentence.trim().length > 2);
+    if (switcher) {
+      switcher.classList.toggle('hidden', !hasSentence);
+      document.getElementById('btn-pron-mode-word')?.classList.toggle('active', this.pronState.mode === 'word');
+      document.getElementById('btn-pron-mode-sentence')?.classList.toggle('active', this.pronState.mode === 'sentence');
+    }
+
+    const targetText = this.getCurrentPronunciationTargetText();
+    const targetWordEl = document.getElementById('pron-target-text');
+    if (targetWordEl) {
+      targetWordEl.textContent = targetText;
+      targetWordEl.style.fontSize = this.pronState.mode === 'sentence' ? '1.22rem' : '1.75rem';
+    }
+
+    const meaningEl = document.getElementById('pron-target-meaning');
+    if (meaningEl) {
+      meaningEl.textContent = entry.meaningsTr || entry.meaningsEn || '';
+    }
+
+    // Fonetik Analiz (IPA, Türkçe Okunuş, Heceler ve Kritik İpuçları)
+    const analysis = window.GermanPhoneticAnalyzer
+      ? window.GermanPhoneticAnalyzer.analyzeText(targetText)
+      : { ipa: '/-/', trGuide: '-', syllables: [], focusTips: [] };
+
+    const ipaEl = document.getElementById('pron-target-ipa');
+    if (ipaEl) ipaEl.textContent = analysis.ipa;
+
+    const trGuideEl = document.getElementById('pron-target-tr-guide');
+    if (trGuideEl) trGuideEl.textContent = `Okunuş: ${analysis.trGuide}`;
+
+    // Heceleri nötr (bekleme) durumunda çiz
+    const sylContainer = document.getElementById('pron-syllables-container');
+    if (sylContainer) {
+      sylContainer.innerHTML = analysis.syllables
+        .map(
+          (syl) => `
+          <div class="pron-syl-chip neutral">
+            <span class="pron-syl-text">${syl.text}</span>
+            <span class="pron-syl-ipa">[${syl.ipa}]</span>
+          </div>
+        `
+        )
+        .join('');
+    }
+
+    // Kelimeye Özel Fonetik İpuçlarını Çiz
+    const tipsBox = document.getElementById('pron-tips-box');
+    const tipsList = document.getElementById('pron-tips-list');
+    if (tipsBox && tipsList) {
+      if (analysis.focusTips && analysis.focusTips.length > 0) {
+        tipsBox.classList.remove('hidden');
+        tipsList.innerHTML = analysis.focusTips
+          .map(
+            (t) => `
+            <div class="pron-tip-item">
+              <strong class="pron-tip-title">${t.title}:</strong>
+              <span class="pron-tip-detail">${t.detail}</span>
+            </div>
+          `
+          )
+          .join('');
+      } else {
+        tipsBox.classList.remove('hidden');
+        tipsList.innerHTML = `
+          <div class="pron-tip-item">
+            <strong class="pron-tip-title">Standart Vurgu Kuralı:</strong>
+            <span class="pron-tip-detail">İlk heceyi daha baskın okuyun ve ünsüzleri kelime sonunda net çıkarın.</span>
+          </div>
+        `;
+      }
+    }
+
+    // Sonuç panelini gizle
+    document.getElementById('pron-result-panel')?.classList.add('hidden');
+  }
+
+  resetPronunciationRecorderUI() {
+    const recBtn = document.getElementById('btn-pron-record-toggle');
+    const recBox = document.getElementById('pron-recorder-box');
+    const hintEl = document.getElementById('pron-status-hint');
+    const bars = document.querySelectorAll('#pron-waveform-bars .wf-bar');
+
+    recBtn?.classList.remove('is-recording');
+    recBox?.classList.remove('is-recording');
+    if (hintEl) {
+      hintEl.textContent = 'Mikrofona dokunun ve Almanca ifadeyi net bir şekilde okuyun';
+      hintEl.style.color = 'var(--text-secondary)';
+    }
+    bars.forEach((b) => {
+      b.style.height = '6px';
+    });
+  }
+
+  async togglePronunciationRecording() {
+    if (!window.wmPronunciation) return;
+    const recBtn = document.getElementById('btn-pron-record-toggle');
+    const recBox = document.getElementById('pron-recorder-box');
+    const hintEl = document.getElementById('pron-status-hint');
+    const bars = document.querySelectorAll('#pron-waveform-bars .wf-bar');
+
+    if (!window.wmPronunciation.isRecording) {
+      // Kaydı Başlat
+      try {
+        if (navigator.vibrate) navigator.vibrate(15);
+        recBtn?.classList.add('is-recording');
+        recBox?.classList.add('is-recording');
+        if (hintEl) {
+          hintEl.textContent = '🔴 Dinleniyor... Okumayı bitirince tekrar dokunun';
+          hintEl.style.color = '#FF453A';
+        }
+
+        await window.wmPronunciation.startRecording('de-DE', (freqData) => {
+          if (!bars || bars.length === 0) return;
+          const step = Math.max(1, Math.floor(freqData.length / (bars.length * 2.5)));
+          bars.forEach((bar, idx) => {
+            const val = freqData[idx * step] || 0;
+            const h = Math.max(5, Math.min(38, Math.round((val / 255) * 38)));
+            bar.style.height = `${h}px`;
+          });
+        });
+
+        // Otomatik güvenlik zaman aşımı (8 saniye)
+        if (this.pronAutoStopTimer) clearTimeout(this.pronAutoStopTimer);
+        this.pronAutoStopTimer = setTimeout(() => {
+          if (window.wmPronunciation && window.wmPronunciation.isRecording) {
+            this.togglePronunciationRecording();
+          }
+        }, 8000);
+      } catch (err) {
+        this.resetPronunciationRecorderUI();
+        this.showToast('Mikrofon izni alınamadı. Lütfen tarayıcı ayarlarından mikrofona izin verin.');
+      }
+    } else {
+      // Kaydı Durdur ve Değerlendir
+      if (this.pronAutoStopTimer) {
+        clearTimeout(this.pronAutoStopTimer);
+        this.pronAutoStopTimer = null;
+      }
+      if (navigator.vibrate) navigator.vibrate([15, 30, 15]);
+      recBtn?.classList.remove('is-recording');
+      recBox?.classList.remove('is-recording');
+      if (hintEl) {
+        hintEl.textContent = 'Fonetik motoru ses çerçevelerini hizalıyor...';
+        hintEl.style.color = 'var(--brand-blue)';
+      }
+
+      const targetText = this.getCurrentPronunciationTargetText();
+      const report = await window.wmPronunciation.stopRecordingAndEvaluate(targetText, (statusMsg) => {
+        if (hintEl && statusMsg) {
+          hintEl.textContent = statusMsg;
+          hintEl.style.color = 'var(--brand-blue)';
+        }
+      });
+      this.syncPronunciationEngineSelectorUI();
+      this.renderPronunciationEvaluation(report);
+    }
+  }
+
+  renderPronunciationEvaluation(report) {
+    this.resetPronunciationRecorderUI();
+    if (!report) return;
+
+    const selfBtn = document.getElementById('btn-pron-listen-self');
+    if (selfBtn && report.recordedAudioUrl) {
+      selfBtn.disabled = false;
+    }
+
+    const hintEl = document.getElementById('pron-status-hint');
+
+    if (!report.hasSpeech) {
+      if (hintEl) {
+        hintEl.textContent = report.error || 'Net bir konuşma algılanamadı. Tekrar deneyin.';
+        hintEl.style.color = '#FF9F0A';
+      }
+      this.showToast('Ses çok kısık veya kısa algılandı, tekrar deneyin.');
+      return;
+    }
+
+    if (hintEl) {
+      hintEl.textContent = `${report.engineName || 'Fonetik Motoru'} ile analiz tamamlandı!`;
+      hintEl.style.color = 'var(--text-secondary)';
+    }
+
+    const engineBadge = document.getElementById('pron-engine-badge');
+    if (engineBadge && report.engineName) {
+      engineBadge.textContent = report.engineName;
+    }
+
+    // 1. Hece Kartlarını Renkli Doğruluk Oranlarıyla Güncelle
+    const sylContainer = document.getElementById('pron-syllables-container');
+    if (sylContainer && Array.isArray(report.syllables)) {
+      sylContainer.innerHTML = report.syllables
+        .map(
+          (syl) => `
+          <div class="pron-syl-chip status-${syl.status}">
+            <span class="pron-syl-text">${syl.text}</span>
+            <span class="pron-syl-ipa">[${syl.ipa}]</span>
+            <span class="pron-syl-score">%${syl.score}</span>
+          </div>
+        `
+        )
+        .join('');
+    }
+
+    // 2. Sonuç Panelini Göster
+    const resPanel = document.getElementById('pron-result-panel');
+    if (resPanel) resPanel.classList.remove('hidden');
+
+    const scoreCircle = document.getElementById('pron-score-circle');
+    const overallVal = document.getElementById('pron-overall-score-val');
+    const overall = report.overallScore || 0;
+
+    if (overallVal) overallVal.textContent = `%${overall}`;
+    if (scoreCircle) {
+      scoreCircle.className = 'pron-score-circle';
+      if (overall >= 84) scoreCircle.classList.add('score-good');
+      else if (overall >= 64) scoreCircle.classList.add('score-warning');
+      else scoreCircle.classList.add('score-bad');
+    }
+
+    // 3 Alt Metrik Çubuğu
+    const setMetric = (idPrefix, val) => {
+      const vEl = document.getElementById(`${idPrefix}-val`);
+      const bEl = document.getElementById(`${idPrefix}-bar`);
+      const color = val >= 84 ? '#30D158' : val >= 64 ? '#FF9F0A' : '#FF453A';
+      if (vEl) {
+        vEl.textContent = `%${val}`;
+        vEl.style.color = color;
+      }
+      if (bEl) {
+        bEl.style.width = `${val}%`;
+        bEl.style.backgroundColor = color;
+      }
+    };
+
+    setMetric('pron-metric-accuracy', report.accuracyScore || overall);
+    setMetric('pron-metric-prosody', report.prosodyScore || overall);
+    setMetric('pron-metric-fluency', report.fluencyScore || overall);
+
+    // 4. Fonem Kırılım Çipleri (MFA Viterbi / Wav2Vec2 CTC milisaniye hizalaması ile)
+    const phonContainer = document.getElementById('pron-phoneme-breakdown');
+    if (phonContainer && Array.isArray(report.syllables)) {
+      const allPhonemes = report.syllables.flatMap((s) => s.phonemes || []);
+      phonContainer.innerHTML = allPhonemes
+        .map((p) => {
+          const timeTag =
+            p.endMs && p.endMs > p.startMs
+              ? `<span class="pp-time-span" title="Zorlamalı Hizalama (Forced Alignment) Aralığı">${p.startMs}–${p.endMs}ms</span>`
+              : '';
+          return `
+          <div class="pron-phoneme-pill status-${p.status || (p.score >= 84 ? 'good' : p.score >= 64 ? 'warning' : 'bad')}">
+            <span class="pp-grapheme">${p.grapheme}</span>
+            <span class="pp-ipa">/${p.ipa}/</span>
+            <strong class="pp-score">%${p.score}</strong>
+            ${timeTag}
+          </div>
+        `;
+        })
+        .join('');
+    }
+
+    // 5. Spesifik Akustik Geri Bildirim Listesi
+    const fbList = document.getElementById('pron-feedback-list');
+    if (fbList && Array.isArray(report.feedbackTips)) {
+      fbList.innerHTML = report.feedbackTips.map((tip) => `<li>${tip}</li>`).join('');
+    }
   }
 
   showToast(message) {

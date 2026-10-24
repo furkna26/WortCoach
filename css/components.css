@@ -2708,3 +2708,606 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+/* ==========================================================================
+   TELAFFUZ KOÇU & AKUSTİK FONETİK ANALİZÖR (modal-pronunciation-coach)
+   ========================================================================== */
+.pron-modal-sheet {
+  max-width: 520px;
+  border-radius: var(--radius-xl);
+}
+
+.pron-header-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #10B981, #0A84FF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-mic-trigger {
+  position: relative;
+  border-radius: 10px;
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.btn-mic-trigger:hover {
+  background-color: rgba(16, 185, 129, 0.14);
+  transform: scale(1.06);
+}
+
+.pron-mode-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: var(--bg-inner);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 12px;
+}
+
+.pron-mode-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 8px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pron-mode-btn.active {
+  background: var(--bg-surface-elevated);
+  color: var(--brand-blue);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.pron-target-card {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.pron-target-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pron-target-meaning {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  max-width: 72%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pron-target-word {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 4px 0 10px;
+}
+
+.pron-phonetic-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.pron-ipa-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(10, 132, 255, 0.14);
+  border: 1px solid rgba(10, 132, 255, 0.3);
+  color: var(--brand-blue);
+  font-family: monospace;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.pron-tr-guide-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10B981;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.pron-syllables-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.pron-syllables-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pron-syl-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 64px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  transition: all 0.25s ease;
+}
+
+.pron-syl-chip .pron-syl-text {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.pron-syl-chip .pron-syl-ipa {
+  font-size: 0.72rem;
+  font-family: monospace;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.pron-syl-chip .pron-syl-score {
+  font-size: 0.74rem;
+  font-weight: 900;
+  margin-top: 3px;
+}
+
+.pron-syl-chip.status-good {
+  background: rgba(48, 209, 88, 0.14);
+  border-color: rgba(48, 209, 88, 0.55);
+}
+.pron-syl-chip.status-good .pron-syl-text,
+.pron-syl-chip.status-good .pron-syl-score {
+  color: #30D158;
+}
+
+.pron-syl-chip.status-warning {
+  background: rgba(255, 159, 10, 0.14);
+  border-color: rgba(255, 159, 10, 0.55);
+}
+.pron-syl-chip.status-warning .pron-syl-text,
+.pron-syl-chip.status-warning .pron-syl-score {
+  color: #FF9F0A;
+}
+
+.pron-syl-chip.status-bad {
+  background: rgba(255, 69, 58, 0.14);
+  border-color: rgba(255, 69, 58, 0.55);
+}
+.pron-syl-chip.status-bad .pron-syl-text,
+.pron-syl-chip.status-bad .pron-syl-score {
+  color: #FF453A;
+}
+
+/* Canlı Ses Dalga Formu & Kayıt Kutusu */
+.pron-recorder-box {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 14px 16px;
+  text-align: center;
+  margin-bottom: 12px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pron-recorder-box.is-recording {
+  border-color: rgba(255, 69, 58, 0.65);
+  box-shadow: 0 0 20px rgba(255, 69, 58, 0.18);
+}
+
+.pron-waveform-bars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 40px;
+  margin-bottom: 8px;
+}
+
+.pron-waveform-bars .wf-bar {
+  width: 4px;
+  height: 6px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, #10B981, #0A84FF);
+  transition: height 0.07s ease;
+}
+
+.pron-recorder-box.is-recording .wf-bar {
+  background: linear-gradient(180deg, #FF453A, #FF9F0A);
+}
+
+.pron-status-hint {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.pron-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.pron-mic-main-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #10B981, #0A84FF);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.38);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
+}
+
+.pron-mic-main-btn:active {
+  transform: scale(0.92);
+}
+
+.pron-mic-main-btn.is-recording {
+  background: linear-gradient(135deg, #FF453A, #FF2D55);
+  box-shadow: 0 0 0 8px rgba(255, 69, 58, 0.22);
+  animation: pulseMicRec 1.15s infinite;
+}
+
+@keyframes pulseMicRec {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+
+.pron-side-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.pron-side-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pron-side-btn:not(:disabled):hover {
+  border-color: var(--brand-blue);
+}
+
+/* Sonuç Paneli */
+.pron-result-panel {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.pron-score-overview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.pron-score-circle {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 4px solid #30D158;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(48, 209, 88, 0.1);
+}
+
+.pron-score-circle.score-warning {
+  border-color: #FF9F0A;
+  background: rgba(255, 159, 10, 0.1);
+}
+
+.pron-score-circle.score-bad {
+  border-color: #FF453A;
+  background: rgba(255, 69, 58, 0.1);
+}
+
+.pron-overall-score-val {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.pron-overall-score-lbl {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.pron-submetrics-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pron-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pron-metric-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.pron-metric-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-surface);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.pron-metric-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  transition: width 0.35s ease;
+}
+
+.pron-phoneme-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pron-phoneme-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+.pron-phoneme-pill .pp-grapheme {
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.pron-phoneme-pill .pp-ipa {
+  font-family: monospace;
+  color: var(--text-muted);
+}
+
+.pron-phoneme-pill.status-good {
+  border-color: rgba(48, 209, 88, 0.45);
+}
+.pron-phoneme-pill.status-good .pp-score {
+  color: #30D158;
+}
+
+.pron-phoneme-pill.status-warning {
+  border-color: rgba(255, 159, 10, 0.45);
+}
+.pron-phoneme-pill.status-warning .pp-score {
+  color: #FF9F0A;
+}
+
+.pron-phoneme-pill.status-bad {
+  border-color: rgba(255, 69, 58, 0.45);
+}
+.pron-phoneme-pill.status-bad .pp-score {
+  color: #FF453A;
+}
+
+.pron-coaching-box {
+  background: rgba(10, 132, 255, 0.08);
+  border: 1px solid rgba(10, 132, 255, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.pron-coaching-title {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--brand-blue);
+  margin-bottom: 6px;
+}
+
+.pron-feedback-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.pron-feedback-list li + li {
+  margin-top: 4px;
+}
+
+.pron-tips-box {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.pron-tips-header {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #10B981;
+  margin-bottom: 8px;
+}
+
+.pron-tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pron-tip-item {
+  font-size: 0.77rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.pron-tip-title {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.pron-trainer-nav {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+/* Fonetik Motoru Seçici Bar (Wav2Vec2 CTC / MFA Viterbi / Hibrit / Azure) */
+.pron-engine-selector-bar {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.pron-engine-selector-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pron-engine-label {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #10B981;
+  white-space: nowrap;
+}
+
+.pron-engine-select {
+  flex: 1;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  outline: none;
+  cursor: pointer;
+}
+
+.pron-engine-select:focus {
+  border-color: var(--brand-blue);
+}
+
+.pron-engine-desc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#pron-engine-desc-text {
+  font-size: 0.69rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  flex: 1;
+}
+
+.pron-neural-load-btn {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(10, 132, 255, 0.45);
+  background: rgba(10, 132, 255, 0.14);
+  color: var(--brand-blue);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.pron-neural-load-btn.is-ready {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.16);
+  color: #10B981;
+}
+
+.pp-time-span {
+  font-size: 0.63rem;
+  font-family: monospace;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+}

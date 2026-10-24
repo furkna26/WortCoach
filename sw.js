@@ -4,26 +4,27 @@
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v2.9.3';
+const CACHE_NAME = 'wortcoach-v2.9.6';
 
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=2.9.3',
-  './css/components.css?v=2.9.3',
-  './js/db.js?v=2.9.3',
-  './js/verbHelper.js?v=2.9.3',
-  './js/offlineDictionary.js?v=2.9.3',
-  './js/dictionary.js?v=2.9.3',
-  './js/curatedPacks.js?v=2.9.3',
-  './js/seeder.js?v=2.9.3',
-  './js/tts.js?v=2.9.3',
-  './js/translator.js?v=2.9.3',
-  './js/game.js?v=2.9.3',
-  './js/study.js?v=2.9.3',
-  './js/stats.js?v=2.9.3',
-  './js/app.js?v=2.9.3',
+  './css/app.css?v=2.9.6',
+  './css/components.css?v=2.9.6',
+  './js/db.js?v=2.9.6',
+  './js/verbHelper.js?v=2.9.6',
+  './js/offlineDictionary.js?v=2.9.6',
+  './js/dictionary.js?v=2.9.6',
+  './js/curatedPacks.js?v=2.9.6',
+  './js/seeder.js?v=2.9.6',
+  './js/tts.js?v=2.9.6',
+  './js/pronunciation.js?v=2.9.6',
+  './js/translator.js?v=2.9.6',
+  './js/game.js?v=2.9.6',
+  './js/study.js?v=2.9.6',
+  './js/stats.js?v=2.9.6',
+  './js/app.js?v=2.9.6',
   './icons/icon-192.svg',
   './icons/icon-512.svg'
 ];
