@@ -1218,6 +1218,14 @@ class DictionaryService {
       } catch (_) {}
     }
 
+    // 1b. Gelişmiş Çevrimdışı Morfolojik Sözlük Motoru (0ms, Çekim ve Kök Analizli)
+    if (typeof window !== 'undefined' && window.OfflineDictionary) {
+      try {
+        const offHit = window.OfflineDictionary.search(trimmed);
+        if (offHit) return offHit;
+      } catch (_) {}
+    }
+
     // 2. Doğrudan çift dilli ters sözlükte var mı? (ev -> Haus, araba -> Auto, house -> Haus, car -> Auto) (0ms)
     const mapHit = REVERSE_TR_EN_TO_DE_MAP[lower];
     if (mapHit) {

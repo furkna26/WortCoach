@@ -14,6 +14,7 @@ const CORE_ASSETS = [
   './css/components.css?v=2.8.7',
   './js/db.js?v=2.8.7',
   './js/verbHelper.js?v=2.8.7',
+  './js/offlineDictionary.js?v=2.8.7',
   './js/dictionary.js?v=2.8.7',
   './js/seeder.js?v=2.8.7',
   './js/tts.js?v=2.8.7',
