@@ -281,12 +281,18 @@ class WortMeisterStudy {
       exCard.classList.add('hidden');
     }
 
-    // SRS "Öğrendim" aralığı tahmini
-    const curInt = Number(card.intervalDays) || 0;
-    const nextInt = curInt === 0 ? 1 : Math.min(16, curInt * 2);
+    // SRS Leitner Kutu ve Aralık Hesabı
+    const currentStage = Math.max(0, Math.min(5, Number(card.srsStage) || 0));
+    const leitnerSchedule = [3, 7, 14, 30, 60];
+    const nextGoodDays = leitnerSchedule[Math.min(currentStage, leitnerSchedule.length - 1)];
+
+    const againLabel = document.getElementById('srs-again-interval-label');
+    if (againLabel) againLabel.textContent = '1 Gün (Kutu 1)';
+    const hardLabel = document.getElementById('srs-hard-interval-label');
+    if (hardLabel) hardLabel.textContent = '12 Saat (Zor)';
     const goodLabel = document.getElementById('srs-good-interval-label');
     if (goodLabel) {
-      goodLabel.textContent = `${nextInt} Gün`;
+      goodLabel.textContent = `${nextGoodDays} Gün (Kutu ${Math.min(5, currentStage + 2)})`;
     }
   }
 

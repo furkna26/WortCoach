@@ -1834,30 +1834,60 @@ class WortCoachApp {
     const modal = document.getElementById('modal-new-deck');
     const form = document.getElementById('form-new-deck');
     const curatedModal = document.getElementById('modal-curated-packs');
+    let editingDeckId = null;
 
-    document.getElementById('btn-fab-new-deck')?.addEventListener('click', () => {
+    const openCreateModal = () => {
+      editingDeckId = null;
+      const titleEl = modal.querySelector('.modal-header h3');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (titleEl) titleEl.textContent = 'Yeni Deste Oluştur';
+      if (submitBtn) submitBtn.textContent = 'Oluştur';
+      form.reset();
       modal.classList.remove('hidden');
       document.getElementById('deck-name-input').focus();
-    });
+    };
+
+    document.getElementById('btn-fab-new-deck')?.addEventListener('click', openCreateModal);
+    document.getElementById('btn-create-deck-top')?.addEventListener('click', openCreateModal);
 
     document.getElementById('btn-close-deck-modal')?.addEventListener('click', () => {
       modal.classList.add('hidden');
+      editingDeckId = null;
     });
 
     document.getElementById('btn-cancel-deck-modal')?.addEventListener('click', () => {
       modal.classList.add('hidden');
+      editingDeckId = null;
     });
 
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = document.getElementById('deck-name-input').value.trim();
       if (!name) return;
-      await window.wmDB.createDeck(name);
+      if (editingDeckId) {
+        await window.wmDB.updateDeck(editingDeckId, name);
+        this.showToast(`Deste adı "${name}" olarak güncellendi.`);
+      } else {
+        await window.wmDB.createDeck(name);
+        this.showToast(`"${name}" destesi oluşturuldu.`);
+      }
       modal.classList.add('hidden');
       form.reset();
-      this.showToast(`"${name}" destesi oluşturuldu.`);
+      editingDeckId = null;
       await this.renderDecksTab();
     });
+
+    this.openEditDeckModal = (deckId, currentName) => {
+      editingDeckId = deckId;
+      const titleEl = modal.querySelector('.modal-header h3');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (titleEl) titleEl.textContent = 'Desteyi Düzenle';
+      if (submitBtn) submitBtn.textContent = 'Kaydet';
+      const input = document.getElementById('deck-name-input');
+      if (input) input.value = currentName;
+      modal.classList.remove('hidden');
+      if (input) input.focus();
+    };
 
     // Hazır Desteler Modalı
     document.getElementById('btn-curated-packs')?.addEventListener('click', async () => {
@@ -1968,12 +1998,23 @@ class WortCoachApp {
             </div>
           </div>
           <div class="deck-item-actions">
-            <button class="icon-btn-ghost share-btn btn-share-deck" data-deck-id="${d.id}" title="Paylaş">
-              <svg class="svg-icon"><use href="#icon-share"></use></svg>
+            <button class="icon-btn-ghost btn-deck-menu" data-deck-id="${d.id}" title="Deste İşlemleri">
+              <svg class="svg-icon"><use href="#icon-more-vertical"></use></svg>
             </button>
-            <button class="icon-btn-ghost delete-btn btn-delete-deck" data-deck-id="${d.id}" title="Sil">
-              <svg class="svg-icon"><use href="#icon-trash"></use></svg>
-            </button>
+            <div class="deck-actions-dropdown hidden" id="deck-menu-${d.id}">
+              <button type="button" class="deck-dropdown-item btn-action-edit-deck" data-deck-id="${d.id}" data-deck-name="${d.name.replace(/"/g, '&quot;')}">
+                <svg class="svg-icon" style="color:var(--brand-blue);"><use href="#icon-edit"></use></svg>
+                <span>Düzenle</span>
+              </button>
+              <button type="button" class="deck-dropdown-item btn-action-share-deck btn-share-deck" data-deck-id="${d.id}">
+                <svg class="svg-icon" style="color:var(--brand-blue);"><use href="#icon-share"></use></svg>
+                <span>Paylaş</span>
+              </button>
+              <button type="button" class="deck-dropdown-item item-delete btn-action-delete-deck" data-deck-id="${d.id}" data-deck-name="${d.name.replace(/"/g, '&quot;')}">
+                <svg class="svg-icon"><use href="#icon-trash"></use></svg>
+                <span>Sil</span>
+              </button>
+            </div>
           </div>
         </div>
       `
@@ -1982,18 +2023,57 @@ class WortCoachApp {
 
     container.querySelectorAll('.deck-item-card').forEach((cardEl) => {
       cardEl.addEventListener('click', async (e) => {
-        if (e.target.closest('button')) return;
+        if (e.target.closest('.deck-item-actions')) return;
         const dId = cardEl.getAttribute('data-deck-id');
         await this.switchTab('tab-study');
         await window.wmStudy.loadSession(dId, false);
       });
     });
 
-    container.querySelectorAll('.btn-delete-deck').forEach((btn) => {
+    // 3 Nokta Menü Aç/Kapat
+    container.querySelectorAll('.btn-deck-menu').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dId = btn.getAttribute('data-deck-id');
+        const menu = document.getElementById(`deck-menu-${dId}`);
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => {
+          if (m !== menu) m.classList.add('hidden');
+        });
+        if (menu) menu.classList.toggle('hidden');
+      });
+    });
+
+    // Menü: Düzenle
+    container.querySelectorAll('.btn-action-edit-deck').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dId = Number(btn.getAttribute('data-deck-id'));
+        const dName = btn.getAttribute('data-deck-name') || '';
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        if (typeof this.openEditDeckModal === 'function') {
+          this.openEditDeckModal(dId, dName);
+        }
+      });
+    });
+
+    // Menü: Paylaş
+    container.querySelectorAll('.btn-action-share-deck').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dId = Number(btn.getAttribute('data-deck-id'));
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        this.openShareDeckModal(dId);
+      });
+    });
+
+    // Menü: Sil
+    container.querySelectorAll('.btn-action-delete-deck').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const dId = Number(btn.getAttribute('data-deck-id'));
-        if (confirm('Bu desteyi ve içindeki kartları silmek istediğinizden emin misiniz?')) {
+        const dName = btn.getAttribute('data-deck-name') || 'Bu deste';
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        if (confirm(`"${dName}" destesini ve içindeki tüm kartları silmek istediğinizden emin misiniz?`)) {
           await window.wmDB.deleteDeck(dId);
           this.showToast('Deste silindi.');
           await this.renderDecksTab();
@@ -2001,12 +2081,9 @@ class WortCoachApp {
       });
     });
 
-    container.querySelectorAll('.btn-share-deck').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const dId = Number(btn.getAttribute('data-deck-id'));
-        this.openShareDeckModal(dId);
-      });
+    // Dışarı tıklandığında açık menüleri kapat
+    document.addEventListener('click', () => {
+      container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
     });
   }
 

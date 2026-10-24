@@ -22,7 +22,7 @@ async function run() {
   // 1. Service Worker & Manifest Configuration
   console.log("\n[TEST 1: Service Worker & App Branding]");
   const swCode = fs.readFileSync('sw.js', 'utf8');
-  assert(swCode.includes("wortcoach-v2.9.1"), "Service worker cache is 'wortcoach-v2.9.1'");
+  assert(swCode.includes("wortcoach-v2.9.2"), "Service worker cache is 'wortcoach-v2.9.2'");
 
   const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
   assert(manifest.name.startsWith("WortCoach"), `Manifest name starts with 'WortCoach' (got: ${manifest.name})`);

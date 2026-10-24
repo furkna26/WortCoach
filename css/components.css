@@ -832,6 +832,63 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  position: relative;
+}
+
+.deck-actions-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  z-index: 50;
+  min-width: 150px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.deck-actions-dropdown.hidden {
+  display: none !important;
+}
+
+.deck-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.deck-dropdown-item:hover, .deck-dropdown-item:active {
+  background-color: var(--bg-inner);
+}
+
+.deck-dropdown-item.item-delete {
+  color: #FF453A;
+}
+
+.deck-dropdown-item.item-delete:hover {
+  background-color: rgba(255, 69, 58, 0.12);
+}
+
+.deck-dropdown-item .svg-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 /* --------------------------------------------------------------------------

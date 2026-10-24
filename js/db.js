@@ -143,6 +143,24 @@ class WortMeisterDatabase {
     });
   }
 
+  async updateDeck(deckId, newName) {
+    const numericId = Number(deckId);
+    const store = await this._tx('decks', 'readwrite');
+    return new Promise((resolve, reject) => {
+      const getReq = store.get(numericId);
+      getReq.onsuccess = () => {
+        const deck = getReq.result;
+        if (!deck) return resolve(null);
+        deck.name = (newName || '').trim() || deck.name;
+        deck.updatedAt = Date.now();
+        const putReq = store.put(deck);
+        putReq.onsuccess = () => resolve(deck);
+        putReq.onerror = (e) => reject(e.target.error);
+      };
+      getReq.onerror = (e) => reject(e.target.error);
+    });
+  }
+
   // --- CARDS ---
   async getAllCards() {
     const store = await this._tx('cards', 'readonly');
@@ -310,14 +328,15 @@ class WortMeisterDatabase {
       card.nextReviewDate = now + ONE_DAY;
     } else if (rating === 'hard') {
       card.isPriority = true;
-      card.intervalDays = Math.max(1, card.intervalDays || 1);
-      card.nextReviewDate = now + 4 * ONE_HOUR;
+      card.intervalDays = 1;
+      card.nextReviewDate = now + 12 * ONE_HOUR;
     } else if (rating === 'good') {
-      const currentInterval = Number(card.intervalDays) || 0;
-      const nextInterval = currentInterval === 0 ? 1 : Math.min(16, currentInterval * 2);
-      card.intervalDays = nextInterval;
-      card.srsStage = Math.min(5, (Number(card.srsStage) || 0) + 1);
-      card.nextReviewDate = now + nextInterval * ONE_DAY;
+      const currentStage = Math.max(0, Math.min(5, Number(card.srsStage) || 0));
+      const leitnerSchedule = [3, 7, 14, 30, 60];
+      const nextDays = leitnerSchedule[Math.min(currentStage, leitnerSchedule.length - 1)];
+      card.srsStage = Math.min(5, currentStage + 1);
+      card.intervalDays = nextDays;
+      card.nextReviewDate = now + nextDays * ONE_DAY;
     }
 
     await this.updateCard(card);

@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.9.1" />
-  <link rel="stylesheet" href="css/components.css?v=2.9.1" />
+  <link rel="stylesheet" href="css/app.css?v=2.9.2" />
+  <link rel="stylesheet" href="css/components.css?v=2.9.2" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -287,6 +287,37 @@
       <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
       <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
       <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+    </symbol>
+
+    <symbol id="icon-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <circle cx="12" cy="6" r="6"></circle>
+      <circle cx="12" cy="2" r="2"></circle>
+    </symbol>
+
+    <symbol id="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </symbol>
+
+    <symbol id="icon-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="16 3 21 3 21 8"></polyline>
+      <line x1="4" y1="20" x2="21" y2="3"></line>
+      <polyline points="21 16 21 21 16 21"></polyline>
+      <line x1="15" y1="15" x2="21" y2="21"></line>
+      <line x1="4" y1="4" x2="9" y2="9"></line>
+    </symbol>
+
+    <symbol id="icon-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="17 1 21 5 17 9"></polyline>
+      <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+      <polyline points="7 23 3 19 7 15"></polyline>
+      <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+    </symbol>
+
+    <symbol id="icon-more-vertical" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
+      <circle cx="12" cy="5" r="1.5" fill="currentColor"></circle>
+      <circle cx="12" cy="19" r="1.5" fill="currentColor"></circle>
     </symbol>
   </svg>
 
@@ -683,15 +714,15 @@
           <div class="srs-buttons-row">
             <button class="btn-srs-android btn-again" data-rating="again">
               <span class="srs-btn-label">Tekrar Et</span>
-              <span class="srs-btn-sub">1 Gün</span>
+              <span class="srs-btn-sub" id="srs-again-interval-label">1 Gün (Kutu 1)</span>
             </button>
             <button class="btn-srs-android btn-hard" data-rating="hard">
               <span class="srs-btn-label">Önemli</span>
-              <span class="srs-btn-sub">4 Saat</span>
+              <span class="srs-btn-sub" id="srs-hard-interval-label">12 Saat (Zor)</span>
             </button>
             <button class="btn-srs-android btn-good" data-rating="good">
               <span class="srs-btn-label">Öğrendim</span>
-              <span class="srs-btn-sub" id="srs-good-interval-label">1 Gün</span>
+              <span class="srs-btn-sub" id="srs-good-interval-label">3 Gün</span>
             </button>
           </div>
         </div>
@@ -729,7 +760,6 @@
         <div id="subview-games-content" class="games-subview-panel">
           <!-- Featured Game: Kablo ile Anlam Eşleştirme -->
           <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer;">
-            <div class="featured-badge">⚡ YENİ &amp; İNTERAKTİF</div>
             <div class="game-card-top">
               <div class="game-icon-box" style="background: linear-gradient(135deg, rgba(236,72,153,0.2), rgba(59,130,246,0.2)); color: #38BDF8;">
                 <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-cable"></use></svg>
@@ -740,7 +770,7 @@
             <div class="game-card-desc">Almanca kelimeleri renkli elektrik kablolarıyla Türkçe anlamlarına bağlayın! İstediğiniz destelerden kelime seçebilirsiniz.</div>
           </div>
 
-          <!-- 6 Temel Quiz Oyunu (2x3 Izgara) -->
+          <!-- 7 Temel Quiz Oyunu -->
           <div class="games-2x3-grid">
             <!-- 1. Artikel Testi -->
             <div class="game-card" data-game-type="ARTICLE">
@@ -812,9 +842,10 @@
               </div>
               <div class="game-card-title">Karışık Quiz</div>
               <div class="game-card-desc">Tüm konulardan karma test</div>
+            </div>
 
             <!-- 7. Ayrılabilen & Dönüşlü Fiil Testi (Reflexiv / Trennbar / Beide) -->
-            <div class="game-card" data-game-type="REFLEXIV_TRENNBAR">
+            <div class="game-card" data-game-type="REFLEXIV_TRENNBAR" style="grid-column: span 2;">
               <div class="game-card-top">
                 <div class="game-icon-box" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4;">
                   <svg class="svg-icon"><use href="#icon-repeat"></use></svg>
@@ -822,9 +853,9 @@
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
               </div>
               <div class="game-card-title">Trennbar &amp; Reflexiv</div>
-              <div class="game-card-desc">Ayrılabilen ve dönüşlü fiil testi</div>
+              <div class="game-card-desc">Ayrılabilen ve dönüşlü fiil testi (Reflexiv, Trennbar oder Beide)</div>
             </div>
-            </div>
+          </div>
           </div>
         </div>
       </section>
@@ -836,8 +867,12 @@
         <h1 class="page-title-blue">Kelime Desteleri</h1>
         <p class="page-subtitle">Kelimelerinizi tematik desteler halinde organize edin</p>
 
-        <!-- Eylem Butonları: [✨ Hazır Desteler] [📥 İçe Aktar] -->
+        <!-- Eylem Butonları: [+ Yeni Deste] [✨ Hazır Desteler] [📥 İçe Aktar] -->
         <div class="pill-action-row">
+          <button class="pill-action-btn pill-action-btn-primary" id="btn-create-deck-top" style="background:var(--brand-blue); color:#fff; border-color:var(--brand-blue);">
+            <svg class="svg-icon" style="color:#fff;"><use href="#icon-plus"></use></svg>
+            <span>+ Yeni Deste</span>
+          </button>
           <button class="pill-action-btn" id="btn-curated-packs">
             <svg class="svg-icon"><use href="#icon-sparkle"></use></svg>
             <span>Hazır Desteler</span>
@@ -1485,17 +1520,17 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.9.1"></script>
-  <script src="js/verbHelper.js?v=2.9.1"></script>
-  <script src="js/offlineDictionary.js?v=2.9.1"></script>
-  <script src="js/dictionary.js?v=2.9.1"></script>
-  <script src="js/curatedPacks.js?v=2.9.1"></script>
-  <script src="js/seeder.js?v=2.9.1"></script>
-  <script src="js/tts.js?v=2.9.1"></script>
-  <script src="js/translator.js?v=2.9.1"></script>
-  <script src="js/game.js?v=2.9.1"></script>
-  <script src="js/study.js?v=2.9.1"></script>
-  <script src="js/stats.js?v=2.9.1"></script>
-  <script src="js/app.js?v=2.9.1"></script>
+  <script src="js/db.js?v=2.9.2"></script>
+  <script src="js/verbHelper.js?v=2.9.2"></script>
+  <script src="js/offlineDictionary.js?v=2.9.2"></script>
+  <script src="js/dictionary.js?v=2.9.2"></script>
+  <script src="js/curatedPacks.js?v=2.9.2"></script>
+  <script src="js/seeder.js?v=2.9.2"></script>
+  <script src="js/tts.js?v=2.9.2"></script>
+  <script src="js/translator.js?v=2.9.2"></script>
+  <script src="js/game.js?v=2.9.2"></script>
+  <script src="js/study.js?v=2.9.2"></script>
+  <script src="js/stats.js?v=2.9.2"></script>
+  <script src="js/app.js?v=2.9.2"></script>
 </body>
 </html>
