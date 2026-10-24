@@ -1,0 +1,238 @@
+/**
+ * WortMeister — Hızlı Çeviri Sekmesi (tab-translate) Yöneticisi
+ * - DeepL API & Google Translate & MyMemory Hibrit Motoru
+ * - Segmented Language Switcher [TR] [DE] [EN] <-> [TR] [DE]
+ * - Otomatik Morfoloji Çıkarımı ve Hatasız Bayrak / Dil Eşleme
+ */
+
+class WortMeisterTranslator {
+  constructor() {
+    this.sourceLang = 'tr';
+    this.targetLang = 'de';
+    this.inputEl = document.getElementById('trans-input-text');
+    this.outputEl = document.getElementById('trans-output-text');
+    this.resultWrapper = document.getElementById('trans-result-wrapper');
+    this.grammarHintEl = document.getElementById('trans-grammar-hint');
+    this.counterEl = document.getElementById('trans-char-counter');
+    this.btnToCard = document.getElementById('btn-trans-to-card');
+
+    this.lastResult = null;
+    this.abortController = null;
+  }
+
+  init() {
+    if (!this.inputEl) return;
+
+    // Karakter Sayacı
+    this.inputEl.addEventListener('input', () => {
+      const len = this.inputEl.value.length;
+      this.counterEl.textContent = `${len} / 150`;
+    });
+
+    // Kaynak Dil Segment Butonları [TR] [DE] [EN]
+    const sourceBtns = document.querySelectorAll('#source-lang-segments .lang-pill-btn');
+    sourceBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        sourceBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.sourceLang = btn.getAttribute('data-lang');
+        this.syncSourceFlag();
+      });
+    });
+
+    // Hedef Dil Segment Butonları [TR] [DE]
+    const targetBtns = document.querySelectorAll('#target-lang-segments .lang-pill-btn');
+    targetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        targetBtns.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.targetLang = btn.getAttribute('data-lang');
+        this.syncTargetFlag();
+      });
+    });
+
+    // Dilleri Değiştir (Swap) Butonu
+    document.getElementById('btn-swap-langs').addEventListener('click', () => {
+      const oldSrc = this.sourceLang;
+      const oldTgt = this.targetLang;
+
+      this.sourceLang = oldTgt;
+      this.targetLang = oldSrc === 'en' ? 'tr' : oldSrc;
+
+      // Segment butonlarını güncelle
+      document.querySelectorAll('#source-lang-segments .lang-pill-btn').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-lang') === this.sourceLang);
+      });
+      document.querySelectorAll('#target-lang-segments .lang-pill-btn').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-lang') === this.targetLang);
+      });
+
+      this.syncSourceFlag();
+      this.syncTargetFlag();
+
+      if (this.inputEl.value.trim()) {
+        this.translateNow();
+      }
+    });
+
+    document.getElementById('btn-run-translate').addEventListener('click', () => {
+      this.translateNow();
+    });
+
+    document.getElementById('btn-tts-target').addEventListener('click', () => {
+      if (this.lastResult && this.lastResult.translatedText) {
+        window.wmTTS.speak(this.lastResult.translatedText, this.targetLang === 'en' ? 'en-US' : 'de-DE');
+      }
+    });
+
+    this.btnToCard.addEventListener('click', () => {
+      if (this.lastResult && window.wmApp) {
+        window.wmApp.openAddCardModalWithPrefill(this.lastResult);
+      }
+    });
+
+    this.syncSourceFlag();
+    this.syncTargetFlag();
+  }
+
+  syncSourceFlag() {
+    const el = document.getElementById('trans-source-flag-badge');
+    const flagClass = `lang-badge-${this.sourceLang}`;
+    const flagId = `#flag-${this.sourceLang}`;
+    el.innerHTML = `
+      <span class="lang-badge ${flagClass}">
+        <svg class="flag-svg"><use href="${flagId}"></use></svg>
+        <span>${this.sourceLang.toUpperCase()}</span>
+      </span>
+    `;
+  }
+
+  syncTargetFlag() {
+    const el = document.getElementById('trans-target-flag-badge');
+    const flagClass = `lang-badge-${this.targetLang}`;
+    const flagId = `#flag-${this.targetLang}`;
+    el.innerHTML = `
+      <span class="lang-badge ${flagClass}">
+        <svg class="flag-svg"><use href="${flagId}"></use></svg>
+        <span>${this.targetLang.toUpperCase()}</span>
+      </span>
+    `;
+  }
+
+  async translateTextHybrid(text, src, tgt, signal) {
+    const cleanText = text.trim().slice(0, 150);
+    const deepLKey = localStorage.getItem('deepl_api_key');
+
+    // 1. DeepL API (Eğer Key girilmişse)
+    if (deepLKey) {
+      try {
+        const isFree = deepLKey.endsWith(':fx');
+        const endpoint = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
+        const params = new URLSearchParams({
+          auth_key: deepLKey,
+          text: cleanText,
+          source_lang: src.toUpperCase(),
+          target_lang: tgt.toUpperCase()
+        });
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          body: params,
+          signal
+        });
+        const data = await res.json();
+        if (data?.translations && data.translations[0]?.text) {
+          return data.translations[0].text;
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+      }
+    }
+
+    // 2. Google Translate Web Client (Yüksek Hız, API Key İstemez)
+    try {
+      const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(cleanText)}`;
+      const res = await fetch(gUrl, { signal });
+      const raw = await res.json();
+      if (raw && Array.isArray(raw[0])) {
+        return raw[0].map((item) => item[0]).join('').trim();
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    // 3. MyMemory Fallback
+    try {
+      const mUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=${src}|${tgt}`;
+      const res = await fetch(mUrl, { signal });
+      const data = await res.json();
+      return data?.responseData?.translatedText || cleanText;
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+      return 'Çeviri yapılamadı (Çevrimdışı)';
+    }
+  }
+
+  async translateNow() {
+    const rawText = this.inputEl.value.trim();
+    if (!rawText) return;
+
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+
+    this.resultWrapper.classList.remove('hidden');
+    this.outputEl.textContent = 'Çevriliyor...';
+
+    const src = this.sourceLang;
+    const tgt = this.targetLang;
+
+    try {
+      const translated = await this.translateTextHybrid(rawText, src, tgt, this.abortController.signal);
+      this.outputEl.textContent = translated;
+
+      // Almanca kelime adayı belirleme
+      const germanCandidate = src === 'de' ? rawText : tgt === 'de' ? translated : '';
+      const trCandidate = src === 'tr' ? rawText : tgt === 'tr' ? translated : '';
+      const enCandidate = src === 'en' ? rawText : tgt === 'en' ? translated : '';
+
+      if (germanCandidate && germanCandidate.split(/\s+/).length <= 3) {
+        const synth = window.DictionaryService.synthesizeInstantEntry(germanCandidate);
+        this.lastResult = {
+          ...synth,
+          targetLanguage: 'de', // Kesinlikle Almanca ('de')
+          translatedText: translated,
+          meaningsTr: trCandidate || synth.meaningsTr,
+          meaningsEn: enCandidate || synth.meaningsEn
+        };
+
+        if (synth.partOfSpeech === 'VERB') {
+          const reflStr = synth.isReflexive ? ' • Reflexiv (sich)' : '';
+          this.grammarHintEl.textContent = `Fiil Analizi: ${synth.regularity}${reflStr} | Präsens: ${synth.praesens} | Perfekt: ${synth.hilfsverb} ${synth.partizipZwei}`;
+          this.grammarHintEl.classList.remove('hidden');
+        } else if (synth.partOfSpeech === 'NOUN') {
+          this.grammarHintEl.textContent = `İsim Analizi: Artikel: ${synth.article} | Çoğul: ${synth.pluralForm}`;
+          this.grammarHintEl.classList.remove('hidden');
+        } else {
+          this.grammarHintEl.classList.add('hidden');
+        }
+      } else {
+        this.lastResult = {
+          germanWord: germanCandidate || rawText,
+          targetLanguage: tgt === 'de' || src === 'de' ? 'de' : 'en',
+          partOfSpeech: 'OTHER',
+          meaningsTr: trCandidate || translated,
+          meaningsEn: enCandidate || '',
+          exampleSentence: '',
+          translatedText: translated
+        };
+        this.grammarHintEl.classList.add('hidden');
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      this.outputEl.textContent = 'Bağlantı hatası oluştu.';
+    }
+  }
+}
+
+window.wmTranslator = new WortMeisterTranslator();

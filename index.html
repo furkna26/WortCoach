@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" id="meta-theme-color" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="WortCoach — Akıllı Almanca Kelime &amp; Sözlük Koçu, Çeviri, Gramer ve SRS Flashcard PWA" />
+  <meta name="apple-mobile-web-app-title" content="WortCoach" />
+  <title>WortCoach — Akıllı Almanca Kelime &amp; Sözlük Koçu</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg" />
+  <link rel="apple-touch-icon" href="icons/icon-192.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css?v=2.8.7" />
+  <link rel="stylesheet" href="css/components.css?v=2.8.7" />
+</head>
+<body>
+  <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <!-- Bayrak: Almanya (DE) -->
+    <symbol id="flag-de" viewBox="0 0 24 16">
+      <rect width="24" height="16" rx="2" fill="#000000" />
+      <rect y="5.33" width="24" height="5.34" fill="#DD0000" />
+      <rect y="10.67" width="24" height="5.33" fill="#FFCE00" />
+      <rect width="24" height="16" rx="2" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.8" />
+    </symbol>
+
+    <!-- Bayrak: Birleşik Krallık (EN) -->
+    <symbol id="flag-en" viewBox="0 0 24 16">
+      <rect width="24" height="16" rx="2" fill="#012169" />
+      <path d="M0,0 L24,16 M24,0 L0,16" stroke="#FFFFFF" stroke-width="3" />
+      <path d="M0,0 L24,16 M24,0 L0,16" stroke="#C8102E" stroke-width="1.5" />
+      <path d="M12,0 V16 M0,8 H24" stroke="#FFFFFF" stroke-width="5" />
+      <path d="M12,0 V16 M0,8 H24" stroke="#C8102E" stroke-width="3" />
+      <rect width="24" height="16" rx="2" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.8" />
+    </symbol>
+
+    <!-- Bayrak: Türkiye (TR) -->
+    <symbol id="flag-tr" viewBox="0 0 24 16">
+      <rect width="24" height="16" rx="2" fill="#E30A17" />
+      <circle cx="9" cy="8" r="4.2" fill="#FFFFFF" />
+      <circle cx="10.3" cy="8" r="3.4" fill="#E30A17" />
+      <polygon points="14,8 16.8,8.9 15.1,6.5 15.1,9.5 16.8,7.1" fill="#FFFFFF" />
+      <rect width="24" height="16" rx="2" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.8" />
+    </symbol>
+
+    <!-- Sistem İkonları -->
+        <!-- Navigasyon İkonları (5 Yeni Ultra-Modern İkon) -->
+    <!-- 1. Sözlük İkonu (Kullanıcının Tercih Ettiği Klasik Kitap İkonu) -->
+    <symbol id="nav-icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+    </symbol>
+
+    <!-- 2. Çeviri İkonu (Kullanıcının Tercih Ettiği Klasik Dünya/Küre İkonu) -->
+    <symbol id="nav-icon-translate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="2" y1="12" x2="22" y2="12"></line>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </symbol>
+
+    <!-- 3. Oyunlar İkonu (Oyun Kolu / Gamepad) -->
+    <symbol id="nav-icon-games" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="6" width="20" height="12" rx="4"></rect>
+      <line x1="6" y1="12" x2="10" y2="12"></line>
+      <line x1="8" y1="10" x2="8" y2="14"></line>
+      <circle cx="15.5" cy="10.5" r="1" fill="currentColor"></circle>
+      <circle cx="17.5" cy="13.5" r="1" fill="currentColor"></circle>
+    </symbol>
+
+    <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+    </symbol>
+
+    <symbol id="nav-icon-decks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7V4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3"/>
+      <rect x="2" y="7" width="20" height="14" rx="3"/>
+      <line x1="12" y1="12" x2="12" y2="16"/>
+      <line x1="10" y1="14" x2="14" y2="14"/>
+    </symbol>
+
+    <symbol id="nav-icon-cards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="16" rx="3"/>
+      <line x1="7" y1="8" x2="17" y2="8"/>
+      <line x1="7" y1="12" x2="14" y2="12"/>
+      <line x1="7" y1="16" x2="11" y2="16"/>
+    </symbol>
+
+    <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </symbol>
+
+    <symbol id="icon-cable" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 7h4a2 2 0 0 1 2 2v6a2 2 0 0 0 2 2h8"></path>
+      <circle cx="4" cy="7" r="2" fill="currentColor"></circle>
+      <circle cx="20" cy="17" r="2" fill="currentColor"></circle>
+      <path d="M14 7h6"></path>
+      <path d="M4 17h6"></path>
+    </symbol>
+<symbol id="icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </symbol>
+
+    <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </symbol>
+
+    <symbol id="icon-translate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m5 8 6 6"></path>
+      <path d="m4 14 6-6 2-3"></path>
+      <path d="M2 5h12"></path>
+      <path d="M7 2h1"></path>
+      <path d="m22 22-5-10-5 10"></path>
+      <path d="M14 18h6"></path>
+    </symbol>
+
+    <symbol id="icon-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+      <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+    </symbol>
+
+    <symbol id="icon-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+    </symbol>
+
+    <symbol id="icon-cards" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="7" width="16" height="14" rx="2"></rect>
+      <path d="M6 3h14a2 2 0 0 1 2 2v12"></path>
+    </symbol>
+
+    <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="16" x2="12" y2="12"></line>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </symbol>
+
+    <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </symbol>
+
+    <symbol id="icon-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+    </symbol>
+
+    <symbol id="icon-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </symbol>
+
+    <symbol id="icon-star-filled" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </symbol>
+
+    <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"></line>
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+    </symbol>
+
+    <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </symbol>
+
+    <symbol id="icon-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"></circle>
+      <circle cx="6" cy="12" r="3"></circle>
+      <circle cx="18" cy="19" r="3"></circle>
+      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+    </symbol>
+
+    <symbol id="icon-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10"></line>
+      <line x1="12" y1="20" x2="12" y2="4"></line>
+      <line x1="6" y1="20" x2="6" y2="14"></line>
+    </symbol>
+
+    <symbol id="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"></path>
+    </symbol>
+
+    <symbol id="icon-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="17 1 21 5 17 9"></polyline>
+      <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+      <polyline points="7 23 3 19 7 15"></polyline>
+      <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+    </symbol>
+
+    <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <polyline points="12 6 12 12 16 14"></polyline>
+    </symbol>
+
+    <symbol id="icon-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+      <path d="M3 3v5h5"></path>
+      <polyline points="12 7 12 12 15 15"></polyline>
+    </symbol>
+
+    <symbol id="icon-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+    </symbol>
+
+    <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </symbol>
+
+    <symbol id="icon-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"></path>
+    </symbol>
+
+    <symbol id="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+      <polyline points="7 10 12 15 17 10"></polyline>
+      <line x1="12" y1="15" x2="12" y2="3"></line>
+    </symbol>
+
+    <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </symbol>
+
+    <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </symbol>
+
+    <symbol id="icon-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+    </symbol>
+
+    <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </symbol>
+
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12"></line>
+      <polyline points="12 5 19 12 12 19"></polyline>
+    </symbol>
+
+    <symbol id="icon-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <line x1="12" y1="17" x2="12.01" y2="17"></line>
+    </symbol>
+
+    <symbol id="icon-bookmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    </symbol>
+
+    <symbol id="icon-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="6" y1="12" x2="10" y2="12"></line>
+      <line x1="8" y1="10" x2="8" y2="14"></line>
+      <line x1="15" y1="13" x2="15.01" y2="13"></line>
+      <line x1="18" y1="11" x2="18.01" y2="11"></line>
+      <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+    </symbol>
+
+    <symbol id="icon-quote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+      <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
+    </symbol>
+
+    <symbol id="icon-hand-touch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+      <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+      <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+    </symbol>
+  </svg>
+
+  <!-- UYGULAMA KABUĞU -->
+  <div class="app-shell">
+    <!-- ÜST BAR (HEADER: Pure Typography, SIFIR AI Logo) -->
+    <header class="app-header">
+      <div class="brand-group" id="brand-home-trigger" style="cursor:pointer;">
+        <div class="brand-logo">
+          Wort<span style="color:var(--brand-blue)">Coach</span>
+        </div>
+        <div class="brand-subtitle">Akıllı Sözlük &amp; Kelime Koçu</div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-install-pwa" class="icon-btn-sm hidden" title="Uygulamayı Yükle" aria-label="Uygulamayı Yükle">
+          <svg class="svg-icon"><use href="#icon-download"></use></svg>
+        </button>
+        <button id="btn-theme-toggle" class="icon-btn-sm" title="Temayı Değiştir" aria-label="Temayı Değiştir">
+          <svg class="svg-icon" id="theme-icon-svg"><use href="#icon-sun"></use></svg>
+        </button>
+        <button id="btn-open-settings" class="icon-btn-sm" title="Ayarlar" aria-label="Ayarlar">
+          <svg class="svg-icon"><use href="#icon-settings"></use></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ANA İÇERİK GÖRÜNÜMÜ (6 SEKME) -->
+    <main class="app-content">
+
+      <!-- ====================================================================
+           TAB 1: ANASAYFA / KEŞFET (tab-home)
+           ==================================================================== -->
+      <section id="tab-home" class="tab-view active">
+        <!-- Arama Çubuğu -->
+        <div class="search-container">
+          <div class="search-input-wrapper">
+            <svg class="svg-icon search-lead-icon"><use href="#icon-search"></use></svg>
+            <input
+              type="text"
+              id="global-search-input"
+              class="search-input"
+              placeholder="Kelime, terim veya çeviri ara..."
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="none"
+              spellcheck="false"
+            />
+            <button id="btn-clear-search" class="icon-btn-inline hidden" aria-label="Aramayı Temizle">
+              <svg class="svg-icon"><use href="#icon-close"></use></svg>
+            </button>
+          </div>
+
+
+
+          <!-- Hızlı Umlaut Toolbar -->
+          <div class="umlaut-bar" data-target-input="global-search-input">
+            <button type="button" class="umlaut-btn" data-char="ä" title="ä">ä</button>
+            <button type="button" class="umlaut-btn" data-char="ö" title="ö">ö</button>
+            <button type="button" class="umlaut-btn" data-char="ü" title="ü">ü</button>
+            <button type="button" class="umlaut-btn" data-char="ß" title="ß">ß</button>
+            <button type="button" class="umlaut-btn" data-char="Ä" title="Ä">Ä</button>
+            <button type="button" class="umlaut-btn" data-char="Ö" title="Ö">Ö</button>
+            <button type="button" class="umlaut-btn" data-char="Ü" title="Ü">Ü</button>
+          </div>
+          <div id="search-status-bar" class="search-status-bar hidden"></div>
+        </div>
+
+        <!-- "Bunu mu demek istediniz?" / Suggestions Alanı -->
+        <div id="search-suggestions-container" class="suggestions-wrapper hidden"></div>
+
+        <!-- Arama Sonuç Kartı Alanı -->
+        <div id="search-results-container" class="search-results-container hidden"></div>
+
+        <!-- Varsayılan Keşfet Akışı (Arama kutusu boşken) -->
+        <div id="home-dashboard" class="home-dashboard">
+          <!-- Kelime Oyunları & Alıştırmalar Kategori Yönlendirme Kartı -->
+          <div class="deck-item-card" id="btn-goto-games-card" style="margin-bottom:18px; cursor:pointer; background:linear-gradient(135deg, rgba(236,72,153,0.12), rgba(59,130,246,0.12)); border:1.5px solid rgba(59,130,246,0.3); border-radius:var(--radius-lg); padding:16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%;">
+              <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #EC4899, #3B82F6); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 4px 12px rgba(236,72,153,0.35);">
+                  <svg class="svg-icon" style="width:22px; height:22px;"><use href="#nav-icon-games"></use></svg>
+                </div>
+                <div>
+                  <div style="font-size:1.02rem; font-weight:900; color:var(--text-primary);">Kelime Oyunları</div>
+                  <div style="font-size:0.80rem; color:var(--text-secondary); margin-top:2px;">Kablo eşleştirme, artikel testleri ve interaktif quizler ➔</div>
+                </div>
+              </div>
+              <span class="featured-badge" style="position:static;">OYNA</span>
+            </div>
+          </div>
+
+          <!-- Günün Kelime Tekrarı Hero Kartı -->
+          <div class="word-detail-card" style="margin-bottom: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div>
+                <span style="font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; color: var(--brand-blue); text-transform: uppercase;">GÜNÜN KELİME TEKRARI</span>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;" id="hero-due-title">Tekrar Bekleyen Kartlar</h2>
+                <p style="font-size: 0.82rem; color: var(--text-secondary);" id="hero-due-subtitle">Bugünkü Leitner hedefini tamamla ve serini koru.</p>
+              </div>
+              <div class="lang-badge lang-badge-de" style="padding: 5px 10px;">
+                <svg class="svg-icon" style="color:var(--brand-blue); width:16px; height:16px;"><use href="#icon-bolt"></use></svg>
+                <span id="home-streak-count" style="font-weight: 800; color: var(--text-primary);">0 Gün Seri</span>
+              </div>
+            </div>
+
+            <div style="margin: 12px 0;">
+              <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 6px;">
+                <span id="hero-progress-text" style="color: var(--text-secondary);">0 / 20 günlük hedef</span>
+                <span id="hero-due-badge" class="badge-regularity">0 Hazır</span>
+              </div>
+              <div class="study-progress-track">
+                <div id="hero-progress-fill" class="study-progress-fill" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <button id="btn-hero-start-study" class="btn-primary" style="width: 100%; border-radius: 12px; margin-top: 6px;">
+              <svg class="svg-icon"><use href="#icon-school"></use></svg>
+              <span>Tekrara Başla</span>
+            </button>
+          </div>
+
+          <!-- 0ms Morfoloji Örnek Hapları (Pills) -->
+          <div style="margin-bottom: 20px;">
+            <div class="section-header-row">
+              <h3 class="section-title">Anlık Morfoloji Örnekleri (0ms)</h3>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <button class="pill-action-btn word-chip" data-word="erfassen">erfassen</button>
+              <button class="pill-action-btn word-chip" data-word="untergehen">untergehen</button>
+              <button class="pill-action-btn word-chip" data-word="aufstehen">aufstehen</button>
+              <button class="pill-action-btn word-chip" data-word="sich erinnern">sich erinnern</button>
+              <button class="pill-action-btn word-chip" data-word="mitbringen">mitbringen</button>
+              <button class="pill-action-btn word-chip" data-word="Haus">Haus</button>
+              <button class="pill-action-btn word-chip" data-word="Wohnung">Wohnung</button>
+              <button class="pill-action-btn word-chip" data-word="großartig">großartig</button>
+            </div>
+          </div>
+
+          <!-- Son Desteler -->
+          <div class="recent-decks-section">
+            <div class="section-header-row">
+              <h3 class="section-title">Destelerim</h3>
+              <button class="icon-btn-ghost" id="btn-see-all-decks" style="color: var(--brand-blue); font-size: 0.82rem; font-weight: 700;">Tümünü Gör</button>
+            </div>
+            <div id="home-recent-decks"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 2: ÇEVİRİ (tab-translate) — Screenshot 1 Parity
+           ==================================================================== -->
+      <section id="tab-translate" class="tab-view">
+        <div class="translator-header-row">
+          <div>
+            <h1 class="page-title">Çeviri</h1>
+            <p class="page-subtitle">DeepL Destekli Metin Çevirisi &amp; Gramer Analizi</p>
+          </div>
+          <span class="status-pill-green">DeepL API</span>
+        </div>
+
+        <!-- Dil Seçim Segment Barı: [TR] [DE] [EN] <-> [TR] [DE] -->
+        <div class="lang-toggle-bar">
+          <div class="lang-segment-group" id="source-lang-segments">
+            <button class="lang-pill-btn active" data-lang="tr">TR</button>
+            <button class="lang-pill-btn" data-lang="de">DE</button>
+            <button class="lang-pill-btn" data-lang="en">EN</button>
+          </div>
+
+          <button id="btn-swap-langs" class="lang-swap-btn" title="Dilleri Değiştir">
+            <svg class="svg-icon"><use href="#icon-swap"></use></svg>
+          </button>
+
+          <div class="lang-segment-group" id="target-lang-segments">
+            <button class="lang-pill-btn" data-lang="tr">TR</button>
+            <button class="lang-pill-btn active" data-lang="de">DE</button>
+          </div>
+        </div>
+
+        <!-- Giriş Kartı -->
+        <div class="trans-input-card">
+          <div class="trans-card-top">
+            <div id="trans-source-flag-badge">
+              <span class="lang-badge lang-badge-tr">
+                <svg class="flag-svg"><use href="#flag-tr"></use></svg>
+                <span>TR</span>
+              </span>
+            </div>
+            <span id="trans-char-counter" class="char-counter-text">0 / 150</span>
+          </div>
+
+          <textarea
+            id="trans-input-text"
+            class="trans-textarea"
+            maxlength="150"
+            rows="3"
+            placeholder="Çevrilecek metin veya kelimeyi yazın (maks. 150 karakter)..."
+          ></textarea>
+
+          <!-- Hızlı Umlaut Toolbar -->
+          <div class="umlaut-bar" data-target-input="trans-input-text" style="margin-bottom: 10px;">
+            <button type="button" class="umlaut-btn" data-char="ä" title="ä">ä</button>
+            <button type="button" class="umlaut-btn" data-char="ö" title="ö">ö</button>
+            <button type="button" class="umlaut-btn" data-char="ü" title="ü">ü</button>
+            <button type="button" class="umlaut-btn" data-char="ß" title="ß">ß</button>
+            <button type="button" class="umlaut-btn" data-char="Ä" title="Ä">Ä</button>
+            <button type="button" class="umlaut-btn" data-char="Ö" title="Ö">Ö</button>
+            <button type="button" class="umlaut-btn" data-char="Ü" title="Ü">Ü</button>
+          </div>
+
+          <button id="btn-run-translate" class="trans-submit-btn">
+            <svg class="svg-icon"><use href="#icon-translate"></use></svg>
+            <span>Çevir</span>
+          </button>
+        </div>
+
+        <!-- Çeviri Sonucu Kartı -->
+        <div id="trans-result-wrapper" class="trans-result-card hidden">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div id="trans-target-flag-badge">
+              <span class="lang-badge lang-badge-de">
+                <svg class="flag-svg"><use href="#flag-de"></use></svg>
+                <span>DE</span>
+              </span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button id="btn-tts-target" class="icon-btn-sm" title="Sesli Dinle">
+                <svg class="svg-icon"><use href="#icon-volume"></use></svg>
+              </button>
+              <button id="btn-trans-to-card" class="btn-primary-compact">
+                <svg class="svg-icon"><use href="#icon-plus"></use></svg>
+                <span>Desteye Ekle</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="trans-output-text" class="trans-result-text"></div>
+          <div id="trans-grammar-hint" class="trans-grammar-pill hidden"></div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 3: TEKRAR / SRS FLASHCARD (tab-study) — Screenshots 4 & 5 Parity
+           ==================================================================== -->
+      <!-- ====================================================================
+           TAB 2: KARTLAR / FLASHCARD (tab-study) - ARALIKLI TEKRAR (SRS)
+           ==================================================================== -->
+      <section id="tab-study" class="tab-view">
+        <div class="games-hub-header" style="margin-bottom:18px;">
+          <div class="section-header-row">
+            <div>
+              <h2 class="section-title" style="font-size:1.45rem; font-weight:900; margin:0;">Kartlar (Flashcard)</h2>
+              <p style="font-size:0.84rem; color:var(--text-muted); margin-top:3px;">Aralıklı Tekrar (SRS Leitner) ile kalıcı öğrenin</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="subview-study-content" class="games-subview-panel">
+
+        <!-- Üst Kontrol Barı: Çalışma Destesi Dropdown + İstatistik + Sıfırla -->
+        <div class="study-top-bar">
+          <div class="deck-selector-box">
+            <label class="deck-selector-label" for="study-deck-select">Çalışma Destesi</label>
+            <select id="study-deck-select" class="deck-selector-select">
+              <option value="all">Tüm Kartlar</option>
+            </select>
+            <svg class="svg-icon deck-selector-chevron"><use href="#icon-chevron-down"></use></svg>
+          </div>
+
+          <button id="btn-study-stats-shortcut" class="icon-btn-square" title="İstatistikleri Gör">
+            <svg class="svg-icon"><use href="#icon-chart"></use></svg>
+          </button>
+          <button id="btn-study-reset-session" class="icon-btn-square" title="Tekrarı Sıfırla / Başa Al">
+            <svg class="svg-icon"><use href="#icon-refresh"></use></svg>
+          </button>
+        </div>
+
+        <!-- Günlük Seri & Seviye Rozeti -->
+        <div class="study-streak-bar">
+          <div class="study-streak-left">
+            <span id="study-streak-label">1 Gün Seri • Bugün: 0 Kart</span>
+            <svg class="svg-icon" style="color:var(--brand-blue);"><use href="#icon-chart"></use></svg>
+          </div>
+          <div class="study-streak-right">
+            <span>Çırak (Anfänger)</span>
+            <svg class="svg-icon" style="display:inline; width:13px; height:13px; vertical-align:middle;"><use href="#icon-arrow-right"></use></svg>
+          </div>
+        </div>
+
+        <!-- İlerleme Çubuğu: Kart X / Y • %Z -->
+        <div class="study-progress-row">
+          <span id="study-progress-card-count" class="sp-card-count">Kart 1 / 1</span>
+          <span id="study-progress-pct" class="sp-pct">%0</span>
+        </div>
+        <div class="study-progress-track">
+          <div id="study-progress-fill-bar" class="study-progress-fill"></div>
+        </div>
+
+        <!-- 3D Flashcard Sahnesi -->
+        <div id="study-arena">
+          <div id="flashcard-3d-wrapper" class="study-card-container">
+            <div id="flashcard-inner" class="study-card-inner">
+
+              <!-- KART ÖN YÜZÜ (FRONT — Screenshot 5 Parity) -->
+              <div class="study-card-face study-card-front">
+                <div class="scf-top-row">
+                  <div id="fc-front-pos-badge">
+                    <span class="badge badge-pos-VERB">Fiil</span>
+                  </div>
+                  <button id="btn-fc-priority" class="icon-btn-ghost" title="Önemli Yıldızı">
+                    <svg class="svg-icon"><use href="#icon-star"></use></svg>
+                  </button>
+                </div>
+
+                <div class="scf-word-center">
+                  <span class="lang-badge lang-badge-de">
+                    <svg class="flag-svg"><use href="#flag-de"></use></svg>
+                    <span>DE</span>
+                  </span>
+                  <div id="fc-front-word" class="scf-main-word">---</div>
+                  <button id="btn-fc-tts" class="icon-btn-ghost" title="Dinle">
+                    <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
+                  </button>
+                </div>
+
+                <!-- İsim Detayı (Screenshot 5: [ DIE ] badge) -->
+                <div id="fc-front-noun-container" class="fc-noun-center-box hidden" style="margin-top: 14px; display: flex; justify-content: center; gap: 8px;">
+                  <span id="fc-front-noun-article" class="badge badge-die" style="font-size: 0.92rem; padding: 6px 14px; font-weight: 800;">DIE</span>
+                  <span id="fc-front-noun-plural" class="badge-regularity hidden" style="font-size: 0.85rem; padding: 6px 12px;">-</span>
+                </div>
+
+                <!-- Fiil Zamanları ve Çekimleri (Screenshot 6: 4'lü Grid) -->
+                <div id="fc-front-grammar-container">
+                  <div class="scf-section-title">FİİL ZAMANLARI &amp; ÇEKİMLERİ</div>
+                  <div class="tense-2x2-grid" id="fc-front-tense-grid">
+                    <div class="tense-tile">
+                      <div class="tense-tile-header">
+                        <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-clock"></use></svg>
+                        <span>Präsens (3. Sg)</span>
+                      </div>
+                      <div class="tense-tile-val" id="fc-front-prs">-</div>
+                    </div>
+                    <div class="tense-tile">
+                      <div class="tense-tile-header">
+                        <svg class="svg-icon" style="color:#A78BFA"><use href="#icon-history"></use></svg>
+                        <span>Präteritum</span>
+                      </div>
+                      <div class="tense-tile-val" id="fc-front-prt">-</div>
+                    </div>
+                    <div class="tense-tile full-width">
+                      <div class="tense-tile-header">
+                        <svg class="svg-icon" style="color:var(--palette-green)"><use href="#icon-check"></use></svg>
+                        <span>Perfekt (Geçmiş Zaman)</span>
+                      </div>
+                      <div class="tense-tile-val">
+                        <span id="fc-front-p2">-</span>
+                        <span class="tile-link-pill" id="fc-front-hilfsverb-pill">
+                          <svg class="svg-icon" style="width:12px;height:12px;"><use href="#icon-link"></use></svg>
+                          <span id="fc-front-hilfsverb-text">haben (hat)</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="tense-tile full-width">
+                      <div class="tense-tile-header">
+                        <svg class="svg-icon" style="color:var(--palette-yellow)"><use href="#icon-bolt"></use></svg>
+                        <span>Imperativ (Emir Kipi)</span>
+                      </div>
+                      <div class="tense-tile-val" id="fc-front-imp">-</div>
+                    </div>
+                  </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 3: KELİME OYUNLARI (tab-games) - KABLO EŞLEŞTİRME & QUİZLER
+           ==================================================================== -->
+      <section id="tab-games" class="tab-view">
+        <div class="games-hub-header" style="margin-bottom:18px;">
+          <div class="section-header-row">
+            <div>
+              <h2 class="section-title" style="font-size:1.45rem; font-weight:900; margin:0;">Kelime Oyunları</h2>
+              <p style="font-size:0.84rem; color:var(--text-muted); margin-top:3px;">Kablo eşleştirme ve pratik quiz oyunları</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="subview-games-content" class="games-subview-panel">
+          <!-- Featured Game: Kablo ile Anlam Eşleştirme -->
+          <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer;">
+            <div class="featured-badge">⚡ YENİ &amp; İNTERAKTİF</div>
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: linear-gradient(135deg, rgba(236,72,153,0.2), rgba(59,130,246,0.2)); color: #38BDF8;">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-cable"></use></svg>
+              </div>
+              <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+            </div>
+            <div class="game-card-title" style="font-size: 1.15rem; font-weight: 900;">Kablo ile Anlam Eşleştirme</div>
+            <div class="game-card-desc">Almanca kelimeleri renkli elektrik kablolarıyla Türkçe anlamlarına bağlayın! İstediğiniz destelerden kelime seçebilirsiniz.</div>
+          </div>
+
+          <!-- 6 Temel Quiz Oyunu (2x3 Izgara) -->
+          <div class="games-2x3-grid">
+            <!-- 1. Artikel Testi -->
+            <div class="game-card" data-game-type="ARTICLE">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;">
+                  <svg class="svg-icon"><use href="#icon-target"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">Artikel Testi</div>
+              <div class="game-card-desc">der, die, das artikel pratiği</div>
+            </div>
+
+            <!-- 2. Fiil Çekim Quiz -->
+            <div class="game-card" data-game-type="VERB">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">
+                  <svg class="svg-icon"><use href="#icon-bolt"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">Fiil Çekim Quiz</div>
+              <div class="game-card-desc">Präsens, Präteritum, Partizip II</div>
+            </div>
+
+            <!-- 3. İsim Çoğul Testi -->
+            <div class="game-card" data-game-type="NOUN">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                  <svg class="svg-icon"><use href="#icon-cards"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">İsim Çoğul Testi</div>
+              <div class="game-card-desc">Tekil ve çoğul eşleştirme</div>
+            </div>
+
+            <!-- 4. Sıfat ve Anlam Testi -->
+            <div class="game-card" data-game-type="ADJECTIVE">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">
+                  <svg class="svg-icon"><use href="#icon-sparkle"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">Sıfat Testi</div>
+              <div class="game-card-desc">Zıt anlamlar ve sıfatlar</div>
+            </div>
+
+            <!-- 5. Kalıp & İfade Testi -->
+            <div class="game-card" data-game-type="PHRASE">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;">
+                  <svg class="svg-icon"><use href="#icon-chat"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">Kalıp &amp; İfade Testi</div>
+              <div class="game-card-desc">Günlük konuşma kalıpları</div>
+            </div>
+
+            <!-- 6. Karışık Quiz -->
+            <div class="game-card" data-game-type="MIXED">
+              <div class="game-card-top">
+                <div class="game-icon-box" style="background: rgba(14, 165, 233, 0.15); color: #0EA5E9;">
+                  <svg class="svg-icon"><use href="#icon-shuffle"></use></svg>
+                </div>
+                <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
+              </div>
+              <div class="game-card-title">Karışık Quiz</div>
+              <div class="game-card-desc">Tüm konulardan karma test</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 4: DESTELER (tab-decks) — Screenshot 3 Parity
+           ==================================================================== -->
+      <section id="tab-decks" class="tab-view">
+        <h1 class="page-title-blue">Kelime Desteleri</h1>
+        <p class="page-subtitle">Kelimelerinizi tematik desteler halinde organize edin</p>
+
+        <!-- Eylem Butonları: [✨ Hazır Desteler] [📥 İçe Aktar] -->
+        <div class="pill-action-row">
+          <button class="pill-action-btn" id="btn-curated-packs">
+            <svg class="svg-icon"><use href="#icon-sparkle"></use></svg>
+            <span>Hazır Desteler</span>
+          </button>
+          <button class="pill-action-btn" id="btn-import-deck">
+            <svg class="svg-icon"><use href="#icon-download"></use></svg>
+            <span>İçe Aktar</span>
+          </button>
+        </div>
+
+        <!-- Deste Listesi -->
+        <div id="user-decks-list"></div>
+
+        <!-- Floating Action Button (+) -->
+        <button id="btn-fab-new-deck" class="fab-btn" title="Yeni Deste Oluştur">
+          <svg class="svg-icon"><use href="#icon-plus"></use></svg>
+        </button>
+      </section>
+
+      <!-- ====================================================================
+           TAB 5: KARTLAR (tab-cards)
+           ==================================================================== -->
+      <section id="tab-cards" class="tab-view">
+        <div class="section-header-row" style="align-items:center;">
+          <div>
+            <h1 class="page-title">Kartlarım</h1>
+            <p class="page-subtitle" id="cards-total-subtitle">0 Kelime Kartı Kayıtlı</p>
+          </div>
+          <button type="button" id="btn-open-add-card" class="btn-primary-compact" style="border-radius:var(--radius-pill); padding:8px 16px; font-weight:800; display:flex; align-items:center; gap:6px;">
+            <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-plus"></use></svg>
+            <span>Yeni Kart Ekle</span>
+          </button>
+        </div>
+
+        <div class="search-input-wrapper" style="margin-bottom: 14px;">
+          <svg class="svg-icon search-lead-icon"><use href="#icon-search"></use></svg>
+          <input type="text" id="cards-filter-input" class="search-input" placeholder="Kayıtlı kartlarda ara..." />
+        </div>
+
+        <div id="all-cards-list"></div>
+      </section>
+
+    </main>
+
+    <!-- ====================================================================
+         ALT NAVİGASYON ÇUBUĞU (6 SEKME — Android Screenshot Parity)
+         ==================================================================== -->
+    <nav class="bottom-nav" aria-label="Ana Navigasyon">
+      <!-- 1. Sözlük (Kitap İkonu) -->
+      <button class="nav-item active" data-target="tab-home" aria-label="Sözlük">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-home"></use></svg>
+        </div>
+        <span class="nav-label">Sözlük</span>
+      </button>
+
+      <!-- 2. Çeviri (Küre İkonu) -->
+      <button class="nav-item" data-target="tab-translate" aria-label="Çeviri">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-translate"></use></svg>
+        </div>
+        <span class="nav-label">Çeviri</span>
+      </button>
+
+      <!-- 3. Oyunlar (Gamepad İkonu) -->
+      <button class="nav-item" data-target="tab-games" aria-label="Oyunlar">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-games"></use></svg>
+        </div>
+        <span class="nav-label">Oyunlar</span>
+      </button>
+
+      <!-- 4. Desteler (Deste İkonu) -->
+      <button class="nav-item" data-target="tab-decks" aria-label="Desteler">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-decks"></use></svg>
+        </div>
+        <span class="nav-label">Desteler</span>
+      </button>
+
+      <!-- 5. Kelimeler (Kart Listesi İkonu) -->
+      <button class="nav-item" data-target="tab-cards" aria-label="Kelimeler">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-cards"></use></svg>
+        </div>
+        <span class="nav-label">Kelimeler</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- MODAL 1: AKILLI KART EKLEME PENCERESİ (modal-add-card) -->
+  <div id="modal-add-card" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <h3 id="modal-add-card-title">Akıllı Kelime Kartı Ekle</h3>
+        <button id="btn-close-add-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <form id="form-add-card">
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="card-deck-select">Hedef Deste</label>
+            <select id="card-deck-select" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label for="card-target-lang">Dil</label>
+            <select id="card-target-lang" class="form-control">
+              <option value="de" selected>Almanca (DE)</option>
+              <option value="en">İngilizce (EN)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="card-word-input">Kelime (Tekil / Mastar)</label>
+            <input type="text" id="card-word-input" class="form-control" placeholder="örn: erfassen, Haus" required autocomplete="off" />
+            <div class="umlaut-bar" data-target-input="card-word-input" style="margin-top: 6px;">
+              <button type="button" class="umlaut-btn" data-char="ä" title="ä">ä</button>
+              <button type="button" class="umlaut-btn" data-char="ö" title="ö">ö</button>
+              <button type="button" class="umlaut-btn" data-char="ü" title="ü">ü</button>
+              <button type="button" class="umlaut-btn" data-char="ß" title="ß">ß</button>
+              <button type="button" class="umlaut-btn" data-char="Ä" title="Ä">Ä</button>
+              <button type="button" class="umlaut-btn" data-char="Ö" title="Ö">Ö</button>
+              <button type="button" class="umlaut-btn" data-char="Ü" title="Ü">Ü</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="card-pos-select">Sözcük Türü</label>
+            <select id="card-pos-select" class="form-control">
+              <option value="VERB">Fiil (Verb)</option>
+              <option value="NOUN">İsim (Nomen)</option>
+              <option value="ADJECTIVE">Sıfat (Adjektiv)</option>
+              <option value="OTHER">Diğer / İfade</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- İsim Alanları -->
+        <div id="noun-fields-group" class="hidden">
+          <div class="form-row-2col">
+            <div class="form-group">
+              <label for="card-article-select">Artikel</label>
+              <select id="card-article-select" class="form-control">
+                <option value="">Yok</option>
+                <option value="der">der (Maskulin)</option>
+                <option value="die">die (Feminin)</option>
+                <option value="das">das (Neutrum)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="card-plural-input">Çoğul Hali (Plural)</label>
+              <input type="text" id="card-plural-input" class="form-control" placeholder="die Häuser" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Fiil Alanları -->
+        <div id="verb-fields-group">
+          <div class="form-row-3col">
+            <div class="form-group">
+              <label for="card-praesens-input">Präsens (er/sie/es)</label>
+              <input type="text" id="card-praesens-input" class="form-control" placeholder="erfasst" />
+            </div>
+            <div class="form-group">
+              <label for="card-praeteritum-input">Präteritum</label>
+              <input type="text" id="card-praeteritum-input" class="form-control" placeholder="erfasste" />
+            </div>
+            <div class="form-group">
+              <label for="card-partizip-input">Partizip II</label>
+              <input type="text" id="card-partizip-input" class="form-control" placeholder="erfasst" />
+            </div>
+          </div>
+
+          <div class="form-row-3col">
+            <div class="form-group">
+              <label for="card-hilfsverb-select">Hilfsverb</label>
+              <select id="card-hilfsverb-select" class="form-control">
+                <option value="hat">hat</option>
+                <option value="ist">ist</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="card-prefix-input">Ayrılabilir Ön Ek</label>
+              <input type="text" id="card-prefix-input" class="form-control" placeholder="" />
+            </div>
+            <div class="form-group" style="display:flex; flex-direction:column; justify-content:center;">
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; margin-top:14px;">
+                <input type="checkbox" id="card-separable-check" />
+                <span style="font-size:0.8rem; font-weight:700;">Trennbar</span>
+              </label>
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; margin-top:6px;">
+                <input type="checkbox" id="card-reflexive-check" />
+                <span style="font-size:0.8rem; font-weight:700; color:var(--palette-teal);">Reflexiv (sich)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="card-meaning-tr">Türkçe Anlamı</label>
+            <input type="text" id="card-meaning-tr" class="form-control" placeholder="kavramak, ele geçirmek" required />
+          </div>
+          <div class="form-group">
+            <label for="card-meaning-en">İngilizce Anlamı (EN)</label>
+            <input type="text" id="card-meaning-en" class="form-control" placeholder="to grasp, to comprehend" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="card-example-input">Örnek Cümle</label>
+          <input type="text" id="card-example-input" class="form-control" placeholder="Er konnte die Situation schnell erfassen." />
+          <div id="modal-sentence-pills" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-add-card" class="btn-secondary">İptal</button>
+          <button type="submit" id="btn-submit-add-card" class="btn-primary">Kartı Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: YENİ DESTE MODALI -->
+  <div id="modal-new-deck" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:440px;">
+      <div class="modal-header">
+        <h3>Yeni Deste Oluştur</h3>
+        <button id="btn-close-deck-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <form id="form-new-deck">
+        <div class="form-group">
+          <label for="deck-name-input">Deste Adı</label>
+          <input type="text" id="deck-name-input" class="form-control" placeholder="örn: B2 İş Almancası" required />
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-deck-modal" class="btn-secondary">Vazgeç</button>
+          <button type="submit" class="btn-primary">Oluştur</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: HAZIR KÜRATÖRLÜ DESTELER MODALI -->
+  <div id="modal-curated-packs" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:540px;">
+      <div class="modal-header">
+        <div>
+          <h3>Hazır Kelime Paketleri</h3>
+          <p style="font-size:0.78rem; color:var(--text-secondary); margin-top:2px;">Seviyenize uygun desteyi tek tıkla yükleyin</p>
+        </div>
+        <button id="btn-close-curated-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div id="curated-packs-container" class="curated-pack-list"></div>
+
+      <div class="modal-footer" style="justify-content:space-between;">
+        <button type="button" id="btn-import-all-curated" class="btn-secondary-compact">
+          <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-download"></use></svg>
+          <span>Tüm Paketleri İçe Aktar</span>
+        </button>
+        <button type="button" id="btn-done-curated-modal" class="btn-primary-compact">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: KELİME OYUNLARI & TESTLER MODALI (modal-game-quiz) -->
+  <div id="modal-game-quiz" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet game-modal-sheet">
+      <div class="game-modal-header">
+        <div class="game-header-left">
+          <h3 id="game-quiz-title" class="game-modal-title">Artikel Testi</h3>
+          <div id="game-quiz-streak-pill" class="game-streak-pill">
+            <svg class="svg-icon" style="color:var(--palette-yellow); width:13px; height:13px;"><use href="#icon-bolt"></use></svg>
+            <span id="game-quiz-streak-count">0 Seri</span>
+          </div>
+        </div>
+        <button id="btn-close-game-quiz" class="icon-btn-ghost" aria-label="Oyundan Çık">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- İlerleme Çubuğu -->
+      <div class="game-progress-row">
+        <span id="game-progress-text">Soru 1 / 15</span>
+        <span id="game-score-text">Doğru: 0 • Yanlış: 0</span>
+      </div>
+      <div class="study-progress-track" style="margin-bottom: 16px;">
+        <div id="game-progress-fill" class="study-progress-fill" style="width: 0%;"></div>
+      </div>
+
+      <!-- Soru Arenası -->
+      <div id="game-question-area" class="game-question-area">
+        <!-- Soru Kartı -->
+        <div class="game-question-card">
+          <div class="gqc-prompt" id="game-q-prompt">Doğru artikli seçin</div>
+          <div class="gqc-subject-row">
+            <span class="gqc-subject" id="game-q-subject">Haus</span>
+            <button id="btn-game-tts" class="icon-btn-ghost" title="Dinle">
+              <svg class="svg-icon" style="color:var(--brand-blue); width:20px; height:20px;"><use href="#icon-volume"></use></svg>
+            </button>
+          </div>
+          <div class="gqc-subprompt" id="game-q-subprompt">ev, konut</div>
+        </div>
+
+        <!-- Seçenekler Listesi (3 veya 4 buton) -->
+        <div id="game-options-container" class="game-options-grid"></div>
+
+        <!-- Açıklama ve Geri Bildirim Kutusu -->
+        <div id="game-feedback-box" class="game-feedback-box hidden">
+          <div id="game-feedback-message" class="game-feedback-msg"></div>
+          <div id="game-feedback-explanation" class="game-feedback-expl"></div>
+        </div>
+
+        <!-- Sonraki Soru Butonu -->
+        <button id="btn-game-next" class="btn-primary hidden" style="width: 100%; border-radius: 14px; margin-top: 14px;">
+          <span>Sonraki Soru</span>
+          <svg class="svg-icon"><use href="#icon-arrow-right"></use></svg>
+        </button>
+      </div>
+
+      <!-- Oyun Tamamlandı Özeti -->
+      <div id="game-result-area" class="game-result-area hidden">
+        <div class="game-result-card">
+          <div class="game-result-icon">
+            <svg class="svg-icon-lg" style="color: var(--brand-blue);"><use href="#icon-sparkle"></use></svg>
+          </div>
+          <h3 class="game-result-title">Test Tamamlandı!</h3>
+          <p class="game-result-subtitle" id="game-result-subtitle">Harika pratik yaptınız.</p>
+          <div class="game-result-stats-grid">
+            <div class="tense-tile">
+              <span style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">DOĞRU</span>
+              <div id="gr-correct" style="font-size:1.3rem; font-weight:800; color:var(--palette-green);">0</div>
+            </div>
+            <div class="tense-tile">
+              <span style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">YANLIŞ</span>
+              <div id="gr-wrong" style="font-size:1.3rem; font-weight:800; color:var(--palette-red);">0</div>
+            </div>
+            <div class="tense-tile full-width">
+              <span style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">BAŞARI ORANI</span>
+              <div id="gr-accuracy" style="font-size:1.3rem; font-weight:800; color:var(--brand-blue);">%0</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:16px;">
+            <button id="btn-game-play-again" class="btn-secondary" style="flex:1;">Tekrar Oyna</button>
+            <button id="btn-game-finish" class="btn-primary" style="flex:1;">Tamamla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: OYUN İÇİN DESTE SEÇİMİ (modal-game-deck-select) -->
+  <div id="modal-game-deck-select" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width: 480px; border-radius: var(--radius-xl);">
+      <div class="modal-header">
+        <div>
+          <h3 id="gds-title" style="font-size:1.18rem; font-weight:900; color:var(--text-primary); margin:0;">Oyun İçin Deste Seçin</h3>
+          <p id="gds-subtitle" style="font-size:0.82rem; color:var(--text-secondary); margin-top:3px;">Seçtiğiniz destelerdeki kelimelerle soru üretilecek</p>
+        </div>
+        <button id="btn-close-game-deck-select" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div style="padding: 12px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <span style="font-size:0.8rem; font-weight:800; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em;">Kullanılabilir Desteler</span>
+          <button type="button" id="btn-gds-toggle-all" class="icon-btn-ghost" style="color:var(--brand-blue); font-size:0.8rem; font-weight:800; padding:4px 8px;">Tümünü Seç / Kaldır</button>
+        </div>
+
+        <div id="gds-deck-list" style="display:flex; flex-direction:column; gap:8px; max-height:260px; overflow-y:auto; padding-right:4px;">
+          <!-- JS ile doldurulacak -->
+        </div>
+      </div>
+
+      <div class="modal-footer" style="margin-top:14px;">
+        <button type="button" id="btn-gds-start-game" class="btn-primary" style="width:100%; border-radius:var(--radius-lg); padding:14px; font-size:1rem;">
+          <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-bolt"></use></svg>
+          <span id="btn-gds-start-text">Oyunu Başlat</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: KABLO İLE ANLAM EŞLEŞTİRME OYUNU (modal-cable-game) -->
+  <div id="modal-cable-game" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet cable-modal-sheet">
+      <div class="game-modal-header" style="margin-bottom: 8px;">
+        <div class="game-header-left">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg,#EC4899,#3B82F6); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow: 0 4px 12px rgba(236,72,153,0.35);">
+              <svg class="svg-icon" style="width:20px;height:20px;"><use href="#icon-cable"></use></svg>
+            </div>
+            <div>
+              <h3 style="font-size:1.15rem; font-weight:900; margin:0;">Kablo Eşleştirme</h3>
+              <span id="cable-round-info" style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">Kablolarla kelime ve anlamları bağlayın</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="game-streak-pill" id="cable-score-pill">
+            <svg class="svg-icon" style="color:var(--palette-yellow); width:13px; height:13px;"><use href="#icon-sparkle"></use></svg>
+            <span id="cable-matched-count">0 / 5</span>
+          </div>
+          <button id="btn-close-cable-game" class="icon-btn-ghost" aria-label="Oyundan Çık">
+            <svg class="svg-icon"><use href="#icon-close"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Kablo Arenası (Sol sütun, SVG çizgileri, Sağ sütun) -->
+      <div class="cable-arena-wrapper" id="cable-arena-wrapper">
+        <svg class="cable-svg-layer" id="cable-svg-layer"></svg>
+        <div class="cable-columns-container">
+          <div class="cable-column cable-column-left" id="cable-left-col"></div>
+          <div class="cable-column cable-column-right" id="cable-right-col"></div>
+        </div>
+      </div>
+
+      <!-- Geri Bildirim & Tur Durumu -->
+      <div id="cable-feedback-banner" class="cable-feedback-banner hidden"></div>
+
+      <!-- Alt Kontroller -->
+      <div class="modal-footer" style="justify-content:space-between; margin-top:14px; gap:8px;">
+        <button type="button" id="btn-cable-restart" class="btn-secondary-compact" style="border-radius:var(--radius-md);">
+          <svg class="svg-icon" style="width:14px; height:14px;"><use href="#icon-refresh"></use></svg>
+          <span>Yeniden Karıştır</span>
+        </button>
+        <button type="button" id="btn-cable-next-round" class="btn-primary-compact hidden" style="border-radius:var(--radius-md); padding:10px 18px;">
+          <span>Sonraki Tur ➔</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AYARLAR & LİSANSLAR (modal-settings) -->
+  <div id="modal-settings" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width: 500px; border-radius: var(--radius-xl);">
+      <div class="modal-header">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="brand-logo" style="font-size:1.4rem;">Wort<span style="color:var(--brand-blue)">Coach</span></div>
+          <span class="status-pill-green" style="font-size:0.72rem;">v2.7.0</span>
+        </div>
+        <button id="btn-close-settings-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px; padding:12px 0;">
+        <!-- DeepL API Key -->
+        <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label for="input-deepl-key" style="font-size:0.86rem; font-weight:800; color:var(--text-primary);">Kişisel DeepL API Anahtarı</label>
+            <span id="deepl-key-status" style="font-size:0.72rem; color:var(--text-muted); font-weight:700;">Aktif Değil</span>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input type="password" id="input-deepl-key" class="form-control" placeholder="DeepL Auth Key (örn: ...:fx)" style="flex:1; font-size:0.84rem;" />
+            <button type="button" id="btn-save-deepl-key" class="btn-primary-compact">Kaydet</button>
+          </div>
+          <span style="font-size:0.72rem; color:var(--text-muted); display:block; margin-top:6px;">
+            Anahtar girildiğinde çeviriler doğrudan DeepL API hesabınızdan öncelikli yapılır.
+          </span>
+        </div>
+
+        <!-- Örnek Verileri Yeniden Yükle -->
+        <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
+          <div style="font-size:0.86rem; font-weight:800; color:var(--text-primary); margin-bottom:4px;">Veritabanı &amp; Önbellek</div>
+          <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:10px;">Varsayılan CEFR A1-B2 kelime destelerini ve örnek kartları ilk haline döndürün.</p>
+          <button type="button" id="btn-seed-refresh" class="btn-secondary" style="width:100%; border-radius:var(--radius-md);">
+            <svg class="svg-icon"><use href="#icon-refresh"></use></svg>
+            <span>Örnek Verileri Yeniden Yükle</span>
+          </button>
+        </div>
+
+        <!-- Doğrulanmış Kaynak Lisansları -->
+        <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.45; border-top:1px solid var(--border-subtle); padding-top:12px;">
+          Morfoloji ve artikeller <strong style="color:var(--text-primary)">Wiktionary (CC BY-SA 4.0)</strong>, örnek cümleler <strong style="color:var(--text-primary)">Tatoeba (CC BY 2.0 FR)</strong>, çeviriler <strong style="color:var(--text-primary)">DeepL &amp; Google Neural MT</strong> standartlarıyla sağlanır.
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- TOAST BİLDİRİM ALANI -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- SCRIPTLER -->
+  <script src="js/db.js?v=2.8.7"></script>
+  <script src="js/verbHelper.js?v=2.8.7"></script>
+  <script src="js/dictionary.js?v=2.8.7"></script>
+  <script src="js/seeder.js?v=2.8.7"></script>
+  <script src="js/tts.js?v=2.8.7"></script>
+  <script src="js/translator.js?v=2.8.7"></script>
+  <script src="js/game.js?v=2.8.7"></script>
+  <script src="js/study.js?v=2.8.7"></script>
+  <script src="js/stats.js?v=2.8.7"></script>
+  <script src="js/app.js?v=2.8.7"></script>
+</body>
+</html>

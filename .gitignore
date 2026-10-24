@@ -1,0 +1,17 @@
+# Environment & OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Backups & Temporary Experiments
+_backup_before_argon/
+argon_clean/
+argon_code/
+
+# Node
+node_modules/
+npm-debug.log*

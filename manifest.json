@@ -1,0 +1,27 @@
+{
+  "name": "WortCoach — Akıllı Almanca Kelime & Sözlük Koçu",
+  "short_name": "WortCoach",
+  "description": "Çevrimdışı Almanca ve İngilizce morfolojik sözlük, fiil çekim motoru, çeviri ve Leitner SRS Flashcard uygulaması.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "tr-TR",
+  "categories": ["education", "productivity", "reference"],
+  "icons": [
+    {
+      "src": "icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
