@@ -1875,6 +1875,7 @@ class WortCoachApp {
       form.reset();
       editingDeckId = null;
       await this.renderDecksTab();
+      await this.refreshHomeDashboard();
     });
 
     this.openEditDeckModal = (deckId, currentName) => {
@@ -1915,14 +1916,17 @@ class WortCoachApp {
       this.showToast('Tüm hazır desteler başarıyla yüklendi.');
       await this.renderCuratedPacksModal();
       await this.renderDecksTab();
+      await this.renderCardsList();
+      await this.refreshHomeDashboard();
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = `<svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-check"></use></svg><span>Tamamlandı</span>`;
       }
     });
 
-    document.getElementById('btn-import-deck')?.addEventListener('click', () => {
-      this.showToast('JSON / CSV Deste aktarma aracı hazır.');
+    // Dışarı tıklandığında açık deste menülerini kapat
+    document.addEventListener('click', () => {
+      document.querySelectorAll('#user-decks-list .deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
     });
   }
 
@@ -1970,6 +1974,8 @@ class WortCoachApp {
         btn.innerHTML = `<svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-check"></use></svg><span>Yüklendi</span>`;
         this.showToast('Deste başarıyla içe aktarıldı.');
         await this.renderDecksTab();
+        await this.renderCardsList();
+        await this.refreshHomeDashboard();
       });
     });
   }
@@ -2077,13 +2083,10 @@ class WortCoachApp {
           await window.wmDB.deleteDeck(dId);
           this.showToast('Deste silindi.');
           await this.renderDecksTab();
+          await this.renderCardsList();
+          await this.refreshHomeDashboard();
         }
       });
-    });
-
-    // Dışarı tıklandığında açık menüleri kapat
-    document.addEventListener('click', () => {
-      container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
     });
   }
 
@@ -2264,6 +2267,8 @@ class WortCoachApp {
           await window.wmDB.deleteCard(id);
           this.showToast('Kart silindi.');
           await this.renderCardsList(filterQuery);
+          await this.renderDecksTab();
+          await this.refreshHomeDashboard();
         }
       });
     });
@@ -2394,6 +2399,7 @@ class WortCoachApp {
 
       modal.classList.add('hidden');
       this.showToast(`"${newCard.germanWord}" desteye eklendi.`);
+      await this.renderCardsList();
       await this.refreshHomeDashboard();
       await this.renderDecksTab();
     });
@@ -2407,7 +2413,11 @@ class WortCoachApp {
   }
 
   async populateModalDecksDropdown() {
-    const decks = await window.wmDB.getAllDecks();
+    let decks = await window.wmDB.getAllDecks();
+    if (decks.length === 0) {
+      await window.wmDB.createDeck('Genel Deste');
+      decks = await window.wmDB.getAllDecks();
+    }
     const select = document.getElementById('card-deck-select');
     if (!select) return;
     select.innerHTML = decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');

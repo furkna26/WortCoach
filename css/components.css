@@ -827,6 +827,12 @@
   margin-top: 2px;
 }
 
+.deck-item-card:has(.deck-actions-dropdown:not(.hidden)) {
+  z-index: 30;
+  position: relative;
+  transform: none !important;
+}
+
 .deck-item-actions {
   display: flex;
   align-items: center;
