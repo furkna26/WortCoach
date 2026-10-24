@@ -121,8 +121,18 @@ class DatabaseSeeder {
 
     if (Array.isArray(pack.cards) && pack.cards.length > 0) {
       for (const cardData of pack.cards) {
+        let cleanEx = (cardData.exampleSentence || '').replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim();
+        let meaningsTr = cardData.meaningsTr;
+        if (!meaningsTr && window.DictionaryService) {
+          try {
+            const syn = window.DictionaryService.synthesizeInstantEntry(cardData.germanWord);
+            if (syn && syn.meaningsTr) meaningsTr = syn.meaningsTr;
+          } catch (_) {}
+        }
         await window.wmDB.addCard({
           ...cardData,
+          exampleSentence: cleanEx,
+          meaningsTr: meaningsTr || 'Anlam belirtilmedi',
           deckId: targetDeck.id
         });
       }

@@ -89,6 +89,12 @@ class WortMeisterStudy {
   }
 
   async loadSession(deckId = 'all', forceAll = false) {
+    if (!this.deckSelect) this.deckSelect = document.getElementById('study-deck-select');
+    if (!this.arena) this.arena = document.getElementById('study-arena');
+    if (!this.emptyState) this.emptyState = document.getElementById('study-empty-state');
+    if (!this.cardInner) this.cardInner = document.getElementById('flashcard-inner');
+    if (!this.cardWrapper) this.cardWrapper = document.getElementById('flashcard-3d-wrapper');
+
     await this.populateDeckSelector(deckId);
     this.queue = await window.wmDB.getDueCards(deckId, forceAll);
     this.currentIndex = 0;
@@ -98,11 +104,11 @@ class WortMeisterStudy {
     this.updateProgress();
 
     if (this.queue.length === 0) {
-      this.arena.classList.add('hidden');
-      this.emptyState.classList.remove('hidden');
+      if (this.arena) this.arena.classList.add('hidden');
+      if (this.emptyState) this.emptyState.classList.remove('hidden');
     } else {
-      this.emptyState.classList.add('hidden');
-      this.arena.classList.remove('hidden');
+      if (this.emptyState) this.emptyState.classList.add('hidden');
+      if (this.arena) this.arena.classList.remove('hidden');
       this.renderCurrentCard();
     }
   }
@@ -160,6 +166,18 @@ class WortMeisterStudy {
   renderCurrentCard() {
     const card = this.getCurrentCard();
     if (!card) return;
+
+    // Anlam veya gramer eksikse anlık çözümle
+    if (!card.meaningsTr || card.meaningsTr === '-') {
+      try {
+        if (window.DictionaryService) {
+          const synth = window.DictionaryService.synthesizeInstantEntry(card.germanWord);
+          if (synth && synth.meaningsTr) {
+            card.meaningsTr = synth.meaningsTr;
+          }
+        }
+      } catch (_) {}
+    }
 
     this.isFlipped = false;
     if (this.cardInner) this.cardInner.classList.remove('is-flipped');

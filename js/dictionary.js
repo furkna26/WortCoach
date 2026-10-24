@@ -358,6 +358,32 @@ const VERIFIED_CORE_VOCABULARY = {
     cefr: 'A1',
     examples: ["Er arbeitet als Ingenieur in Berlin. (Berlin'de mühendis olarak çalışıyor.)"]
   },
+  wohnen: {
+    germanWord: 'wohnen',
+    partOfSpeech: 'VERB',
+    praesens: 'wohnt',
+    praeteritum: 'wohnte',
+    partizipZwei: 'gewohnt',
+    hilfsverb: 'hat',
+    imperativ: 'Wohne!',
+    meaningsTr: 'ikamet etmek, oturmak, yaşamak',
+    meaningsEn: 'to live, to reside',
+    cefr: 'A1',
+    examples: ['Wir wohnen in einer ruhigen Straße. (Sakin bir sokakta oturuyoruz.)']
+  },
+  hören: {
+    germanWord: 'hören',
+    partOfSpeech: 'VERB',
+    praesens: 'hört',
+    praeteritum: 'hörte',
+    partizipZwei: 'gehört',
+    hilfsverb: 'hat',
+    imperativ: 'Hör!',
+    meaningsTr: 'duymak, dinlemek, işitmek',
+    meaningsEn: 'to hear, to listen',
+    cefr: 'A1',
+    examples: ['Ich höre gerne klassische Musik. (Klasik müzik dinlemeyi severim.)']
+  },
   lernen: {
     germanWord: 'lernen',
     partOfSpeech: 'VERB',
@@ -714,6 +740,14 @@ class DictionaryService {
         }
       }
     }
+
+    if (typeof window !== 'undefined' && window.OfflineDictionary && typeof window.OfflineDictionary.search === 'function') {
+      const offRes = window.OfflineDictionary.search(lower);
+      if (offRes && offRes.meaningsTr) {
+        return offRes;
+      }
+    }
+
     return null;
   }
 
@@ -906,7 +940,7 @@ class DictionaryService {
             l = l.replace(/^[:\s*#]+/, '');
             l = l.replace(/<ref[\s\S]*?<\/ref>/gi, '');
             l = l.replace(/<ref[^\/>]*\/>/gi, '');
-            l = l.replace(/^\[[\d,\s–-]+\]\s*/g, '');
+            l = l.replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/gi, '');
             l = l.replace(/''+/g, '');
             l = l.replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1');
             l = l.replace(/\{\{[^}]+\}\}/g, '');

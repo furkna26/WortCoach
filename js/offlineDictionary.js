@@ -90,7 +90,8 @@
     vergessen: { praesens: 'vergisst', praeteritum: 'vergaß', partizipZwei: 'vergessen', hilfsverb: 'hat', imperativ: 'vergiss!', cefr: 'A1', tr: 'unutmak', en: 'to forget' },
     treffen: { praesens: 'trifft', praeteritum: 'traf', partizipZwei: 'getroffen', hilfsverb: 'hat', imperativ: 'triff!', cefr: 'A1', tr: 'buluşmak, karşılaşmak', en: 'to meet, hit' },
     warten: { praesens: 'wartet', praeteritum: 'wartete', partizipZwei: 'gewartet', hilfsverb: 'hat', imperativ: 'warte!', cefr: 'A1', tr: 'beklemek', en: 'to wait' },
-    hoeren: { praesens: 'hört', praeteritum: 'hörte', partizipZwei: 'gehört', hilfsverb: 'hat', imperativ: 'hör!', cefr: 'A1', tr: 'duymak, dinlemek', en: 'to hear, listen' },
+    hören: { praesens: 'hört', praeteritum: 'hörte', partizipZwei: 'gehört', hilfsverb: 'hat', imperativ: 'hör!', cefr: 'A1', tr: 'duymak, dinlemek, işitmek', en: 'to hear, listen' },
+    hoeren: { praesens: 'hört', praeteritum: 'hörte', partizipZwei: 'gehört', hilfsverb: 'hat', imperativ: 'hör!', cefr: 'A1', tr: 'duymak, dinlemek, işitmek', en: 'to hear, listen' },
     fühlen: { praesens: 'fühlt', praeteritum: 'fühlte', partizipZwei: 'gefühlt', hilfsverb: 'hat', imperativ: 'fühle!', cefr: 'A2', tr: 'hissetmek', en: 'to feel' }
   };
 

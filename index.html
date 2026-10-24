@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.8.9" />
-  <link rel="stylesheet" href="css/components.css?v=2.8.9" />
+  <link rel="stylesheet" href="css/app.css?v=2.9.0" />
+  <link rel="stylesheet" href="css/components.css?v=2.9.0" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -640,6 +640,77 @@
                       <div class="tense-tile-val" id="fc-front-imp">-</div>
                     </div>
                   </div>
+                </div>
+
+                <div class="sc-flip-hint">
+                  <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-refresh"></use></svg>
+                  <span>Anlamını görmek için dokunun</span>
+                </div>
+              </div>
+
+              <!-- KART ARKA YÜZÜ (BACK — Screenshot 4 Parity) -->
+              <div class="study-card-face study-card-back">
+                <div class="scb-top-label">TÜRKÇE ANLAMI</div>
+                <div id="fc-back-meaning-tr" class="scb-main-translation">-</div>
+
+                <div id="fc-back-en-row" class="scb-english-row hidden">
+                  <span class="lang-badge lang-badge-en">EN</span>
+                  <span id="fc-back-meaning-en">-</span>
+                </div>
+
+                <div id="fc-back-subtext" class="scb-subtext">Almanca: -</div>
+
+                <div id="fc-back-example-card" class="scb-example-card hidden">
+                  <div class="scb-example-header">
+                    <span>ÖRNEK CÜMLE</span>
+                    <button id="btn-fc-tts-back" class="icon-btn-ghost" title="Örneği Dinle">
+                      <svg class="svg-icon" style="width:14px;height:14px;color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
+                    </button>
+                  </div>
+                  <div id="fc-back-example" class="scb-example-text">-</div>
+                </div>
+
+                <div class="sc-flip-hint">
+                  <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-refresh"></use></svg>
+                  <span>Almanca yüzüne dönmek için dokunun</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 3 SRS Butonu: Tekrar Et (Kırmızı), Önemli (Turuncu), Öğrendim (Yeşil) -->
+          <div class="srs-buttons-row">
+            <button class="btn-srs-android btn-again" data-rating="again">
+              <span class="srs-btn-label">Tekrar Et</span>
+              <span class="srs-btn-sub">1 Gün</span>
+            </button>
+            <button class="btn-srs-android btn-hard" data-rating="hard">
+              <span class="srs-btn-label">Önemli</span>
+              <span class="srs-btn-sub">4 Saat</span>
+            </button>
+            <button class="btn-srs-android btn-good" data-rating="good">
+              <span class="srs-btn-label">Öğrendim</span>
+              <span class="srs-btn-sub" id="srs-good-interval-label">1 Gün</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TEKRAR EDİLECEK KART YOK (EMPTY STATE) -->
+        <div id="study-empty-state" class="study-empty-state hidden" style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:var(--radius-xl); border:1px solid var(--border-subtle); margin-top:16px;">
+          <div style="font-size:3rem; margin-bottom:12px;">🎉</div>
+          <h3 style="font-size:1.25rem; font-weight:900; color:var(--text-primary); margin:0 0 8px;">Tebrikler! Tekrar Edilecek Kart Yok</h3>
+          <p style="font-size:0.88rem; color:var(--text-secondary); max-width:320px; margin:0 auto 20px;">Bugün için planlanan tüm aralıklı tekrarları tamamladınız veya henüz destenizde kart bulunmuyor.</p>
+          <div style="display:flex; flex-direction:column; gap:10px; max-width:260px; margin:0 auto;">
+            <button type="button" class="btn-primary" id="btn-study-force-all" style="padding:12px; border-radius:var(--radius-pill); font-weight:800;">
+              <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-refresh"></use></svg>
+              <span>Tüm Kartları Yeniden Çalış</span>
+            </button>
+            <button type="button" class="btn-ghost" id="btn-study-add-new" style="padding:10px; border-radius:var(--radius-pill); font-size:0.86rem;">
+              <span>+ Yeni Kart Ekle</span>
+            </button>
+          </div>
+        </div>
       </section>
 
       <!-- ====================================================================
@@ -1414,17 +1485,17 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.8.9"></script>
-  <script src="js/verbHelper.js?v=2.8.9"></script>
-  <script src="js/offlineDictionary.js?v=2.8.9"></script>
-  <script src="js/dictionary.js?v=2.8.9"></script>
-  <script src="js/curatedPacks.js?v=2.8.9"></script>
-  <script src="js/seeder.js?v=2.8.9"></script>
-  <script src="js/tts.js?v=2.8.9"></script>
-  <script src="js/translator.js?v=2.8.9"></script>
-  <script src="js/game.js?v=2.8.9"></script>
-  <script src="js/study.js?v=2.8.9"></script>
-  <script src="js/stats.js?v=2.8.9"></script>
-  <script src="js/app.js?v=2.8.9"></script>
+  <script src="js/db.js?v=2.9.0"></script>
+  <script src="js/verbHelper.js?v=2.9.0"></script>
+  <script src="js/offlineDictionary.js?v=2.9.0"></script>
+  <script src="js/dictionary.js?v=2.9.0"></script>
+  <script src="js/curatedPacks.js?v=2.9.0"></script>
+  <script src="js/seeder.js?v=2.9.0"></script>
+  <script src="js/tts.js?v=2.9.0"></script>
+  <script src="js/translator.js?v=2.9.0"></script>
+  <script src="js/game.js?v=2.9.0"></script>
+  <script src="js/study.js?v=2.9.0"></script>
+  <script src="js/stats.js?v=2.9.0"></script>
+  <script src="js/app.js?v=2.9.0"></script>
 </body>
 </html>

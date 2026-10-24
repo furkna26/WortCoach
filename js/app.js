@@ -709,7 +709,7 @@ class WortCoachApp {
         }
       }
     } catch (_) {}
-    const existingId = existing ? existing.id : (entry.id || null);
+    let existingId = existing ? existing.id : (entry.id || null);
 
     const actionButtons = existingId
       ? `
@@ -761,9 +761,12 @@ class WortCoachApp {
             germanText = match[1].trim();
             turkishText = match[2].trim();
           }
+          // [1], [1a], [1b] gibi indeksleri temizle
+          germanText = germanText.replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim();
+          const cleanExFull = turkishText ? `${germanText} (${turkishText})` : germanText;
           return `
             <div class="example-radio-card ${idx === 0 ? 'selected' : ''}" data-idx="${idx}">
-              <input type="radio" name="inline-example-choice" class="example-radio-input" ${idx === 0 ? 'checked' : ''} data-ex="${ex.replace(/"/g, '&quot;')}">
+              <input type="radio" name="inline-example-choice" class="example-radio-input" ${idx === 0 ? 'checked' : ''} data-ex="${cleanExFull.replace(/"/g, '&quot;')}">
               <div class="example-card-body">
                 <div class="example-de-text">${germanText}</div>
                 ${turkishText ? `<div class="example-tr-text">${turkishText}</div>` : ''}
@@ -950,7 +953,8 @@ class WortCoachApp {
 
       // Seçili Örnek Cümle
       const checkedExRadio = container.querySelector('.example-radio-input:checked');
-      const selectedEx = checkedExRadio ? (checkedExRadio.getAttribute('data-ex') || '') : (examples[0] || '');
+      let selectedEx = checkedExRadio ? (checkedExRadio.getAttribute('data-ex') || '') : (examples[0] || '');
+      selectedEx = selectedEx.replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim();
 
       // Kart Nesnesi — Otomatik Artikel Garantisi İle
       const cardPayload = {
@@ -2107,7 +2111,17 @@ class WortCoachApp {
 
     container.innerHTML = filtered
       .map(
-        (c) => `
+        (c) => {
+          let trMeaning = (c.meaningsTr && c.meaningsTr !== '-') ? c.meaningsTr : '';
+          if (!trMeaning && window.DictionaryService) {
+            try {
+              const syn = window.DictionaryService.synthesizeInstantEntry(c.germanWord);
+              if (syn && syn.meaningsTr) trMeaning = syn.meaningsTr;
+            } catch (_) {}
+          }
+          if (!trMeaning) trMeaning = c.meaningsEn || 'Anlam belirtilmedi';
+
+          return `
         <div class="deck-item-card" data-card-id="${c.id}" style="margin-bottom:8px; cursor:pointer;" title="Düzenlemek için tıklayın">
           <div style="flex:1;">
             <div style="display:flex; align-items:center; gap:8px;">
@@ -2120,7 +2134,8 @@ class WortCoachApp {
               <span class="badge badge-pos-${c.partOfSpeech}">${c.partOfSpeech}</span>
               ${c.isReflexive ? `<span class="badge-reflexiv">Reflexiv</span>` : ''}
             </div>
-            <div style="font-size:0.85rem; color:var(--text-primary); margin-top:4px;">${c.meaningsTr || '-'}</div>
+            <div style="font-size:0.85rem; color:var(--text-primary); margin-top:4px;">${trMeaning}</div>`;
+        }
             ${c.pluralForm ? `<div style="font-size:0.75rem; color:var(--text-secondary);">Çoğul: ${c.pluralForm}</div>` : ''}
           </div>
           <div class="deck-item-actions">
