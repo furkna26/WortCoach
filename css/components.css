@@ -354,9 +354,12 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 18px;
+  padding: 16px;
   margin-bottom: 16px;
   box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+  overflow: hidden;
+  width: 100%;
 }
 
 /* Source translation banner: [TR] „ele geçirmek“ → [DE] erfassen */
@@ -401,8 +404,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .wdc-title-group {
@@ -410,19 +416,26 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .wdc-word {
-  font-size: 1.65rem;
+  font-size: clamp(1.25rem, 5vw, 1.65rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-primary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  line-height: 1.25;
 }
 
 .wdc-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -434,12 +447,17 @@
   border-radius: 14px;
   padding: 14px;
   margin: 14px 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .gtc-top-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 10px;
 }
 
@@ -462,8 +480,10 @@
 .gtc-stammformen {
   font-size: 0.78rem;
   color: var(--palette-sand);
-  line-height: 1.4;
+  line-height: 1.45;
   margin-bottom: 12px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .gtc-stammformen-label {
@@ -483,6 +503,20 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Mobil ekranlarda (<= 520px) uzun kelimelerin taşmasını ve sıkışmasını önleyen temiz tek sütunlu düzen */
+@media (max-width: 520px) {
+  .gtc-two-col {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .gtc-two-col > div:first-child {
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--border-subtle);
+  }
 }
 
 .gtc-col-header {
@@ -496,18 +530,29 @@
 .gtc-person-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-  padding: 2.5px 0;
+  align-items: baseline;
+  font-size: 0.82rem;
+  padding: 3px 0;
+  gap: 8px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .gtc-person-pronoun {
   color: var(--text-muted);
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  min-width: 62px;
 }
 
 .gtc-person-form {
   color: var(--text-primary);
   font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  flex: 1;
 }
 
 .gtc-person-form.highlighted {
@@ -519,9 +564,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 0.74rem;
   color: var(--text-secondary);
   padding-top: 4px;
+  word-break: break-word;
 }
 
 /* Standard 2x2 Grid for Regular Verbs or Flashcard Front */
@@ -530,13 +578,18 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tense-tile {
   background-color: var(--bg-inner);
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .tense-tile-header {
@@ -552,15 +605,21 @@
 .tense-tile-header .svg-icon {
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
 .tense-tile-val {
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  line-height: 1.35;
 }
 
 .tense-tile.full-width {
@@ -573,11 +632,13 @@
   gap: 4px;
   padding: 2px 7px;
   border-radius: 6px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
   background-color: rgba(132, 172, 100, 0.16);
   border: 1px solid rgba(132, 172, 100, 0.45);
   color: var(--palette-green);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -1032,11 +1093,13 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 20px;
-  padding: 20px;
+  padding: 16px 16px 18px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .study-card-back {
@@ -1048,20 +1111,46 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .scf-word-center {
   margin: 14px 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.scf-word-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.scf-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .scf-main-word {
-  font-size: 1.85rem;
+  font-size: clamp(1.2rem, 4.4vw, 1.85rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-primary);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+  line-height: 1.22;
 }
 
 .scf-section-title {
@@ -1084,11 +1173,13 @@
 }
 
 .scb-main-translation {
-  font-size: 1.65rem;
+  font-size: clamp(1.2rem, 4.4vw, 1.65rem);
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--brand-blue);
   margin-bottom: 8px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .scb-english-row {
@@ -1802,8 +1893,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 14px;
   margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sec-row-title {
@@ -1848,6 +1943,12 @@
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  text-align: left;
 }
 
 .meaning-chip.selected,
@@ -1906,6 +2007,8 @@
   border: 1.5px solid #3B82F6;
   border-radius: 10px;
   padding: 4px 8px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .custom-meaning-inline-input {
@@ -1917,6 +2020,8 @@
   font-weight: 600;
   outline: none;
   width: 145px;
+  max-width: 100%;
+  min-width: 80px;
 }
 
 .custom-meaning-inline-input::placeholder {
@@ -1965,6 +2070,10 @@
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .example-radio-card.selected {
@@ -1978,6 +2087,7 @@
 
 .example-radio-content {
   flex: 1;
+  min-width: 0;
 }
 
 .example-de-text {
@@ -1985,12 +2095,16 @@
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .example-tr-text {
   font-size: 0.78rem;
   color: var(--text-secondary);
   margin-top: 3px;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .btn-play-example {

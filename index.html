@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.9.7" />
-  <link rel="stylesheet" href="css/components.css?v=2.9.7" />
+  <link rel="stylesheet" href="css/app.css?v=2.9.8" />
+  <link rel="stylesheet" href="css/components.css?v=2.9.8" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -625,17 +625,21 @@
                 </div>
 
                 <div class="scf-word-center">
-                  <span class="lang-badge lang-badge-de">
-                    <svg class="flag-svg"><use href="#flag-de"></use></svg>
-                    <span>DE</span>
-                  </span>
-                  <div id="fc-front-word" class="scf-main-word">---</div>
-                  <button id="btn-fc-tts" class="icon-btn-ghost" title="Dinle">
-                    <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
-                  </button>
-                  <button id="btn-fc-pronounce" class="icon-btn-ghost btn-mic-trigger" title="Telaffuzunu Test Et">
-                    <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
-                  </button>
+                  <div class="scf-word-group">
+                    <span class="lang-badge lang-badge-de">
+                      <svg class="flag-svg"><use href="#flag-de"></use></svg>
+                      <span>DE</span>
+                    </span>
+                    <div id="fc-front-word" class="scf-main-word">---</div>
+                  </div>
+                  <div class="scf-actions">
+                    <button type="button" id="btn-fc-tts" class="icon-btn-ghost" title="Dinle" aria-label="Dinle">
+                      <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
+                    </button>
+                    <button type="button" id="btn-fc-pronounce" class="icon-btn-ghost btn-mic-trigger" title="Telaffuzunu Test Et" aria-label="Telaffuzunu Test Et">
+                      <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
+                    </button>
+                  </div>
                 </div>
 
                 <!-- İsim Detayı (Screenshot 5: [ DIE ] badge) -->
@@ -1722,18 +1726,18 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.9.7"></script>
-  <script src="js/verbHelper.js?v=2.9.7"></script>
-  <script src="js/offlineDictionary.js?v=2.9.7"></script>
-  <script src="js/dictionary.js?v=2.9.7"></script>
-  <script src="js/curatedPacks.js?v=2.9.7"></script>
-  <script src="js/seeder.js?v=2.9.7"></script>
-  <script src="js/tts.js?v=2.9.7"></script>
-  <script src="js/pronunciation.js?v=2.9.7"></script>
-  <script src="js/translator.js?v=2.9.7"></script>
-  <script src="js/game.js?v=2.9.7"></script>
-  <script src="js/study.js?v=2.9.7"></script>
-  <script src="js/stats.js?v=2.9.7"></script>
-  <script src="js/app.js?v=2.9.7"></script>
+  <script src="js/db.js?v=2.9.8"></script>
+  <script src="js/verbHelper.js?v=2.9.8"></script>
+  <script src="js/offlineDictionary.js?v=2.9.8"></script>
+  <script src="js/dictionary.js?v=2.9.8"></script>
+  <script src="js/curatedPacks.js?v=2.9.8"></script>
+  <script src="js/seeder.js?v=2.9.8"></script>
+  <script src="js/tts.js?v=2.9.8"></script>
+  <script src="js/pronunciation.js?v=2.9.8"></script>
+  <script src="js/translator.js?v=2.9.8"></script>
+  <script src="js/game.js?v=2.9.8"></script>
+  <script src="js/study.js?v=2.9.8"></script>
+  <script src="js/stats.js?v=2.9.8"></script>
+  <script src="js/app.js?v=2.9.8"></script>
 </body>
 </html>

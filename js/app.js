@@ -157,7 +157,7 @@ class WortCoachApp {
           regs.forEach((r) => r.update());
         });
       }
-      navigator.serviceWorker.register('./sw.js?v=2.9.7').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=2.9.8').then((reg) => reg.update()).catch(() => {});
     }
   }
 
