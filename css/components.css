@@ -203,35 +203,33 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  background-color: #1E2534;
+  border: 1px solid #2E384D;
+  color: #CBD5E1;
 }
 
-.badge-pos-VERB {
-  background-color: var(--badge-verb-bg);
-  color: var(--badge-verb-text);
-  border: 1px solid rgba(122, 209, 212, 0.35);
+.badge-pos-VERB,
+.badge-pos-NOUN,
+.badge-pos-ADJECTIVE,
+.badge-pos-ADJ,
+.badge-pos-OTHER,
+.badge-pos-PHRASE {
+  background-color: #1E2534;
+  border: 1px solid #2E384D;
+  color: #CBD5E1;
 }
 
-.badge-pos-NOUN {
-  background-color: var(--badge-noun-bg);
-  color: var(--badge-noun-text);
-  border: 1px solid rgba(74, 183, 224, 0.35);
-}
-
-.badge-pos-ADJECTIVE {
-  background-color: var(--badge-adj-bg);
-  color: var(--badge-adj-text);
-  border: 1px solid rgba(226, 214, 75, 0.35);
-}
-
-.badge-pos-OTHER {
-  background-color: rgba(194, 193, 159, 0.18);
-  color: var(--palette-sand);
-  border: 1px solid rgba(194, 193, 159, 0.35);
+.badge-der,
+.badge-die,
+.badge-das {
+  background-color: #1E2534;
+  border: 1px solid #2E384D;
+  color: #CBD5E1;
 }
 
 /* Language Badge: Capsule with Vector Flag + Text */
@@ -244,24 +242,17 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+  background-color: #1E2534;
+  border: 1px solid #2E384D;
+  color: #CBD5E1;
 }
 
-.lang-badge-de {
-  background-color: rgba(45, 102, 104, 0.35);
-  border: 1px solid rgba(74, 183, 224, 0.35);
-  color: var(--brand-blue);
-}
-
-.lang-badge-tr {
-  background-color: rgba(225, 29, 72, 0.18);
-  border: 1px solid rgba(251, 113, 133, 0.35);
-  color: #FB7185;
-}
-
+.lang-badge-de,
+.lang-badge-tr,
 .lang-badge-en {
-  background-color: rgba(74, 183, 224, 0.18);
-  border: 1px solid rgba(74, 183, 224, 0.35);
-  color: var(--brand-blue);
+  background-color: #1E2534;
+  border: 1px solid #2E384D;
+  color: #CBD5E1;
 }
 
 .lang-badge .flag-svg {
@@ -270,55 +261,23 @@
   border-radius: 2px;
 }
 
-/* Reflexive & Separable Badges */
-.badge-reflexiv {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  background-color: var(--badge-reflexiv-bg);
-  border: 1px solid var(--badge-reflexiv-border);
-  color: var(--badge-reflexiv-text);
-}
-
-.badge-reflexiv-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  background-color: var(--badge-reflexiv-bg);
-  border: 1px solid var(--badge-reflexiv-border);
-  color: var(--badge-reflexiv-text);
-}
-
-.badge-trennbar-pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  background-color: var(--badge-trennbar-bg);
-  border: 1px solid var(--badge-trennbar-border);
-  color: var(--badge-trennbar-text);
-}
-
+/* Reflexive & Separable & Regularity Badges */
+.badge-reflexiv,
+.badge-reflexiv-pill,
+.badge-trennbar-pill,
 .badge-regularity {
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  background-color: rgba(74, 183, 224, 0.18);
-  color: var(--brand-blue);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background-color: #1E2534;
+  border: 1px solid #2E384D;
+  color: #CBD5E1;
 }
 
-/* Status Pill: DeepL API */
+/* Status Pill */
 .status-pill-green {
   display: inline-flex;
   align-items: center;
@@ -326,9 +285,9 @@
   border-radius: 8px;
   font-size: 0.74rem;
   font-weight: 700;
-  background-color: rgba(132, 172, 100, 0.16);
-  border: 1px solid rgba(132, 172, 100, 0.45);
-  color: var(--palette-green);
+  background-color: var(--accent-emerald-soft);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: var(--accent-emerald);
 }
 
 /* --------------------------------------------------------------------------
@@ -638,7 +597,7 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
-  padding: 6px 10px;
+  padding: 5px 8px;
   margin-bottom: 14px;
 }
 
@@ -646,11 +605,15 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  background-color: var(--bg-main);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
 }
 
 .lang-pill-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-muted);
   font-family: inherit;
   font-size: 0.82rem;
@@ -658,20 +621,23 @@
   padding: 6px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .lang-pill-btn.active {
-  background-color: var(--palette-teal);
-  color: #FFFFFF;
+  background-color: #1B202C;
+  border-color: #242B3A;
+  color: #F3F4F6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 .lang-swap-btn {
-  background: transparent;
-  border: none;
-  color: var(--brand-blue);
+  background: #1B202C;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--accent-primary);
   cursor: pointer;
-  padding: 6px;
+  padding: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -714,9 +680,9 @@
   width: 100%;
   height: 48px;
   border-radius: 12px;
-  background-color: var(--palette-teal);
+  background-color: var(--accent-primary);
   color: #FFFFFF;
-  border: 1px solid rgba(74, 183, 224, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.35);
   font-family: inherit;
   font-size: 0.94rem;
   font-weight: 700;
@@ -730,7 +696,7 @@
 }
 
 .trans-submit-btn:hover {
-  background-color: #387b7d;
+  background-color: #2563EB;
 }
 
 .trans-submit-btn:active {
@@ -1764,8 +1730,8 @@
 }
 
 .game-card {
-  background-color: #11141B;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
   border-radius: 16px;
   padding: 14px;
   cursor: pointer;
@@ -1783,7 +1749,7 @@
 
 .game-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: var(--accent-primary);
 }
 
 .game-card:active {
@@ -1864,36 +1830,123 @@
 .meaning-chips-container {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
 .meaning-chip {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   padding: 7px 14px;
   border-radius: 10px;
   font-size: 0.84rem;
   font-weight: 600;
-  border: 1px solid var(--border-subtle);
-  background-color: var(--bg-inner);
-  color: var(--text-secondary);
+  border: 1px solid #242B3A;
+  background-color: #1B202C;
+  color: #9CA3AF;
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
 }
 
+.meaning-chip.selected,
 .meaning-chip.chip-selected {
-  background-color: rgba(59, 130, 246, 0.18);
-  border-color: var(--brand-blue);
-  color: var(--text-primary);
+  background-color: var(--accent-primary-soft);
+  border: 1px solid #3B82F6;
+  color: #FFFFFF;
   font-weight: 700;
+}
+
+.meaning-chip .chip-check-icon {
+  display: none;
+  font-size: 0.78rem;
+  color: #60A5FA;
+  font-weight: 800;
+}
+
+.meaning-chip.selected .chip-check-icon,
+.meaning-chip.chip-selected .chip-check-icon {
+  display: inline-block;
 }
 
 .meaning-chip:active {
   transform: scale(0.95);
 }
 
-/* Example Sentences Radio Cards */
+.btn-add-custom-meaning {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: 1px dashed #3B82F6;
+  background-color: transparent;
+  color: #60A5FA;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.12s ease;
+}
+
+.btn-add-custom-meaning:hover {
+  background-color: rgba(59, 130, 246, 0.12);
+}
+
+.btn-add-custom-meaning:active {
+  transform: scale(0.95);
+}
+
+.custom-meaning-inline-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #1B202C;
+  border: 1.5px solid #3B82F6;
+  border-radius: 10px;
+  padding: 4px 8px;
+}
+
+.custom-meaning-inline-input {
+  background: transparent;
+  border: none;
+  color: #F3F4F6;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  outline: none;
+  width: 145px;
+}
+
+.custom-meaning-inline-input::placeholder {
+  color: #64748B;
+}
+
+.btn-confirm-custom-meaning,
+.btn-cancel-custom-meaning {
+  border: none;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-confirm-custom-meaning {
+  background-color: #3B82F6;
+  color: #FFFFFF;
+}
+
+.btn-cancel-custom-meaning {
+  background-color: transparent;
+  color: #9CA3AF;
+}
+
+/* Example Sentences Multi-Select Cards */
 .example-sentences-list {
   display: flex;
   flex-direction: column;
@@ -1903,26 +1956,24 @@
 .example-radio-card {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  background-color: var(--bg-inner);
-  border: 1px solid var(--border-subtle);
+  background-color: #1B202C;
+  border: 1px solid #242B3A;
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
 }
 
 .example-radio-card.selected {
-  background-color: rgba(59, 130, 246, 0.12);
-  border-color: var(--brand-blue);
+  background-color: rgba(59, 130, 246, 0.08);
+  border: 1.5px solid #3B82F6;
 }
 
 .example-radio-card input[type="radio"] {
-  accent-color: var(--brand-blue);
-  width: 17px;
-  height: 17px;
-  cursor: pointer;
-  flex-shrink: 0;
+  display: none !important;
 }
 
 .example-radio-content {
@@ -2477,16 +2528,16 @@
 /* Featured Game Card in Home Grid */
 .game-card.featured-game-card {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(236, 72, 153, 0.14) 0%, rgba(59, 130, 246, 0.14) 50%, rgba(16, 185, 129, 0.14) 100%);
-  border: 2px solid rgba(59, 130, 246, 0.35);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
 }
 
 .game-card.featured-game-card:hover {
-  border-color: var(--brand-blue);
-  box-shadow: 0 12px 32px rgba(59, 130, 246, 0.28);
+  border-color: var(--accent-primary);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
 }
 
 .featured-badge {
@@ -2495,8 +2546,9 @@
   right: 14px;
   padding: 3px 10px;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #EC4899, #3B82F6);
-  color: #FFFFFF;
+  background: var(--accent-primary-soft);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #60A5FA;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -2819,9 +2871,9 @@
   align-items: center;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(10, 132, 255, 0.14);
-  border: 1px solid rgba(10, 132, 255, 0.3);
-  color: var(--brand-blue);
+  background: #1B202C;
+  border: 1px solid #242B3A;
+  color: #60A5FA;
   font-family: monospace;
   font-size: 0.86rem;
   font-weight: 700;
@@ -2832,9 +2884,9 @@
   align-items: center;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.14);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #10B981;
+  background: #1B202C;
+  border: 1px solid #242B3A;
+  color: #34D399;
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -3310,4 +3362,149 @@
   background: rgba(255, 255, 255, 0.05);
   padding: 1px 5px;
   border-radius: 4px;
+}
+
+/* ==========================================================================
+   FULL-SCREEN PAGES (Fonetik Koç & Oyunlar) + UI HİZALAMA STANDARTLARI (v2.9.7)
+   ========================================================================== */
+
+/* Convert bottom-sheet modals to full-screen standard pages */
+.modal-backdrop.full-page-screen {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-main);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  z-index: 45;
+  display: block;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.modal-backdrop.full-page-screen > .modal-sheet {
+  width: 100%;
+  max-width: 680px;
+  min-height: 100%;
+  max-height: none;
+  margin: 0 auto;
+  background-color: var(--bg-main);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: fadeIn 0.16s ease-out;
+  padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px)) 16px;
+  overflow-y: visible;
+}
+
+.modal-backdrop.full-page-screen > .modal-sheet::before {
+  display: none !important;
+  content: none !important;
+}
+
+/* Standard "← Geri" button at the top of full-screen pages */
+.btn-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  background-color: #1B202C;
+  border: 1px solid #242B3A;
+  color: #F3F4F6;
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-page-back:hover,
+.btn-page-back:active {
+  background-color: var(--accent-primary-soft);
+  border-color: #3B82F6;
+  color: #FFFFFF;
+}
+
+/* Dictionary Detail Card: 2-Row Clean Header Layout */
+.wdc-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.wdc-title-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.wdc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.wdc-badges-subrow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* Uniform 20px Action Icons for Cards List (Düzenle, Dinle, Telaffuz) */
+.card-action-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: #9CA3AF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.card-action-icon-btn svg {
+  width: 20px !important;
+  height: 20px !important;
+  stroke-width: 2px !important;
+}
+
+.card-action-icon-btn:hover,
+.card-action-icon-btn:active {
+  color: #3B82F6;
+  background-color: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Compact & Ellipsis Engine Badge inside Fonetik Koç */
+#pron-engine-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+#pron-engine-desc-text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

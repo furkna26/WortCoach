@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>WortCoach — Yönlendiriliyor...</title>
+  <script>
+    (function () {
+      var loc = window.location;
+      var base = '/WortCoach';
+      var path = loc.pathname;
+      if (path.toLowerCase().indexOf(base.toLowerCase()) === 0) {
+        path = path.slice(base.length);
+      }
+      if (!path || path === '/') path = '/sozluk';
+      var target = loc.origin + (loc.pathname.toLowerCase().indexOf(base.toLowerCase()) === 0 ? base : '') + '/#' + path + (loc.search || '');
+      loc.replace(target);
+    })();
+  </script>
+</head>
+<body style="background:#0B0D12;color:#F3F4F6;font-family:sans-serif;"></body>
+</html>

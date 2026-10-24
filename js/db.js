@@ -209,17 +209,27 @@ class WortMeisterDatabase {
       return null;
     }
 
+    const rawDeckId = cardData.deckId && typeof cardData.deckId === 'object' ? cardData.deckId.id : cardData.deckId;
+    const resolvedDeckId = Number(rawDeckId) || 1;
+
     // Üst üste binmeyi ve mükerrer kart kaydını engelle
     const existing = await this.getCardByWord(cleanWord);
     if (existing) {
-      const merged = { ...existing, ...cardData, germanWord: cleanWord, id: existing.id, updatedAt: Date.now() };
+      const merged = {
+        ...existing,
+        ...cardData,
+        deckId: resolvedDeckId,
+        germanWord: cleanWord,
+        id: existing.id,
+        updatedAt: Date.now()
+      };
       return this.updateCard(merged);
     }
 
     const store = await this._tx('cards', 'readwrite');
     const now = Date.now();
     const record = {
-      deckId: Number(cardData.deckId) || 1,
+      deckId: resolvedDeckId,
       germanWord: cleanWord,
       targetLanguage: cardData.targetLanguage || 'de',
       partOfSpeech: cardData.partOfSpeech || 'OTHER',
@@ -258,6 +268,8 @@ class WortMeisterDatabase {
       console.warn('[wmDB] Boş kelime ile kart güncellenemez!');
       return null;
     }
+    const rawDeckId = card.deckId && typeof card.deckId === 'object' ? card.deckId.id : card.deckId;
+    card.deckId = Number(rawDeckId) || 1;
     card.germanWord = cleanWord;
     const store = await this._tx('cards', 'readwrite');
     return new Promise((resolve, reject) => {

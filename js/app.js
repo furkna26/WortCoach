@@ -15,6 +15,9 @@ class WortCoachApp {
     this.modalAbortController = null;
     this.deferredInstallPrompt = null;
     this.currentSearchEntry = null;
+    this.activeTabId = 'tab-home';
+    this.routeHistoryStack = [];
+    this.isHandlingRoute = false;
   }
 
   async init() {
@@ -22,6 +25,7 @@ class WortCoachApp {
     await window.DatabaseSeeder.seedIfNeeded();
 
     await this.initTheme();
+    this.loadAllCustomMeaningsIntoOfflineDict();
     this.bindNavigation();
     this.bindSearchEngine();
     this.bindAddCardModal();
@@ -44,6 +48,7 @@ class WortCoachApp {
 
     await this.refreshHomeDashboard();
     await this.renderDecksTab();
+    await this.initRouter();
     this.registerServiceWorker();
 
     // Canlı Wiktionary / Ağ zenginleştirmesi tamamlandığında UI'ı güncelle
@@ -152,7 +157,77 @@ class WortCoachApp {
           regs.forEach((r) => r.update());
         });
       }
-      navigator.serviceWorker.register('./sw.js?v=2.9.6').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=2.9.7').then((reg) => reg.update()).catch(() => {});
+    }
+  }
+
+  // --- KULLANICI ÖZEL ANLAM DEPOSU (localStorage + OFFLINE_DICTIONARY KALICI ENTEGRASYONU) ---
+  getCustomMeaningsMap() {
+    try {
+      const raw = localStorage.getItem('wm_custom_meanings_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  getCustomMeaningsForWord(word) {
+    const key = (word || '').trim().toLowerCase();
+    if (!key) return [];
+    const map = this.getCustomMeaningsMap();
+    return Array.isArray(map[key]) ? map[key] : [];
+  }
+
+  saveCustomMeaningForWord(word, meaning) {
+    const key = (word || '').trim().toLowerCase();
+    const cleanMeaning = (meaning || '').trim();
+    if (!key || !cleanMeaning) return [];
+
+    const map = this.getCustomMeaningsMap();
+    const list = Array.isArray(map[key]) ? map[key] : [];
+    if (!list.some((m) => m.toLowerCase() === cleanMeaning.toLowerCase())) {
+      list.push(cleanMeaning);
+    }
+    map[key] = list;
+    try {
+      localStorage.setItem('wm_custom_meanings_v1', JSON.stringify(map));
+    } catch (_) {}
+
+    // Yerel sözlük verisine de kalıcı olarak ekle
+    this.mergeCustomMeaningsIntoOfflineDictEntry(word, list);
+    return list;
+  }
+
+  mergeCustomMeaningsIntoOfflineDictEntry(word, customList) {
+    if (!window.OFFLINE_DICTIONARY || !Array.isArray(customList) || customList.length === 0) return;
+    const raw = (word || '').trim();
+    const lower = raw.toLowerCase();
+    const cap = lower.charAt(0).toUpperCase() + lower.slice(1);
+    const keys = [raw, lower, cap];
+
+    for (const k of keys) {
+      const dictEntry = window.OFFLINE_DICTIONARY[k];
+      if (dictEntry && typeof dictEntry === 'object') {
+        const existingParts = (dictEntry.tr || dictEntry.meaningsTr || '')
+          .split(/[,;\n]/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        for (const cm of customList) {
+          if (!existingParts.some((p) => p.toLowerCase() === cm.toLowerCase())) {
+            existingParts.push(cm);
+          }
+        }
+        const joined = existingParts.join(', ');
+        if ('tr' in dictEntry) dictEntry.tr = joined;
+        if ('meaningsTr' in dictEntry) dictEntry.meaningsTr = joined;
+      }
+    }
+  }
+
+  loadAllCustomMeaningsIntoOfflineDict() {
+    const map = this.getCustomMeaningsMap();
+    for (const [wordKey, list] of Object.entries(map)) {
+      this.mergeCustomMeaningsIntoOfflineDictEntry(wordKey, list);
     }
   }
 
@@ -175,12 +250,174 @@ class WortCoachApp {
 
     const metaTheme = document.getElementById('meta-theme-color');
     if (metaTheme) {
-      metaTheme.setAttribute('content', theme === 'dark' ? '#000000' : '#F5F6F0');
+      metaTheme.setAttribute('content', theme === 'dark' ? '#0B0D12' : '#F5F6F0');
     }
 
     const iconUse = document.querySelector('#theme-icon-svg use');
     if (iconUse) {
       iconUse.setAttribute('href', theme === 'dark' ? '#icon-sun' : '#icon-moon');
+    }
+  }
+
+  // --- GERÇEK SAYFA YÖNLENDİRMESİ (HISTORY API / SPA ROUTER) ---
+  getTabRouteMap() {
+    return {
+      'tab-home': '/sozluk',
+      'tab-translate': '/ceviri',
+      'tab-games': '/oyunlar',
+      'tab-decks': '/desteler',
+      'tab-cards': '/kelimeler',
+      'tab-study': '/tekrar'
+    };
+  }
+
+  getRouteToTabMap() {
+    return {
+      '/': 'tab-home',
+      '/sozluk': 'tab-home',
+      '/ceviri': 'tab-translate',
+      '/oyunlar': 'tab-games',
+      '/desteler': 'tab-decks',
+      '/kelimeler': 'tab-cards',
+      '/tekrar': 'tab-study'
+    };
+  }
+
+  pushRoute(routePath, stateObj = {}, replace = false) {
+    if (this.isHandlingRoute) return;
+    const normalizedPath = routePath.startsWith('/') ? routePath : `/${routePath}`;
+    const targetHash = `#${normalizedPath}`;
+    const currentHash = window.location.hash || '#/sozluk';
+
+    if (!replace && currentHash !== targetHash) {
+      this.routeHistoryStack.push(currentHash);
+    }
+
+    try {
+      if (replace) {
+        window.history.replaceState({ route: normalizedPath, ...stateObj }, '', targetHash);
+      } else if (currentHash !== targetHash) {
+        window.history.pushState({ route: normalizedPath, ...stateObj }, '', targetHash);
+      }
+    } catch (_) {
+      window.location.hash = targetHash;
+    }
+  }
+
+  async closeAllFullScreenPages() {
+    if (this.gameTimerInterval) {
+      clearInterval(this.gameTimerInterval);
+      this.gameTimerInterval = null;
+    }
+    if (window.wmPronunciation && window.wmPronunciation.isRecording) {
+      try {
+        await window.wmPronunciation.stopRecording();
+      } catch (_) {}
+    }
+    this.resetPronunciationRecorderUI?.();
+    document.getElementById('modal-pronunciation-coach')?.classList.add('hidden');
+    document.getElementById('modal-game-deck-select')?.classList.add('hidden');
+    document.getElementById('modal-game-quiz')?.classList.add('hidden');
+    document.getElementById('modal-cable-game')?.classList.add('hidden');
+  }
+
+  navigateBack(fallbackTabId = 'tab-home') {
+    if (this.routeHistoryStack.length > 0) {
+      this.routeHistoryStack.pop();
+      window.history.back();
+    } else {
+      this.switchTab(fallbackTabId);
+    }
+  }
+
+  async initRouter() {
+    window.addEventListener('popstate', async () => {
+      await this.handleCurrentRoute();
+    });
+
+    // İlk yüklemede URL'yi kontrol et (F5 yenilemede mevcut ekranı koru)
+    if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#/') {
+      // Pathname üzerinden doğrudan gelindiyse (/sozluk, /oyunlar vb.) onu yakala
+      const pathPart = window.location.pathname.replace(/^\/WortCoach/i, '').replace(/\/index\.html$/i, '') || '/sozluk';
+      const initialRoute = pathPart === '/' ? '/sozluk' : pathPart;
+      this.pushRoute(initialRoute, {}, true);
+    }
+    await this.handleCurrentRoute();
+  }
+
+  async handleCurrentRoute() {
+    this.isHandlingRoute = true;
+    try {
+      const rawHash = (window.location.hash || '#/sozluk').replace(/^#/, '');
+      const [pathPart, queryString] = rawHash.split('?');
+      const cleanPath = pathPart || '/sozluk';
+      const params = new URLSearchParams(queryString || '');
+
+      await this.closeAllFullScreenPages();
+
+      // 1. Alt ekran: /fonetik-koc/:word
+      if (cleanPath.startsWith('/fonetik-koc/')) {
+        const encodedWord = cleanPath.slice('/fonetik-koc/'.length);
+        const decodedWord = decodeURIComponent(encodedWord || '').trim();
+        await this.switchTab(this.activeTabId || 'tab-home', { skipRoutePush: true, keepFullScreenPages: true });
+
+        if (decodedWord === 'antrenman') {
+          await this.startPronunciationTrainerSession(null, { skipRoutePush: true });
+        } else if (decodedWord) {
+          let entry = null;
+          if (window.wmDB) {
+            entry = await window.wmDB.getCardByWord(decodedWord);
+          }
+          if (!entry && window.DictionaryService) {
+            entry = window.DictionaryService.synthesizeInstantEntry(decodedWord);
+          }
+          if (!entry) {
+            entry = { germanWord: decodedWord, partOfSpeech: 'OTHER', meaningsTr: '' };
+          }
+          const mode = params.get('mode') === 'sentence' ? 'sentence' : 'word';
+          this.openPronunciationCoach(entry, mode, { skipRoutePush: true });
+        }
+        return;
+      }
+
+      // 2. Alt ekran: /oyunlar/:gameType
+      if (cleanPath.startsWith('/oyunlar/')) {
+        const gameSub = decodeURIComponent(cleanPath.slice('/oyunlar/'.length) || '').trim();
+        await this.switchTab('tab-games', { skipRoutePush: true, keepFullScreenPages: true });
+
+        if (gameSub.startsWith('secim-')) {
+          const gType = gameSub.replace(/^secim-/, '') || 'MIXED';
+          await this.openGameDeckSelectionModal(gType, { skipRoutePush: true });
+        } else if (gameSub === 'CABLE_MATCH') {
+          this.openCableGameModal(this.cableSelectedDeckIds || null, { skipRoutePush: true });
+        } else if (gameSub === 'PRONUNCIATION_TRAINER') {
+          await this.startPronunciationTrainerSession(null, { skipRoutePush: true });
+        } else if (gameSub) {
+          if (window.WordGameService && (!window.WordGameService.poolCards || window.WordGameService.poolCards.length === 0)) {
+            await window.WordGameService.initPool('all');
+          }
+          this.openGameQuizModal(gameSub, { skipRoutePush: true });
+        }
+        return;
+      }
+
+      // 3. Ana Sekmeler: /sozluk, /ceviri, /oyunlar, /desteler, /kelimeler, /tekrar
+      const routeToTab = this.getRouteToTabMap();
+      const targetTab = routeToTab[cleanPath] || 'tab-home';
+      await this.switchTab(targetTab, { skipRoutePush: true });
+
+      if (targetTab === 'tab-home') {
+        const q = params.get('q');
+        const searchInput = document.getElementById('global-search-input');
+        if (q && searchInput) {
+          if (searchInput.value.trim().toLowerCase() !== q.trim().toLowerCase()) {
+            searchInput.value = q;
+          }
+          this.executeSearch(q, { skipRoutePush: true });
+        }
+      }
+    } finally {
+      this.isHandlingRoute = false;
     }
   }
 
@@ -211,7 +448,12 @@ class WortCoachApp {
     });
   }
 
-  async switchTab(tabId) {
+  async switchTab(tabId, options = {}) {
+    if (!options.keepFullScreenPages) {
+      await this.closeAllFullScreenPages();
+    }
+
+    this.activeTabId = tabId;
     document.querySelectorAll('.tab-view').forEach((sec) => sec.classList.remove('active'));
     document.querySelectorAll('.bottom-nav .nav-item').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-target') === tabId);
@@ -219,6 +461,18 @@ class WortCoachApp {
 
     const targetEl = document.getElementById(tabId);
     if (targetEl) targetEl.classList.add('active');
+
+    if (!options.skipRoutePush) {
+      const tabRouteMap = this.getTabRouteMap();
+      let routePath = tabRouteMap[tabId] || '/sozluk';
+      if (tabId === 'tab-home') {
+        const curQ = document.getElementById('global-search-input')?.value?.trim();
+        if (curQ) {
+          routePath = `/sozluk?q=${encodeURIComponent(curQ)}`;
+        }
+      }
+      this.pushRoute(routePath, { tabId });
+    }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -229,7 +483,7 @@ class WortCoachApp {
         await window.wmStudy.loadSession(window.wmStudy.deckSelect ? window.wmStudy.deckSelect.value : 'all', false);
       }
     } else if (tabId === 'tab-games') {
-      // Kelime Oyunlar sekmesi ald
+      // Kelime Oyunları sekmesi aktif
     } else if (tabId === 'tab-decks') {
       await this.renderDecksTab();
     } else if (tabId === 'tab-cards') {
@@ -433,6 +687,7 @@ class WortCoachApp {
         resultsContainer?.classList.add('hidden');
         this.renderSuggestions([]);
         homeDashboard?.classList.remove('hidden');
+        this.pushRoute('/sozluk', { tabId: 'tab-home' }, true);
         return;
       }
 
@@ -462,6 +717,7 @@ class WortCoachApp {
       resultsContainer?.classList.add('hidden');
       this.renderSuggestions([]);
       homeDashboard?.classList.remove('hidden');
+      this.pushRoute('/sozluk', { tabId: 'tab-home' }, true);
       searchInput.focus();
     });
 
@@ -477,10 +733,14 @@ class WortCoachApp {
     });
   }
 
-  async executeSearch(query) {
+  async executeSearch(query, options = {}) {
     const statusBar = document.getElementById('search-status-bar');
     const resultsContainer = document.getElementById('search-results-container');
     const homeDashboard = document.getElementById('home-dashboard');
+
+    if (!options.skipRoutePush && query && query.trim()) {
+      this.pushRoute(`/sozluk?q=${encodeURIComponent(query.trim())}`, { tabId: 'tab-home', q: query.trim() }, true);
+    }
 
     if (this.searchAbortController) {
       this.searchAbortController.abort();
@@ -746,8 +1006,8 @@ class WortCoachApp {
     const posBadge = `<span class="badge badge-pos-${pos}">${posLabels[pos] || 'Kelime'}</span>`;
 
     const pluralVal = entry.pluralForm || (nounInfo ? nounInfo.plural : '');
-    const pluralRow = isNoun && pluralVal
-      ? `<div style="margin: 6px 0;"><span class="badge-regularity" style="font-size:0.78rem;">Çoğul: ${pluralVal}</span></div>`
+    const pluralBadge = isNoun && pluralVal
+      ? `<span class="badge-regularity" style="font-size:0.78rem;">Çoğul: ${pluralVal}</span>`
       : '';
 
     const verbTable = pos === 'VERB' ? this.buildVerbTenseTableHTML(entry) : '';
@@ -768,7 +1028,7 @@ class WortCoachApp {
     const actionButtons = existingId
       ? `
         <button class="icon-btn-ghost" id="btn-res-priority" title="Önemli">
-          <svg class="svg-icon" style="color:${existing?.isPriority ? 'var(--palette-yellow)' : 'var(--text-muted)'}"><use href="${existing?.isPriority ? '#icon-star-filled' : '#icon-star'}"></use></svg>
+          <svg class="svg-icon" style="color:${existing?.isPriority ? 'var(--accent-amber)' : 'var(--text-muted)'}"><use href="${existing?.isPriority ? '#icon-star-filled' : '#icon-star'}"></use></svg>
         </button>
         <button class="icon-btn-ghost delete-btn" id="btn-res-delete" title="Kartı Sil">
           <svg class="svg-icon"><use href="#icon-trash"></use></svg>
@@ -776,29 +1036,40 @@ class WortCoachApp {
       `
       : '';
 
-    // Anlam Listelerini Ayır
+    // Anlam Listelerini Ayır ve Kullanıcının Eklediği Özel Anlamları Birleştir
     const trMeanings = (entry.meaningsTr || '')
       .split(/[,;\n]/)
       .map((m) => m.trim())
       .filter((m) => m.length > 0 && !m.toLowerCase().includes('yükleniyor'));
     if (trMeanings.length === 0 && entry.meaningsTr) trMeanings.push(entry.meaningsTr.trim());
 
+    const customUserMeanings = this.getCustomMeaningsForWord(cleanWord);
+    for (const cm of customUserMeanings) {
+      if (!trMeanings.some((m) => m.toLowerCase() === cm.toLowerCase())) {
+        trMeanings.push(cm);
+      }
+    }
+
     const enMeanings = (entry.meaningsEn || '')
       .split(/[,;\n]/)
       .map((m) => m.trim())
       .filter((m) => m.length > 0);
 
-    // Türkçe Anlam Çipleri
+    // Türkçe Anlam Çipleri: Varsayılan olarak İLK eleman (idx === 0) ve kullanıcı özel anlamları seçili
     const trChipsHtml = trMeanings
-      .map((m) => `<button type="button" class="meaning-chip selected" data-type="tr" data-val="${m.replace(/"/g, '&quot;')}">${m}</button>`)
+      .map((m, idx) => {
+        const isCustom = customUserMeanings.some((cm) => cm.toLowerCase() === m.toLowerCase());
+        const isSelected = idx === 0 || isCustom;
+        return `<button type="button" class="meaning-chip ${isSelected ? 'selected' : ''}" data-type="tr" data-val="${m.replace(/"/g, '&quot;')}"><span class="chip-check-icon">✓</span><span>${m}</span></button>`;
+      })
       .join('');
 
-    // İngilizce Anlam Çipleri
+    // İngilizce Anlam Çipleri: Varsayılan olarak İLK eleman (idx === 0) seçili
     const enChipsHtml = enMeanings
-      .map((m) => `<button type="button" class="meaning-chip selected" data-type="en" data-val="${m.replace(/"/g, '&quot;')}">${m}</button>`)
+      .map((m, idx) => `<button type="button" class="meaning-chip ${idx === 0 ? 'selected' : ''}" data-type="en" data-val="${m.replace(/"/g, '&quot;')}"><span class="chip-check-icon">✓</span><span>${m}</span></button>`)
       .join('');
 
-    // Örnek Cümleler
+    // Örnek Cümleler (Radyo butonu olmadan, tüm kart tıklanabilir multi-select, ilk eleman seçili)
     let examples = [];
     if (Array.isArray(entry.examples) && entry.examples.length > 0) {
       examples = entry.examples;
@@ -819,13 +1090,12 @@ class WortCoachApp {
           germanText = germanText.replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim();
           const cleanExFull = turkishText ? `${germanText} (${turkishText})` : germanText;
           return `
-            <div class="example-radio-card ${idx === 0 ? 'selected' : ''}" data-idx="${idx}">
-              <input type="radio" name="inline-example-choice" class="example-radio-input" ${idx === 0 ? 'checked' : ''} data-ex="${cleanExFull.replace(/"/g, '&quot;')}">
-              <div class="example-card-body">
+            <div class="example-radio-card ${idx === 0 ? 'selected' : ''}" data-idx="${idx}" data-ex="${cleanExFull.replace(/"/g, '&quot;')}">
+              <div class="example-card-body" style="flex:1; min-width:0;">
                 <div class="example-de-text">${germanText}</div>
                 ${turkishText ? `<div class="example-tr-text">${turkishText}</div>` : ''}
               </div>
-              <div style="display:flex; align-items:center; gap:2px;">
+              <div style="display:flex; align-items:center; gap:2px; flex-shrink:0;">
                 <button type="button" class="icon-btn-ghost btn-play-example" title="Seslendir" data-tts="${germanText.replace(/"/g, '&quot;')}">
                   <svg class="svg-icon" style="color:var(--brand-blue); width:16px; height:16px;"><use href="#icon-volume"></use></svg>
                 </button>
@@ -840,8 +1110,9 @@ class WortCoachApp {
 
     // Desteler Listesi
     const decks = await window.wmDB.getAllDecks();
+    const currentCardDeckId = existing ? Number(existing.deckId) : null;
     const deckOptionsHtml = decks
-      .map((d) => `<option value="${d.id}">${d.name} (${d.cardCount || 0} kart)</option>`)
+      .map((d) => `<option value="${d.id}" ${currentCardDeckId === Number(d.id) ? 'selected' : ''}>${d.name} (${d.cardCount || 0} kart)</option>`)
       .join('') + `<option value="__NEW_DECK__">+ Yeni Deste Oluştur...</option>`;
 
     // Kayıt Butonu
@@ -869,36 +1140,46 @@ class WortCoachApp {
             </span>
             ${articleBadge}
             <span class="wdc-word">${cleanWord}</span>
+          </div>
+          <div class="wdc-actions">
             <button class="icon-btn-ghost" id="btn-res-tts" title="Dinle (TTS)">
               <svg class="svg-icon" style="color:var(--brand-blue); width:22px; height:22px;"><use href="#icon-volume"></use></svg>
             </button>
             <button class="icon-btn-ghost btn-mic-trigger" id="btn-res-pronounce" title="Telaffuzunu Test Et">
               <svg class="svg-icon" style="color:#10B981; width:21px; height:21px;"><use href="#icon-mic"></use></svg>
             </button>
-            ${reflexivBadge}
-            ${posBadge}
-          </div>
-          <div class="wdc-actions">
             ${actionButtons}
           </div>
         </div>
 
-        ${pluralRow}
+        <div class="wdc-badges-subrow">
+          ${posBadge}
+          ${pluralBadge}
+          ${reflexivBadge}
+        </div>
+
         ${verbTable}
 
-        <!-- TÜRKÇE ANLAMLAR ÇİPLERİ -->
+        <!-- TÜRKÇE ANLAMLAR ÇİPLERİ + ÖZEL ANLAM EKLEME -->
         <div class="sec-row-header" style="margin-top: 14px;">
           <span>TÜRKÇE ANLAMLAR</span>
-          <span style="font-size:0.75rem; color:var(--text-muted);">Kart için seçin</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim yapabilirsiniz</span>
         </div>
         <div class="meaning-chips-container" id="inline-tr-chips">
           ${trChipsHtml}
+          <button type="button" class="btn-add-custom-meaning" id="btn-add-custom-tr-meaning">+ Anlam Ekle</button>
+          <div class="custom-meaning-inline-box hidden" id="custom-meaning-inline-box">
+            <input type="text" id="input-custom-tr-meaning" class="custom-meaning-inline-input" placeholder="Özel anlam yazın..." maxlength="60" autocomplete="off" />
+            <button type="button" id="btn-confirm-custom-tr-meaning" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
+            <button type="button" id="btn-cancel-custom-tr-meaning" class="btn-cancel-custom-meaning" title="İptal">✕</button>
+          </div>
         </div>
 
         <!-- İNGİLİZCE KARŞILIKLAR ÇİPLERİ -->
         ${enMeanings.length > 0 ? `
           <div class="sec-row-header" style="margin-top: 12px;">
             <span>İNGİLİZCE KARŞILIKLAR</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim</span>
           </div>
           <div class="meaning-chips-container" id="inline-en-chips">
             ${enChipsHtml}
@@ -908,9 +1189,9 @@ class WortCoachApp {
         <!-- ÖRNEK CÜMLELER SEÇİMİ -->
         <div class="sec-row-header" style="margin-top: 14px;">
           <span>ÖRNEK CÜMLELER</span>
-          <span style="font-size:0.75rem; color:var(--text-muted);">Karta eklenecek cümleyi seçin</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Karta eklenecek cümle(ler)i seçin</span>
         </div>
-        <div class="examples-selection-container" id="inline-examples-list">
+        <div class="example-sentences-list" id="inline-examples-list">
           ${examplesHtml}
         </div>
 
@@ -921,7 +1202,7 @@ class WortCoachApp {
             <select class="target-deck-select" id="inline-target-deck">
               ${deckOptionsHtml}
             </select>
-            <svg class="svg-icon deck-select-chevron"><use href="#icon-arrow-down"></use></svg>
+            <svg class="svg-icon deck-select-chevron"><use href="#icon-chevron-down"></use></svg>
           </div>
         </div>
 
@@ -978,22 +1259,115 @@ class WortCoachApp {
       });
     });
 
-    // Anlam Çiplerini Aç / Kapa (Toggle Selection)
+    // Anlam Çiplerini Aç / Kapa (Multi-Select Toggle)
     container.querySelectorAll('.meaning-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
         chip.classList.toggle('selected');
       });
     });
 
-    // Örnek Cümle Radio Kartı Seçimi
+    // Kullanıcının Kendi Anlamını Ekleyebilmesi (+ Anlam Ekle)
+    const addCustomBtn = document.getElementById('btn-add-custom-tr-meaning');
+    const customBox = document.getElementById('custom-meaning-inline-box');
+    const customInput = document.getElementById('input-custom-tr-meaning');
+    const confirmCustomBtn = document.getElementById('btn-confirm-custom-tr-meaning');
+    const cancelCustomBtn = document.getElementById('btn-cancel-custom-tr-meaning');
+    const trChipsContainer = document.getElementById('inline-tr-chips');
+
+    const commitCustomMeaning = () => {
+      const val = (customInput?.value || '').trim();
+      if (!val) {
+        customBox?.classList.add('hidden');
+        addCustomBtn?.classList.remove('hidden');
+        return;
+      }
+
+      // Aynı anlam zaten varsa seçili yap
+      const existingChip = Array.from(trChipsContainer?.querySelectorAll('.meaning-chip') || []).find(
+        (c) => (c.getAttribute('data-val') || '').toLowerCase() === val.toLowerCase()
+      );
+
+      if (existingChip) {
+        existingChip.classList.add('selected');
+      } else {
+        const newChip = document.createElement('button');
+        newChip.type = 'button';
+        newChip.className = 'meaning-chip selected';
+        newChip.setAttribute('data-type', 'tr');
+        newChip.setAttribute('data-val', val);
+        newChip.innerHTML = `<span class="chip-check-icon">✓</span><span>${val}</span>`;
+        newChip.addEventListener('click', () => {
+          newChip.classList.toggle('selected');
+        });
+        trChipsContainer?.insertBefore(newChip, addCustomBtn);
+      }
+
+      if (!trMeanings.some((m) => m.toLowerCase() === val.toLowerCase())) {
+        trMeanings.push(val);
+      }
+      this.saveCustomMeaningForWord(cleanWord, val);
+
+      if (customInput) customInput.value = '';
+      customBox?.classList.add('hidden');
+      addCustomBtn?.classList.remove('hidden');
+      this.showToast(`"${val}" anlamı eklendi ve seçildi ✓`);
+    };
+
+    addCustomBtn?.addEventListener('click', () => {
+      addCustomBtn.classList.add('hidden');
+      customBox?.classList.remove('hidden');
+      customInput?.focus();
+    });
+
+    confirmCustomBtn?.addEventListener('click', () => {
+      commitCustomMeaning();
+    });
+
+    cancelCustomBtn?.addEventListener('click', () => {
+      if (customInput) customInput.value = '';
+      customBox?.classList.add('hidden');
+      addCustomBtn?.classList.remove('hidden');
+    });
+
+    customInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitCustomMeaning();
+      } else if (e.key === 'Escape') {
+        if (customInput) customInput.value = '';
+        customBox?.classList.add('hidden');
+        addCustomBtn?.classList.remove('hidden');
+      }
+    });
+
+    // Örnek Cümle Kartı Çoklu Seçimi (Tıklanan kartı seç / kaldır)
     container.querySelectorAll('.example-radio-card').forEach((card) => {
       card.addEventListener('click', () => {
-        container.querySelectorAll('.example-radio-card').forEach((c) => c.classList.remove('selected'));
-        container.querySelectorAll('.example-radio-input').forEach((r) => (r.checked = false));
-        card.classList.add('selected');
-        const r = card.querySelector('.example-radio-input');
-        if (r) r.checked = true;
+        card.classList.toggle('selected');
       });
+    });
+
+    // Hedef Deste Dropdown Değişiminde "+ Yeni Deste Oluştur..." Seçilirse Anında Oluştur
+    const deckSelectEl = document.getElementById('inline-target-deck');
+    deckSelectEl?.addEventListener('change', async () => {
+      if (deckSelectEl.value === '__NEW_DECK__') {
+        const newDeckName = prompt('Yeni deste ismi giriniz:', 'Almanca Kelimeler');
+        if (!newDeckName || !newDeckName.trim()) {
+          deckSelectEl.value = decks.length > 0 ? String(decks[0].id) : '1';
+          return;
+        }
+        const createdDeck = await window.wmDB.createDeck(newDeckName.trim(), 'Özel kelime destesi', 'default');
+        const newDeckId = Number(createdDeck?.id ?? createdDeck);
+        const newOpt = document.createElement('option');
+        newOpt.value = String(newDeckId);
+        newOpt.textContent = `${newDeckName.trim()} (0 kart)`;
+        const newDeckTriggerOpt = deckSelectEl.querySelector('option[value="__NEW_DECK__"]');
+        deckSelectEl.insertBefore(newOpt, newDeckTriggerOpt);
+        deckSelectEl.value = String(newDeckId);
+        decks.push({ id: newDeckId, name: newDeckName.trim(), cardCount: 0 });
+        await this.renderDecksTab();
+        this.showToast(`"${newDeckName.trim()}" destesi oluşturuldu ve seçildi ✓`);
+      }
     });
 
     // Yıldız / Önemli
@@ -1013,47 +1387,71 @@ class WortCoachApp {
       }
     });
 
-    // Inline Kaydet Butonu
+    // Inline Kaydet Butonu (Yeni Deste + Çoklu Anlam + Özel Anlam Garantili)
     document.getElementById('btn-inline-save')?.addEventListener('click', async () => {
       if (!cleanWord || !cleanWord.trim()) {
         this.showToast('Kaydedilecek geçerli bir kelime bulunamadı.');
         return;
       }
+
+      // Açık kalan özel anlam kutusunda metin varsa önce onu da listeye dahil et
+      if (customBox && !customBox.classList.contains('hidden') && customInput?.value.trim()) {
+        commitCustomMeaning();
+      }
+
       const deckSelect = document.getElementById('inline-target-deck');
       let targetDeckId = deckSelect ? deckSelect.value : null;
 
       if (targetDeckId === '__NEW_DECK__') {
         const newDeckName = prompt('Yeni deste ismi giriniz:', 'Almanca Kelimeler');
         if (!newDeckName || !newDeckName.trim()) {
-          if (decks.length > 0) deckSelect.value = decks[0].id;
+          if (decks.length > 0 && deckSelect) deckSelect.value = String(decks[0].id);
           return;
         }
-        const createdDeckId = await window.wmDB.createDeck(newDeckName.trim(), 'Özel kelime destesi', 'default');
-        targetDeckId = createdDeckId;
+        const createdDeck = await window.wmDB.createDeck(newDeckName.trim(), 'Özel kelime destesi', 'default');
+        const resolvedNewDeckId = Number(createdDeck?.id ?? createdDeck);
+        targetDeckId = resolvedNewDeckId;
+
+        if (deckSelect) {
+          const newOpt = document.createElement('option');
+          newOpt.value = String(resolvedNewDeckId);
+          newOpt.textContent = `${newDeckName.trim()} (1 kart)`;
+          const newDeckTriggerOpt = deckSelect.querySelector('option[value="__NEW_DECK__"]');
+          deckSelect.insertBefore(newOpt, newDeckTriggerOpt);
+          deckSelect.value = String(resolvedNewDeckId);
+        }
       } else if (targetDeckId) {
         targetDeckId = Number(targetDeckId);
       } else if (decks.length > 0) {
-        targetDeckId = decks[0].id;
+        targetDeckId = Number(decks[0].id);
+      } else {
+        const fallbackDeck = await window.wmDB.createDeck('Genel Deste', 'Varsayılan deste', 'default');
+        targetDeckId = Number(fallbackDeck?.id ?? fallbackDeck) || 1;
       }
 
-      // Seçili Türkçe Anlamlar
+      // Seçili Türkçe Anlamlar (Hem sözlük hem kullanıcı özel anlamları)
       const selectedTrNodes = container.querySelectorAll('#inline-tr-chips .meaning-chip.selected');
       let selectedTr = Array.from(selectedTrNodes).map((c) => c.getAttribute('data-val')).filter(Boolean);
-      if (selectedTr.length === 0) selectedTr = trMeanings;
+      if (selectedTr.length === 0) selectedTr = trMeanings.slice(0, 1);
 
       // Seçili İngilizce Anlamlar
       const selectedEnNodes = container.querySelectorAll('#inline-en-chips .meaning-chip.selected');
       let selectedEn = Array.from(selectedEnNodes).map((c) => c.getAttribute('data-val')).filter(Boolean);
-      if (selectedEn.length === 0) selectedEn = enMeanings;
+      if (selectedEn.length === 0 && enMeanings.length > 0) selectedEn = enMeanings.slice(0, 1);
 
-      // Seçili Örnek Cümle
-      const checkedExRadio = container.querySelector('.example-radio-input:checked');
-      let selectedEx = checkedExRadio ? (checkedExRadio.getAttribute('data-ex') || '') : (examples[0] || '');
-      selectedEx = selectedEx.replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim();
+      // Seçili Örnek Cümle(ler)
+      const selectedExCards = container.querySelectorAll('#inline-examples-list .example-radio-card.selected');
+      let selectedExList = Array.from(selectedExCards)
+        .map((c) => (c.getAttribute('data-ex') || '').replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim())
+        .filter(Boolean);
+      if (selectedExList.length === 0 && examples.length > 0) {
+        selectedExList = [examples[0].replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim()];
+      }
+      const selectedEx = selectedExList.join(' | ');
 
-      // Kart Nesnesi — Otomatik Artikel Garantisi İle
+      // Kart Nesnesi — Otomatik Artikel & Doğrudan deckId Garantisi İle
       const cardPayload = {
-        deckId: targetDeckId,
+        deckId: Number(targetDeckId) || 1,
         germanWord: cleanWord,
         partOfSpeech: pos,
         article: isNoun ? canonicalArticle : '',
@@ -1092,8 +1490,10 @@ class WortCoachApp {
 
         try {
           if (window.WordGameService) {
-            window.WordGameService.initPool();
+            await window.WordGameService.initPool();
           }
+          await this.renderDecksTab();
+          await this.renderCardsList();
           await this.refreshHomeDashboard();
         } catch (_) {}
       } catch (err) {
@@ -1119,16 +1519,18 @@ class WortCoachApp {
         this.gameTimerInterval = null;
       }
       document.getElementById('modal-game-quiz')?.classList.add('hidden');
+      this.navigateBack('tab-games');
     });
 
     document.getElementById('btn-game-finish')?.addEventListener('click', () => {
       document.getElementById('modal-game-quiz')?.classList.add('hidden');
       this.refreshHomeDashboard();
+      this.navigateBack('tab-games');
     });
 
     document.getElementById('btn-game-play-again')?.addEventListener('click', () => {
       if (window.WordGameService && window.WordGameService.currentGameType) {
-        this.openGameQuizModal(window.WordGameService.currentGameType);
+        this.openGameQuizModal(window.WordGameService.currentGameType, { skipRoutePush: true });
       }
     });
 
@@ -1151,10 +1553,11 @@ class WortCoachApp {
     this.bindCableGameModal();
   }
 
-  // --- OYUN İÇİN DESTE SEÇİM MODALI ---
+  // --- OYUN İÇİN DESTE SEÇİM EKRANI ---
   bindGameDeckSelectionModal() {
     document.getElementById('btn-close-game-deck-select')?.addEventListener('click', () => {
       document.getElementById('modal-game-deck-select')?.classList.add('hidden');
+      this.navigateBack('tab-games');
     });
 
     document.getElementById('btn-gds-toggle-all')?.addEventListener('click', () => {
@@ -1201,10 +1604,14 @@ class WortCoachApp {
     });
   }
 
-  async openGameDeckSelectionModal(gameType) {
+  async openGameDeckSelectionModal(gameType, options = {}) {
     this.pendingGameType = gameType;
     const modal = document.getElementById('modal-game-deck-select');
     if (!modal) return;
+
+    if (!options.skipRoutePush) {
+      this.pushRoute(`/oyunlar/secim-${encodeURIComponent(gameType)}`, { gameType });
+    }
 
     const titleEl = document.getElementById('gds-title');
     const subEl = document.getElementById('gds-subtitle');
@@ -1286,6 +1693,7 @@ class WortCoachApp {
     document.getElementById('btn-close-cable-game')?.addEventListener('click', () => {
       document.getElementById('modal-cable-game')?.classList.add('hidden');
       this.refreshHomeDashboard();
+      this.navigateBack('tab-games');
     });
 
     document.getElementById('btn-cable-restart')?.addEventListener('click', () => {
@@ -1303,10 +1711,13 @@ class WortCoachApp {
     });
   }
 
-  openCableGameModal(selectedDeckIds = null) {
+  openCableGameModal(selectedDeckIds = null, options = {}) {
     const modal = document.getElementById('modal-cable-game');
     if (!modal) return;
     this.cableSelectedDeckIds = selectedDeckIds;
+    if (!options.skipRoutePush) {
+      this.pushRoute('/oyunlar/CABLE_MATCH', { gameType: 'CABLE_MATCH' });
+    }
     modal.classList.remove('hidden');
     this.startCableRound();
   }
@@ -1648,10 +2059,14 @@ class WortCoachApp {
     }
   }
 
-  openGameQuizModal(gameType) {
+  openGameQuizModal(gameType, options = {}) {
     if (!window.WordGameService) return;
     const modal = document.getElementById('modal-game-quiz');
     if (!modal) return;
+
+    if (!options.skipRoutePush) {
+      this.pushRoute(`/oyunlar/${encodeURIComponent(gameType || 'MIXED')}`, { gameType });
+    }
 
     const titles = {
       ARTICLE: 'Artikel Testi (der · die · das)',
@@ -2302,32 +2717,32 @@ class WortCoachApp {
           if (!trMeaning) trMeaning = c.meaningsEn || 'Anlam belirtilmedi';
 
           return `
-        <div class="deck-item-card" data-card-id="${c.id}" style="margin-bottom:8px; cursor:pointer;" title="Düzenlemek için tıklayın">
-          <div style="flex:1;">
-            <div style="display:flex; align-items:center; gap:8px;">
+        <div class="deck-item-card" data-card-id="${c.id}" style="margin-bottom:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px;" title="Düzenlemek için tıklayın">
+          <div style="flex:1; min-width:0; padding-right:4px;">
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
               <span class="lang-badge lang-badge-de">
                 <svg class="flag-svg"><use href="#flag-de"></use></svg>
                 <span>DE</span>
               </span>
               ${c.article ? `<span class="badge badge-${c.article}">${c.article}</span>` : ''}
-              <strong style="font-size:1.05rem; color:var(--text-primary);">${c.germanWord}</strong>
+              <strong style="font-size:1.05rem; color:var(--text-primary); word-break:break-word;">${c.germanWord}</strong>
               <span class="badge badge-pos-${c.partOfSpeech}">${c.partOfSpeech}</span>
               ${c.isReflexive ? `<span class="badge-reflexiv">Reflexiv</span>` : ''}
             </div>
-            <div style="font-size:0.85rem; color:var(--text-primary); margin-top:4px;">${trMeaning}</div>
-            ${c.pluralForm ? `<div style="font-size:0.75rem; color:var(--text-secondary);">Çoğul: ${c.pluralForm}</div>` : ''}
+            <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; word-break:break-word;">${trMeaning}</div>
+            ${c.pluralForm ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Çoğul: ${c.pluralForm}</div>` : ''}
           </div>
-          <div class="deck-item-actions">
-            <button class="icon-btn-ghost btn-card-edit" data-id="${c.id}" title="Düzenle">
-              <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-edit"></use></svg>
+          <div class="deck-item-actions" style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+            <button type="button" class="card-action-icon-btn btn-card-edit" data-id="${c.id}" title="Düzenle" aria-label="Düzenle">
+              <svg class="svg-icon"><use href="#icon-edit"></use></svg>
             </button>
-            <button class="icon-btn-ghost btn-card-tts" data-word="${c.germanWord}" title="Dinle">
-              <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
+            <button type="button" class="card-action-icon-btn btn-card-tts" data-word="${c.germanWord}" title="Dinle" aria-label="Dinle">
+              <svg class="svg-icon"><use href="#icon-volume"></use></svg>
             </button>
-            <button class="icon-btn-ghost btn-card-pronounce btn-mic-trigger" data-id="${c.id}" title="Telaffuzunu Test Et">
-              <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
+            <button type="button" class="card-action-icon-btn btn-card-pronounce btn-mic-trigger" data-id="${c.id}" title="Telaffuz (Mikrofon)" aria-label="Telaffuz">
+              <svg class="svg-icon"><use href="#icon-mic"></use></svg>
             </button>
-            <button class="icon-btn-ghost delete-btn btn-card-delete" data-id="${c.id}" title="Sil">
+            <button type="button" class="card-action-icon-btn delete-btn btn-card-delete" data-id="${c.id}" title="Sil" aria-label="Sil">
               <svg class="svg-icon"><use href="#icon-trash"></use></svg>
             </button>
           </div>
@@ -2918,6 +3333,7 @@ ${jsonStr}`
       }
       this.resetPronunciationRecorderUI();
       modal.classList.add('hidden');
+      this.navigateBack(this.activeTabId || 'tab-home');
     });
 
     // Fonetik Motoru Seçici (Hibrit / Wav2Vec2 CTC / MFA Viterbi / Azure)
@@ -3002,6 +3418,7 @@ ${jsonStr}`
       } else {
         this.showToast('Telaffuz antrenmanı tamamlandı! Harika pratik yaptınız. 🎉');
         modal.classList.add('hidden');
+        this.navigateBack('tab-games');
       }
     });
 
@@ -3023,10 +3440,10 @@ ${jsonStr}`
     if (engineBadge) {
       if (selectedId === 'AZURE_CLOUD') {
         engineBadge.textContent = az.isConfigured
-          ? `Azure Cloud GOP (${az.region}) Aktif`
-          : 'Azure Anahtarı Yok • MFA Viterbi Yedek Aktif';
+          ? `Azure Cloud GOP (${az.region})`
+          : 'Azure Anahtarı Yok • MFA Viterbi Aktif';
       } else {
-        engineBadge.textContent = meta.badgeText;
+        engineBadge.textContent = meta.shortLabel || meta.badgeText;
       }
     }
 
@@ -3034,26 +3451,32 @@ ${jsonStr}`
     const preloadBtn = document.getElementById('btn-pron-preload-wav2vec2');
 
     if (descText) {
-      descText.textContent = meta.description;
+      const compactDescMap = {
+        HYBRID_ENSEMBLE: 'MFA Viterbi + Wav2Vec2 + Akustik DSP birleşimi',
+        WAV2VEC2_CTC: 'Tarayıcı içi Wav2Vec2 Neural CTC fonem analizi',
+        MFA_FORCED_ALIGN: 'Montreal Forced Aligner (MFA Viterbi) zaman hizalama',
+        AZURE_CLOUD: 'Microsoft Azure Speech GOP bulut değerlendirmesi'
+      };
+      descText.textContent = compactDescMap[selectedId] || meta.shortLabel || 'Fonetik doğruluk analizi';
     }
 
     if (preloadBtn) {
       const showNeuralBtn = selectedId === 'WAV2VEC2_CTC' || selectedId === 'HYBRID_ENSEMBLE';
       preloadBtn.classList.toggle('hidden', !showNeuralBtn);
       if (window.wmPronunciation.wav2vec2Status === 'ready') {
-        preloadBtn.textContent = '✓ Wav2Vec2 CTC Aktif';
+        preloadBtn.textContent = '✓ Wav2Vec2 Aktif';
         preloadBtn.classList.add('is-ready');
       } else if (window.wmPronunciation.wav2vec2Status === 'loading') {
-        preloadBtn.textContent = `⏳ Yükleniyor (%${window.wmPronunciation.wav2vec2Progress || 0})`;
+        preloadBtn.textContent = `⏳ %${window.wmPronunciation.wav2vec2Progress || 0}`;
         preloadBtn.classList.remove('is-ready');
       } else {
-        preloadBtn.textContent = '🧠 Wav2Vec2 Modelini Yükle';
+        preloadBtn.textContent = '🧠 Modeli Yükle';
         preloadBtn.classList.remove('is-ready');
       }
     }
   }
 
-  async startPronunciationTrainerSession(selectedDeckIds = null) {
+  async startPronunciationTrainerSession(selectedDeckIds = null, options = {}) {
     if (!window.WordGameService) return;
     await window.WordGameService.initPool(selectedDeckIds && selectedDeckIds.length > 0 ? selectedDeckIds : 'all');
     const pool = window.WordGameService.poolCards || [];
@@ -3070,18 +3493,28 @@ ${jsonStr}`
     this.pronState.entry = shuffled[0];
     this.pronState.mode = 'word';
 
+    if (!options.skipRoutePush) {
+      this.pushRoute('/fonetik-koc/antrenman', { trainer: true });
+    }
+
     const modal = document.getElementById('modal-pronunciation-coach');
     if (modal) modal.classList.remove('hidden');
     this.renderPronunciationTarget();
   }
 
-  openPronunciationCoach(entry, initialMode = 'word') {
+  openPronunciationCoach(entry, initialMode = 'word', options = {}) {
     if (!entry) return;
     this.pronState.isTrainerSession = false;
     this.pronState.trainerCards = [];
     this.pronState.trainerIndex = 0;
     this.pronState.entry = entry;
     this.pronState.mode = initialMode === 'sentence' && entry.exampleSentence ? 'sentence' : 'word';
+
+    if (!options.skipRoutePush) {
+      const wSlug = encodeURIComponent((entry.germanWord || 'kelime').trim());
+      const qMode = this.pronState.mode === 'sentence' ? '?mode=sentence' : '';
+      this.pushRoute(`/fonetik-koc/${wSlug}${qMode}`, { word: entry.germanWord, mode: this.pronState.mode });
+    }
 
     const modal = document.getElementById('modal-pronunciation-coach');
     if (modal) modal.classList.remove('hidden');

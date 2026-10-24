@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.9.6" />
-  <link rel="stylesheet" href="css/components.css?v=2.9.6" />
+  <link rel="stylesheet" href="css/app.css?v=2.9.7" />
+  <link rel="stylesheet" href="css/components.css?v=2.9.7" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -404,14 +404,14 @@
         <!-- Varsayılan Keşfet Akışı (Arama kutusu boşken) -->
         <div id="home-dashboard" class="home-dashboard">
           <!-- Kelime Oyunları & Alıştırmalar Kategori Yönlendirme Kartı -->
-          <div class="deck-item-card" id="btn-goto-games-card" style="margin-bottom:18px; cursor:pointer; background:linear-gradient(135deg, rgba(236,72,153,0.12), rgba(59,130,246,0.12)); border:1.5px solid rgba(59,130,246,0.3); border-radius:var(--radius-lg); padding:16px;">
+          <div class="deck-item-card" id="btn-goto-games-card" style="margin-bottom:18px; cursor:pointer; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%;">
               <div style="display:flex; align-items:center; gap:14px;">
-                <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #EC4899, #3B82F6); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 4px 12px rgba(236,72,153,0.35);">
+                <div style="width:44px; height:44px; border-radius:12px; background:var(--accent-primary-soft); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; color:var(--accent-primary);">
                   <svg class="svg-icon" style="width:22px; height:22px;"><use href="#nav-icon-games"></use></svg>
                 </div>
                 <div>
-                  <div style="font-size:1.02rem; font-weight:900; color:var(--text-primary);">Kelime Oyunları</div>
+                  <div style="font-size:1.02rem; font-weight:800; color:var(--text-primary);">Kelime Oyunları</div>
                   <div style="font-size:0.80rem; color:var(--text-secondary); margin-top:2px;">Kablo eşleştirme, artikel testleri ve interaktif quizler ➔</div>
                 </div>
               </div>
@@ -428,7 +428,7 @@
                 <p style="font-size: 0.82rem; color: var(--text-secondary);" id="hero-due-subtitle">Bugünkü Leitner hedefini tamamla ve serini koru.</p>
               </div>
               <div class="lang-badge lang-badge-de" style="padding: 5px 10px;">
-                <svg class="svg-icon" style="color:var(--brand-blue); width:16px; height:16px;"><use href="#icon-bolt"></use></svg>
+                <svg class="svg-icon" style="color:var(--accent-amber); width:16px; height:16px;"><use href="#icon-bolt"></use></svg>
                 <span id="home-streak-count" style="font-weight: 800; color: var(--text-primary);">0 Gün Seri</span>
               </div>
             </div>
@@ -469,7 +469,6 @@
             <h1 class="page-title">Çeviri</h1>
             <p class="page-subtitle">DeepL Destekli Metin Çevirisi &amp; Gramer Analizi</p>
           </div>
-          <span class="status-pill-green">DeepL API</span>
         </div>
 
         <!-- Dil Seçim Segment Barı: [TR] [DE] [EN] <-> [TR] [DE] -->
@@ -778,21 +777,21 @@
 
         <div id="subview-games-content" class="games-subview-panel">
           <!-- Featured Game 1: Telaffuz Koçu (Aussprache-Trainer) -->
-          <div class="game-card featured-game-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: linear-gradient(135deg, rgba(16,185,129,0.14), rgba(10,132,255,0.14)); border: 1.5px solid rgba(16,185,129,0.38);">
+          <div class="game-card featured-game-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
-              <div class="game-icon-box" style="background: linear-gradient(135deg, rgba(16,185,129,0.28), rgba(10,132,255,0.28)); color: #10B981;">
+              <div class="game-icon-box" style="background: var(--accent-emerald-soft); color: var(--accent-emerald);">
                 <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-waveform"></use></svg>
               </div>
-              <span class="badge" style="background:rgba(16,185,129,0.2); color:#10B981; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AKUSTİK FONETİK KOÇ</span>
+              <span class="badge" style="background:var(--accent-emerald-soft); border:1px solid rgba(16,185,129,0.35); color:var(--accent-emerald); font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AKUSTİK FONETİK KOÇ</span>
             </div>
             <div class="game-card-title" style="font-size: 1.15rem; font-weight: 900;">Telaffuz Koçu (Aussprache-Trainer)</div>
             <div class="game-card-desc">Standart ses tanımanın kaçırdığı ince fonemleri (ch [ç/x], sch, sp/st, z [ts], ä/ö/ü ve ünlü uzunlukları) hece hece analiz edin ve gerçek doğruluk oranınızı görün!</div>
           </div>
 
           <!-- Featured Game 2: Kablo ile Anlam Eşleştirme -->
-          <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer;">
+          <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
-              <div class="game-icon-box" style="background: linear-gradient(135deg, rgba(236,72,153,0.2), rgba(59,130,246,0.2)); color: #38BDF8;">
+              <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
                 <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-cable"></use></svg>
               </div>
               <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -806,7 +805,7 @@
             <!-- 1. Artikel Testi -->
             <div class="game-card" data-game-type="ARTICLE">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(59, 130, 246, 0.15); color: #3B82F6;">
+                <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
                   <svg class="svg-icon"><use href="#icon-target"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -818,7 +817,7 @@
             <!-- 2. Fiil Çekim Quiz -->
             <div class="game-card" data-game-type="VERB">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">
+                <div class="game-icon-box" style="background: var(--accent-emerald-soft); color: var(--accent-emerald);">
                   <svg class="svg-icon"><use href="#icon-bolt"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -830,7 +829,7 @@
             <!-- 3. İsim Çoğul Testi -->
             <div class="game-card" data-game-type="NOUN">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                <div class="game-icon-box" style="background: var(--accent-amber-soft); color: var(--accent-amber);">
                   <svg class="svg-icon"><use href="#icon-cards"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -842,7 +841,7 @@
             <!-- 4. Sıfat ve Anlam Testi -->
             <div class="game-card" data-game-type="ADJECTIVE">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">
+                <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
                   <svg class="svg-icon"><use href="#icon-sparkle"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -854,7 +853,7 @@
             <!-- 5. Kalıp & İfade Testi -->
             <div class="game-card" data-game-type="PHRASE">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;">
+                <div class="game-icon-box" style="background: var(--accent-emerald-soft); color: var(--accent-emerald);">
                   <svg class="svg-icon"><use href="#icon-chat"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -866,7 +865,7 @@
             <!-- 6. Karışık Quiz -->
             <div class="game-card" data-game-type="MIXED">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(14, 165, 233, 0.15); color: #0EA5E9;">
+                <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
                   <svg class="svg-icon"><use href="#icon-shuffle"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -878,7 +877,7 @@
             <!-- 7. Ayrılabilen & Dönüşlü Fiil Testi (Reflexiv / Trennbar / Beide) -->
             <div class="game-card" data-game-type="REFLEXIV_TRENNBAR" style="grid-column: span 2;">
               <div class="game-card-top">
-                <div class="game-icon-box" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4;">
+                <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
                   <svg class="svg-icon"><use href="#icon-repeat"></use></svg>
                 </div>
                 <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
@@ -1299,17 +1298,19 @@
       </div>
     </div>
   </div>
-  <!-- MODAL 4: KELİME OYUNLARI & TESTLER MODALI (modal-game-quiz) -->
-  <div id="modal-game-quiz" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+  <!-- TAM EKRAN SAYFA: KELİME OYUNLARI & TESTLER (modal-game-quiz) -->
+  <div id="modal-game-quiz" class="modal-backdrop full-page-screen hidden" role="region" aria-label="Kelime Oyunu">
     <div class="modal-sheet game-modal-sheet">
       <div class="game-modal-header">
-        <div class="game-header-left">
+        <div class="game-header-left" style="flex-wrap:wrap; gap:10px;">
+          <button type="button" id="btn-close-game-quiz" class="btn-page-back" aria-label="Geri Dön">← Geri</button>
           <h3 id="game-quiz-title" class="game-modal-title">Artikel Testi</h3>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
           <div id="game-quiz-streak-pill" class="game-streak-pill">
-            <svg class="svg-icon" style="color:var(--palette-yellow); width:13px; height:13px;"><use href="#icon-bolt"></use></svg>
+            <svg class="svg-icon" style="color:var(--accent-amber); width:13px; height:13px;"><use href="#icon-bolt"></use></svg>
             <span id="game-quiz-streak-count">0 Seri</span>
           </div>
-
           <div id="game-score-badge" class="game-score-badge">
             <span>⭐</span>
             <span id="game-quiz-score-val">0</span>
@@ -1319,9 +1320,6 @@
             <span id="game-quiz-timer-val">00:00</span>
           </div>
         </div>
-        <button id="btn-close-game-quiz" class="icon-btn-ghost" aria-label="Oyundan Çık">
-          <svg class="svg-icon"><use href="#icon-close"></use></svg>
-        </button>
       </div>
 
       <!-- İlerleme Çubuğu -->
@@ -1394,17 +1392,15 @@
     </div>
   </div>
 
-  <!-- MODAL: OYUN İÇİN DESTE SEÇİMİ (modal-game-deck-select) -->
-  <div id="modal-game-deck-select" class="modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="modal-sheet" style="max-width: 480px; border-radius: var(--radius-xl);">
-      <div class="modal-header">
+  <!-- TAM EKRAN SAYFA: OYUN İÇİN DESTE SEÇİMİ (modal-game-deck-select) -->
+  <div id="modal-game-deck-select" class="modal-backdrop full-page-screen hidden" role="region" aria-label="Oyun İçin Deste Seçimi">
+    <div class="modal-sheet">
+      <div class="modal-header" style="justify-content:flex-start; gap:12px;">
+        <button type="button" id="btn-close-game-deck-select" class="btn-page-back" aria-label="Geri Dön">← Geri</button>
         <div>
-          <h3 id="gds-title" style="font-size:1.18rem; font-weight:900; color:var(--text-primary); margin:0;">Oyun İçin Deste Seçin</h3>
-          <p id="gds-subtitle" style="font-size:0.82rem; color:var(--text-secondary); margin-top:3px;">Seçtiğiniz destelerdeki kelimelerle soru üretilecek</p>
+          <h3 id="gds-title" style="font-size:1.15rem; font-weight:900; color:var(--text-primary); margin:0;">Oyun İçin Deste Seçin</h3>
+          <p id="gds-subtitle" style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Seçtiğiniz destelerdeki kelimelerle soru üretilecek</p>
         </div>
-        <button id="btn-close-game-deck-select" class="icon-btn-ghost" aria-label="Kapat">
-          <svg class="svg-icon"><use href="#icon-close"></use></svg>
-        </button>
       </div>
 
       <div style="padding: 12px 0;">
@@ -1449,29 +1445,27 @@
     </div>
   </div>
 
-  <!-- MODAL: KABLO İLE ANLAM EŞLEŞTİRME OYUNU (modal-cable-game) -->
-  <div id="modal-cable-game" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+  <!-- TAM EKRAN SAYFA: KABLO İLE ANLAM EŞLEŞTİRME OYUNU (modal-cable-game) -->
+  <div id="modal-cable-game" class="modal-backdrop full-page-screen hidden" role="region" aria-label="Kablo Eşleştirme Oyunu">
     <div class="modal-sheet cable-modal-sheet">
       <div class="game-modal-header" style="margin-bottom: 8px;">
         <div class="game-header-left">
           <div style="display:flex; align-items:center; gap:10px;">
-            <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg,#EC4899,#3B82F6); display:flex; align-items:center; justify-content:center; color:#fff; box-shadow: 0 4px 12px rgba(236,72,153,0.35);">
-              <svg class="svg-icon" style="width:20px;height:20px;"><use href="#icon-cable"></use></svg>
+            <button type="button" id="btn-close-cable-game" class="btn-page-back" aria-label="Geri Dön">← Geri</button>
+            <div style="width:36px; height:36px; border-radius:10px; background:var(--accent-primary-soft); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; color:var(--accent-primary);">
+              <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-cable"></use></svg>
             </div>
             <div>
-              <h3 style="font-size:1.15rem; font-weight:900; margin:0;">Kablo Eşleştirme</h3>
-              <span id="cable-round-info" style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">Kablolarla kelime ve anlamları bağlayın</span>
+              <h3 style="font-size:1.1rem; font-weight:900; margin:0;">Kablo Eşleştirme</h3>
+              <span id="cable-round-info" style="font-size:0.74rem; color:var(--text-muted); font-weight:700;">Kablolarla kelime ve anlamları bağlayın</span>
             </div>
           </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
           <div class="game-streak-pill" id="cable-score-pill">
-            <svg class="svg-icon" style="color:var(--palette-yellow); width:13px; height:13px;"><use href="#icon-sparkle"></use></svg>
+            <svg class="svg-icon" style="color:var(--accent-amber); width:13px; height:13px;"><use href="#icon-sparkle"></use></svg>
             <span id="cable-matched-count">0 / 5</span>
           </div>
-          <button id="btn-close-cable-game" class="icon-btn-ghost" aria-label="Oyundan Çık">
-            <svg class="svg-icon"><use href="#icon-close"></use></svg>
-          </button>
         </div>
       </div>
 
@@ -1570,25 +1564,23 @@
       </div>
     </div>
   </div>
-  <!-- MODAL: DETAYLI TELAFFUZ KOÇU & AKUSTİK FONETİK ANALİZÖR (modal-pronunciation-coach) -->
-  <div id="modal-pronunciation-coach" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+  <!-- TAM EKRAN SAYFA: DETAYLI TELAFFUZ KOÇU & AKUSTİK FONETİK ANALİZÖR (modal-pronunciation-coach) -->
+  <div id="modal-pronunciation-coach" class="modal-backdrop full-page-screen hidden" role="region" aria-label="Telaffuz Koçu">
     <div class="modal-sheet pron-modal-sheet">
       <!-- Üst Başlık -->
-      <div class="game-modal-header" style="margin-bottom:10px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div class="pron-header-icon">
+      <div class="game-modal-header" style="margin-bottom:10px; gap:10px;">
+        <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+          <button type="button" id="btn-close-pron-modal" class="btn-page-back" aria-label="Geri Dön">← Geri</button>
+          <div class="pron-header-icon" style="flex-shrink:0;">
             <svg class="svg-icon" style="width:20px; height:20px;"><use href="#icon-waveform"></use></svg>
           </div>
-          <div>
-            <h3 id="pron-modal-title" style="font-size:1.12rem; font-weight:900; margin:0; color:var(--text-primary);">Telaffuz Koçu</h3>
-            <span id="pron-engine-badge" style="font-size:0.7rem; color:#10B981; font-weight:700;">Akustik Fonetik DSP • Hece &amp; Fonem Analizi</span>
+          <div style="min-width:0; flex:1;">
+            <h3 id="pron-modal-title" style="font-size:1.08rem; font-weight:900; margin:0; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Telaffuz Koçu</h3>
+            <span id="pron-engine-badge" style="font-size:0.7rem; color:#10B981; font-weight:700; display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Hibrit Fonetik Motor • Hece &amp; Fonem Analizi</span>
           </div>
         </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span id="pron-trainer-counter" class="badge hidden" style="background:rgba(10,132,255,0.16); color:var(--brand-blue); font-weight:800; font-size:0.76rem; padding:5px 10px;">1 / 10</span>
-          <button id="btn-close-pron-modal" class="icon-btn-ghost" aria-label="Kapat">
-            <svg class="svg-icon"><use href="#icon-close"></use></svg>
-          </button>
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <span id="pron-trainer-counter" class="badge hidden" style="background:var(--accent-primary-soft); color:var(--accent-primary); font-weight:800; font-size:0.76rem; padding:5px 10px;">1 / 10</span>
         </div>
       </div>
 
@@ -1597,15 +1589,15 @@
         <div class="pron-engine-selector-top">
           <label for="select-pron-phonetic-engine" class="pron-engine-label">FONETİK MOTORU:</label>
           <select id="select-pron-phonetic-engine" class="pron-engine-select">
-            <option value="HYBRID_ENSEMBLE">⚡ Hibrit Ensemble (MFA Viterbi + Wav2Vec2 + DSP)</option>
-            <option value="WAV2VEC2_CTC">🧠 Wav2Vec2 Neural CTC Posterior (Torchaudio / ONNX)</option>
-            <option value="MFA_FORCED_ALIGN">🎯 Montreal Forced Aligner (MFA / Kaldi Viterbi GOP)</option>
+            <option value="HYBRID_ENSEMBLE">⚡ Hibrit Ensemble (MFA + Wav2Vec2 + DSP)</option>
+            <option value="WAV2VEC2_CTC">🧠 Wav2Vec2 Neural CTC (ONNX)</option>
+            <option value="MFA_FORCED_ALIGN">🎯 Montreal Forced Aligner (MFA Viterbi)</option>
             <option value="AZURE_CLOUD">☁️ Microsoft Azure Cloud GOP</option>
           </select>
         </div>
         <div id="pron-engine-desc-row" class="pron-engine-desc-row">
-          <span id="pron-engine-desc-text">MFA Viterbi Zorlamalı Hizalama + Fiziksel Formant/VOT DSP + Wav2Vec2 CTC birleşimi</span>
-          <button type="button" id="btn-pron-preload-wav2vec2" class="pron-neural-load-btn hidden">🧠 Wav2Vec2 Modelini Yükle</button>
+          <span id="pron-engine-desc-text">Hece ve fonem bazlı akustik doğruluk analizi</span>
+          <button type="button" id="btn-pron-preload-wav2vec2" class="pron-neural-load-btn hidden">🧠 Modeli Yükle</button>
         </div>
       </div>
 
@@ -1730,18 +1722,18 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.9.6"></script>
-  <script src="js/verbHelper.js?v=2.9.6"></script>
-  <script src="js/offlineDictionary.js?v=2.9.6"></script>
-  <script src="js/dictionary.js?v=2.9.6"></script>
-  <script src="js/curatedPacks.js?v=2.9.6"></script>
-  <script src="js/seeder.js?v=2.9.6"></script>
-  <script src="js/tts.js?v=2.9.6"></script>
-  <script src="js/pronunciation.js?v=2.9.6"></script>
-  <script src="js/translator.js?v=2.9.6"></script>
-  <script src="js/game.js?v=2.9.6"></script>
-  <script src="js/study.js?v=2.9.6"></script>
-  <script src="js/stats.js?v=2.9.6"></script>
-  <script src="js/app.js?v=2.9.6"></script>
+  <script src="js/db.js?v=2.9.7"></script>
+  <script src="js/verbHelper.js?v=2.9.7"></script>
+  <script src="js/offlineDictionary.js?v=2.9.7"></script>
+  <script src="js/dictionary.js?v=2.9.7"></script>
+  <script src="js/curatedPacks.js?v=2.9.7"></script>
+  <script src="js/seeder.js?v=2.9.7"></script>
+  <script src="js/tts.js?v=2.9.7"></script>
+  <script src="js/pronunciation.js?v=2.9.7"></script>
+  <script src="js/translator.js?v=2.9.7"></script>
+  <script src="js/game.js?v=2.9.7"></script>
+  <script src="js/study.js?v=2.9.7"></script>
+  <script src="js/stats.js?v=2.9.7"></script>
+  <script src="js/app.js?v=2.9.7"></script>
 </body>
 </html>

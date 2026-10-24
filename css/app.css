@@ -1,77 +1,98 @@
 /* ==========================================================================
-   WortCoach — Apple iOS HIG Design System (v3.0.0)
-   Pure Apple iOS Look & Feel: SF Pro Typography, Frosted Translucent Glass,
-   iOS Inset Grouped Surfaces, Dynamic System Colors & Spring Micro-Interactions
+   WortCoach — Standartlaştırılmış Tasarım Sistemi (v3.1.0)
+   Bölüm 1: Renk Paleti, Tipografi, Yüzeyler ve Mobil Safe-Area Mimarisi
    ========================================================================== */
 
 :root,
 [data-theme="dark"] {
-  /* Apple iOS True Black OLED & Dark System Colors */
-  --bg-base: #000000;
-  --bg-surface: #1C1C1E;               /* iOS Secondary Grouped Background */
-  --bg-surface-elevated: #2C2C2E;      /* iOS Tertiary Grouped Background */
-  --bg-inner: #151517;                 /* Inner capsule surface */
-  --bg-inner-subtle: #242426;          /* Inset subtle surface */
-  --bg-glass: rgba(0, 0, 0, 0.78);
-  --bg-surface-glass: rgba(28, 28, 30, 0.82);
+  /* 1. Arka Plan & Yüzeyler (Surfaces) */
+  --bg-main: #0B0D12;                   /* Ana Sayfa Arka Planı (Derin karbon siyahı) */
+  --bg-surface: #131720;                /* Kart / Konteyner Arka Planı (Yumuşak koyu antrasit) */
+  --bg-elevated: #1B202C;               /* İkincil / İç Kart Yüzeyi (Inputlar, dil seçici, iç kutular, pasif chip'ler) */
+  --bg-nav: rgba(19, 23, 32, 0.88);     /* Alt Navigasyon ve Üst Header */
 
-  --border-subtle: rgba(84, 84, 88, 0.36);   /* iOS 0.5px hairline divider */
-  --border-medium: rgba(84, 84, 88, 0.55);
-  --border-strong: rgba(84, 84, 88, 0.75);
+  /* Geriye Dönük Uyumluluk Alias'ları (Tüm bileşenlerin aynı paleti kullanması için) */
+  --bg-base: var(--bg-main);
+  --bg-surface-elevated: var(--bg-elevated);
+  --bg-inner: var(--bg-elevated);
+  --bg-inner-subtle: var(--bg-elevated);
+  --bg-glass: var(--bg-nav);
+  --bg-surface-glass: var(--bg-nav);
 
-  --text-primary: #FFFFFF;
-  --text-secondary: rgba(235, 235, 245, 0.65);
-  --text-muted: #8E8E93;               /* Apple System Gray */
+  /* 2. Kenarlıklar (Borders & Dividers) */
+  --border-subtle: #242B3A;             /* Varsayılan Kart Kenarlığı (1px solid) */
+  --border-focus: #3B82F6;              /* Seçili / Odaklanılan Kenarlık (1.5px solid) */
+  --border-medium: #2E384D;
+  --border-strong: #3B82F6;
 
-  /* Apple Dark System Blue & Accents */
-  --brand-blue: #0A84FF;
-  --brand-blue-hover: #409CFF;
-  --brand-blue-deep: #0066D6;
-  --brand-blue-soft: rgba(10, 132, 255, 0.16);
-  --brand-blue-glow: rgba(10, 132, 255, 0.32);
+  /* 3. Tipografi Renkleri */
+  --text-primary: #F3F4F6;              /* Birincil Metin (Kırık beyaz) */
+  --text-secondary: #9CA3AF;            /* İkincil Metin (Açık gri) */
+  --text-muted: #64748B;                /* Üçüncül / Pasif Metin */
 
-  /* Apple System Grammar Badges */
-  --badge-der-bg: rgba(10, 132, 255, 0.18);
-  --badge-der-text: #0A84FF;
-  --badge-die-bg: rgba(255, 55, 95, 0.18);
-  --badge-die-text: #FF375F;
-  --badge-das-bg: rgba(48, 209, 88, 0.18);
-  --badge-das-text: #30D158;
+  /* 4. Vurgu ve Durum Renkleri (Accents) */
+  --accent-primary: #3B82F6;            /* Birincil Marka & Aksiyon Rengi (Modern Elektrik Mavisi) */
+  --accent-primary-soft: rgba(59, 130, 246, 0.14);
+  --accent-emerald: #10B981;            /* İkincil / Fonetik / Başarı Rengi (Zümrüt Yeşili) */
+  --accent-emerald-soft: rgba(16, 185, 129, 0.14);
+  --accent-amber: #F59E0B;              /* Uyarı / Seri (Streak) Rengi */
 
-  /* Part of Speech */
-  --badge-verb-bg: rgba(191, 90, 242, 0.18);
-  --badge-verb-text: #BF5AF2;
-  --badge-noun-bg: rgba(10, 132, 255, 0.18);
-  --badge-noun-text: #0A84FF;
-  --badge-adj-bg: rgba(255, 159, 10, 0.18);
-  --badge-adj-text: #FF9F0A;
-  --badge-prep-bg: rgba(48, 209, 88, 0.18);
-  --badge-prep-text: #30D158;
+  /* Marka ve Palet Alias'ları */
+  --brand-blue: var(--accent-primary);
+  --brand-blue-hover: #60A5FA;
+  --brand-blue-deep: #2563EB;
+  --brand-blue-soft: var(--accent-primary-soft);
+  --brand-blue-glow: rgba(59, 130, 246, 0.28);
+  --palette-green: var(--accent-emerald);
+  --palette-yellow: var(--accent-amber);
+  --palette-red: #EF4444;
+  --palette-teal: var(--accent-primary);
+  --palette-sand: #CBD5E1;
 
-  /* Grammatical Special Badges */
-  --badge-reflexiv-bg: rgba(64, 200, 224, 0.18);
-  --badge-reflexiv-border: rgba(64, 200, 224, 0.4);
-  --badge-reflexiv-text: #40C8E0;
+  /* 5. Gramer / Kelime Türü Rozetleri (Yüksek okunabilirlikli nötr gri-mavi) */
+  --badge-neutral-bg: #1E2534;
+  --badge-neutral-border: #2E384D;
+  --badge-neutral-text: #CBD5E1;
 
-  --badge-trennbar-bg: rgba(255, 159, 10, 0.18);
-  --badge-trennbar-border: rgba(255, 159, 10, 0.4);
-  --badge-trennbar-text: #FF9F0A;
+  --badge-der-bg: #1E2534;
+  --badge-der-text: #60A5FA;
+  --badge-die-bg: #1E2534;
+  --badge-die-text: #F87171;
+  --badge-das-bg: #1E2534;
+  --badge-das-text: #34D399;
 
-  /* SRS Apple Tactile Buttons */
-  --srs-again-bg: rgba(255, 69, 58, 0.16);
-  --srs-again-border: rgba(255, 69, 58, 0.3);
-  --srs-again-shadow: #FF453A;
-  --srs-hard-bg: rgba(255, 159, 10, 0.16);
-  --srs-hard-border: rgba(255, 159, 10, 0.3);
-  --srs-hard-shadow: #FF9F0A;
-  --srs-good-bg: rgba(48, 209, 88, 0.16);
-  --srs-good-border: rgba(48, 209, 88, 0.3);
-  --srs-good-shadow: #30D158;
+  --badge-verb-bg: #1E2534;
+  --badge-verb-text: #CBD5E1;
+  --badge-noun-bg: #1E2534;
+  --badge-noun-text: #CBD5E1;
+  --badge-adj-bg: #1E2534;
+  --badge-adj-text: #CBD5E1;
+  --badge-prep-bg: #1E2534;
+  --badge-prep-text: #CBD5E1;
 
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.08);
-  --shadow-card-hover: 0 6px 24px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.12);
+  --badge-reflexiv-bg: #1E2534;
+  --badge-reflexiv-border: #2E384D;
+  --badge-reflexiv-text: #CBD5E1;
 
-  /* iOS Radii */
+  --badge-trennbar-bg: #1E2534;
+  --badge-trennbar-border: #2E384D;
+  --badge-trennbar-text: #CBD5E1;
+
+  /* SRS Butonları */
+  --srs-again-bg: rgba(239, 68, 68, 0.14);
+  --srs-again-border: rgba(239, 68, 68, 0.35);
+  --srs-again-shadow: #EF4444;
+  --srs-hard-bg: rgba(245, 158, 11, 0.14);
+  --srs-hard-border: rgba(245, 158, 11, 0.35);
+  --srs-hard-shadow: #F59E0B;
+  --srs-good-bg: rgba(16, 185, 129, 0.14);
+  --srs-good-border: rgba(16, 185, 129, 0.35);
+  --srs-good-shadow: #10B981;
+
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.5);
+
+  /* Köşe Yuvarlaklıkları */
   --radius-xs: 6px;
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -81,65 +102,74 @@
 }
 
 [data-theme="light"] {
-  /* Apple iOS Pure Light System Colors */
-  --bg-base: #F2F2F7;                 /* iOS System Grouped Background */
-  --bg-surface: #FFFFFF;              /* Pure White Card Surface */
-  --bg-surface-elevated: #FFFFFF;
-  --bg-inner: #F2F2F7;
-  --bg-inner-subtle: #E5E5EA;         /* Inset subtle surface */
-  --bg-glass: rgba(242, 242, 247, 0.82);
-  --bg-surface-glass: rgba(255, 255, 255, 0.85);
+  --bg-main: #F3F4F6;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F8FAFC;
+  --bg-nav: rgba(255, 255, 255, 0.90);
 
-  --border-subtle: rgba(60, 60, 67, 0.14);  /* iOS 0.5px hairline divider */
-  --border-medium: rgba(60, 60, 67, 0.25);
-  --border-strong: rgba(60, 60, 67, 0.4);
+  --bg-base: var(--bg-main);
+  --bg-surface-elevated: var(--bg-elevated);
+  --bg-inner: #F1F5F9;
+  --bg-inner-subtle: #E2E8F0;
+  --bg-glass: var(--bg-nav);
+  --bg-surface-glass: var(--bg-nav);
 
-  --text-primary: #000000;            /* True Apple Black Label */
-  --text-secondary: rgba(60, 60, 67, 0.7);
-  --text-muted: #8E8E93;              /* Apple System Gray */
+  --border-subtle: #E2E8F0;
+  --border-focus: #3B82F6;
+  --border-medium: #CBD5E1;
+  --border-strong: #3B82F6;
 
-  --brand-blue: #007AFF;              /* Apple Signature System Blue */
-  --brand-blue-hover: #0062CC;
-  --brand-blue-deep: #0051A8;
-  --brand-blue-soft: rgba(0, 122, 255, 0.12);
-  --brand-blue-glow: rgba(0, 122, 255, 0.25);
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
 
-  --badge-der-bg: rgba(0, 122, 255, 0.1);
-  --badge-der-text: #007AFF;
-  --badge-die-bg: rgba(255, 45, 85, 0.1);
-  --badge-die-text: #FF2D55;
-  --badge-das-bg: rgba(52, 199, 89, 0.12);
-  --badge-das-text: #248A3D;
+  --accent-primary: #3B82F6;
+  --accent-primary-soft: rgba(59, 130, 246, 0.14);
+  --accent-emerald: #10B981;
+  --accent-emerald-soft: rgba(16, 185, 129, 0.14);
+  --accent-amber: #F59E0B;
 
-  --badge-verb-bg: rgba(175, 82, 222, 0.1);
-  --badge-verb-text: #8944AB;
-  --badge-noun-bg: rgba(0, 122, 255, 0.1);
-  --badge-noun-text: #007AFF;
-  --badge-adj-bg: rgba(255, 149, 0, 0.12);
-  --badge-adj-text: #C97200;
-  --badge-prep-bg: rgba(52, 199, 89, 0.12);
-  --badge-prep-text: #248A3D;
+  --brand-blue: var(--accent-primary);
+  --brand-blue-hover: #2563EB;
+  --brand-blue-deep: #1D4ED8;
+  --brand-blue-soft: var(--accent-primary-soft);
+  --brand-blue-glow: rgba(59, 130, 246, 0.25);
+  --palette-green: var(--accent-emerald);
+  --palette-yellow: var(--accent-amber);
+  --palette-red: #EF4444;
+  --palette-teal: var(--accent-primary);
+  --palette-sand: #475569;
 
-  --badge-reflexiv-bg: rgba(48, 176, 199, 0.12);
-  --badge-reflexiv-border: rgba(48, 176, 199, 0.35);
-  --badge-reflexiv-text: #1B8294;
+  --badge-neutral-bg: #F1F5F9;
+  --badge-neutral-border: #CBD5E1;
+  --badge-neutral-text: #334155;
 
-  --badge-trennbar-bg: rgba(255, 149, 0, 0.12);
-  --badge-trennbar-border: rgba(255, 149, 0, 0.35);
-  --badge-trennbar-text: #C97200;
+  --badge-der-bg: #F1F5F9;
+  --badge-der-text: #2563EB;
+  --badge-die-bg: #F1F5F9;
+  --badge-die-text: #DC2626;
+  --badge-das-bg: #F1F5F9;
+  --badge-das-text: #059669;
 
-  --srs-again-bg: rgba(255, 59, 48, 0.12);
-  --srs-again-border: rgba(255, 59, 48, 0.25);
-  --srs-again-shadow: #FF3B30;
-  --srs-hard-bg: rgba(255, 149, 0, 0.12);
-  --srs-hard-border: rgba(255, 149, 0, 0.25);
-  --srs-hard-shadow: #FF9500;
-  --srs-good-bg: rgba(52, 199, 89, 0.14);
-  --srs-good-border: rgba(52, 199, 89, 0.25);
-  --srs-good-shadow: #34C759;
+  --badge-verb-bg: #F1F5F9;
+  --badge-verb-text: #334155;
+  --badge-noun-bg: #F1F5F9;
+  --badge-noun-text: #334155;
+  --badge-adj-bg: #F1F5F9;
+  --badge-adj-text: #334155;
+  --badge-prep-bg: #F1F5F9;
+  --badge-prep-text: #334155;
 
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.07), 0 10px 24px rgba(0, 0, 0, 0.06);
+  --badge-reflexiv-bg: #F1F5F9;
+  --badge-reflexiv-border: #CBD5E1;
+  --badge-reflexiv-text: #334155;
+
+  --badge-trennbar-bg: #F1F5F9;
+  --badge-trennbar-border: #CBD5E1;
+  --badge-trennbar-text: #334155;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 *,
@@ -155,9 +185,9 @@ html,
 body {
   width: 100%;
   height: 100%;
-  background-color: var(--bg-base);
+  background-color: var(--bg-main);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   font-size: 16px;
   line-height: 1.47;
   overflow-x: hidden;
@@ -172,11 +202,11 @@ body {
   min-height: 100dvh;
   max-width: 600px;
   margin: 0 auto;
-  background-color: var(--bg-base);
+  background-color: var(--bg-main);
   position: relative;
 }
 
-/* Apple iOS Header Navigation Bar */
+/* Üst Header Bar */
 .app-header {
   position: sticky;
   top: 0;
@@ -185,26 +215,25 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background-color: var(--bg-surface-glass);
-  backdrop-filter: blur(25px) saturate(180%);
-  -webkit-backdrop-filter: blur(25px) saturate(180%);
-  border-bottom: 0.5px solid var(--border-subtle);
+  background-color: var(--bg-nav);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .brand-logo {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Helvetica Neue", sans-serif;
   font-size: 1.45rem;
   font-weight: 800;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   color: var(--text-primary);
   cursor: pointer;
   user-select: none;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .brand-logo:active {
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 .header-actions {
@@ -213,15 +242,16 @@ body {
   gap: 8px;
 }
 
-/* Main Content Area with Safe Area Bottom Padding */
+/* Ana İçerik Alanı — Mobil Safe Area & Alt Navigasyon Boşluğu */
 .app-content {
   flex: 1;
-  padding: 16px 16px calc(76px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 .tab-view {
   display: none;
-  animation: iosTabFadeIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  animation: iosTabFadeIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .tab-view.active {
@@ -231,16 +261,16 @@ body {
 @keyframes iosTabFadeIn {
   from {
     opacity: 0;
-    transform: scale(0.995);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
 /* ==========================================================================
-   Apple iOS Frosted Glass Bottom Tab Bar (5 Clean Tabs)
+   Alt Navigasyon Çubuğu (Safe Area Destekli)
    ========================================================================== */
 .bottom-nav {
   position: fixed;
@@ -249,17 +279,17 @@ body {
   transform: translateX(-50%);
   width: 100%;
   max-width: 600px;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
-  background-color: var(--bg-surface-glass);
-  backdrop-filter: blur(25px) saturate(180%);
-  -webkit-backdrop-filter: blur(25px) saturate(180%);
-  border-top: 0.5px solid var(--border-subtle);
+  min-height: calc(60px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--bg-nav);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border-subtle);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   align-items: center;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-top: 4px;
+  padding-top: 6px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
 }
 
 .nav-item {
