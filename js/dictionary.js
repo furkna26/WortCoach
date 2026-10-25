@@ -293,6 +293,21 @@ const VERIFIED_CORE_VOCABULARY = {
     cefr: 'A1',
     examples: ['Ich gehe jeden Morgen zu Fuß zur Schule. (Her sabah okula yürüyerek giderim.)']
   },
+  durchgehen: {
+    germanWord: 'durchgehen',
+    partOfSpeech: 'VERB',
+    praesens: 'geht durch',
+    praeteritum: 'ging durch',
+    partizipZwei: 'durchgegangen',
+    hilfsverb: 'ist',
+    isSeparable: true,
+    separablePrefix: 'durch',
+    imperativ: 'geh durch!',
+    meaningsTr: 'baştan sona gözden geçirmek, incelemek, aralıksız geçmek',
+    meaningsEn: 'to go through, examine, pass through',
+    cefr: 'B1',
+    examples: ['Wir müssen die Unterlagen noch einmal durchgehen. (Belgeleri bir kez daha gözden geçirmeliyiz.)']
+  },
   kommen: {
     germanWord: 'kommen',
     partOfSpeech: 'VERB',
@@ -1237,8 +1252,15 @@ class DictionaryService {
    * Eşleşme veya çeviri bulunamazsa `null` döner (Arayüzde 'Sonuç yok (Ekle)' gösterilir).
    */
   static async resolveToGermanEntry(rawQuery, signal) {
-    const trimmed = (rawQuery || '').trim();
+    let trimmed = (rawQuery || '').trim();
     if (!trimmed) return null;
+
+    if (typeof window !== 'undefined' && window.GermanVerbHelper) {
+      const cleanedVerb = window.GermanVerbHelper.cleanInput(trimmed);
+      if (cleanedVerb && cleanedVerb.toLowerCase() !== trimmed.toLowerCase() && cleanedVerb.length >= 4) {
+        trimmed = cleanedVerb;
+      }
+    }
 
     const lower = trimmed.toLowerCase();
 

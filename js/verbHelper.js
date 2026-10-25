@@ -113,7 +113,25 @@ const IRREGULAR_VERBS = {
     praeteritum: 'erfasste',
     partizipZwei: 'erfasst',
     hilfsverb: 'hat',
-    imperativ: 'erfasse!',
+    imperativ: 'erfasse dich!',
+    isReflexive: true,
+    reflexiveType: 'sich'
+  },
+  durchgehen: {
+    praesens: 'geht durch',
+    praeteritum: 'ging durch',
+    partizipZwei: 'durchgegangen',
+    hilfsverb: 'ist',
+    isSeparable: true,
+    separablePrefix: 'durch',
+    imperativ: 'geh durch!'
+  },
+  freuen: {
+    praesens: 'freut',
+    praeteritum: 'freute',
+    partizipZwei: 'gefreut',
+    hilfsverb: 'hat',
+    imperativ: 'freu dich!',
     isReflexive: true,
     reflexiveType: 'sich'
   },
@@ -185,26 +203,72 @@ const REFLEXIVE_VERB_SET = new Set([
 const FULL_CONJUGATIONS = {
   erfassen: {
     infinitiv: 'erfassen',
-    vowelChange: 'Düzensiz (Unregelmäßig)',
+    vowelChange: 'Düzenli (Reflexiv)',
     isReflexive: true,
     reflexiveType: 'sich',
     isSeparable: false,
     separablePrefix: '',
-    praesensEr: 'erfasst',
-    praeteritumEr: 'erfasste',
-    perfektEr: 'hat erfasst',
-    praesensIch: 'erfasse',
-    praesensDu: 'erfasstst',
-    praesensWir: 'erfassen',
-    praesensIhr: 'erfasst',
-    praesensSie: 'erfassen',
-    praeteritumIch: 'erfasste',
-    praeteritumDu: 'erfasstest',
-    praeteritumWir: 'erfassten',
-    praeteritumIhr: 'erfasstet',
-    praeteritumSie: 'erfassten',
-    konjunktivZweiIch: 'erfässte',
-    imperativDu: 'erfasse!'
+    praesensEr: 'erfasst sich',
+    praeteritumEr: 'erfasste sich',
+    perfektEr: 'hat sich erfasst',
+    praesensIch: 'erfasse mich',
+    praesensDu: 'erfasst dich',
+    praesensWir: 'erfassen uns',
+    praesensIhr: 'erfasst euch',
+    praesensSie: 'erfassen sich',
+    praeteritumIch: 'erfasste mich',
+    praeteritumDu: 'erfasstest dich',
+    praeteritumWir: 'erfassten uns',
+    praeteritumIhr: 'erfasstet euch',
+    praeteritumSie: 'erfassten sich',
+    konjunktivZweiIch: 'erfasste mich',
+    imperativDu: 'erfasse dich!'
+  },
+  freuen: {
+    infinitiv: 'sich freuen',
+    vowelChange: 'Düzenli (Reflexiv)',
+    isReflexive: true,
+    reflexiveType: 'sich',
+    isSeparable: false,
+    separablePrefix: '',
+    praesensEr: 'freut sich',
+    praeteritumEr: 'freute sich',
+    perfektEr: 'hat sich gefreut',
+    praesensIch: 'freue mich',
+    praesensDu: 'freust dich',
+    praesensWir: 'freuen uns',
+    praesensIhr: 'freut euch',
+    praesensSie: 'freuen sich',
+    praeteritumIch: 'freute mich',
+    praeteritumDu: 'freutest dich',
+    praeteritumWir: 'freuten uns',
+    praeteritumIhr: 'freutet euch',
+    praeteritumSie: 'freuten sich',
+    konjunktivZweiIch: 'freute mich',
+    imperativDu: 'freu dich!'
+  },
+  durchgehen: {
+    infinitiv: 'durchgehen',
+    vowelChange: 'Düzensiz (Ayrılabilen)',
+    isReflexive: false,
+    reflexiveType: null,
+    isSeparable: true,
+    separablePrefix: 'durch',
+    praesensEr: 'geht durch',
+    praeteritumEr: 'ging durch',
+    perfektEr: 'ist durchgegangen',
+    praesensIch: 'gehe durch',
+    praesensDu: 'gehst durch',
+    praesensWir: 'gehen durch',
+    praesensIhr: 'geht durch',
+    praesensSie: 'gehen durch',
+    praeteritumIch: 'ging durch',
+    praeteritumDu: 'gingst durch',
+    praeteritumWir: 'gingen durch',
+    praeteritumIhr: 'gingt durch',
+    praeteritumSie: 'gingen durch',
+    konjunktivZweiIch: 'ginge durch',
+    imperativDu: 'geh durch!'
   },
   untergehen: {
     infinitiv: 'untergehen',
@@ -324,13 +388,13 @@ const FULL_CONJUGATIONS = {
 };
 
 const SEPARABLE_PREFIXES = [
-  'zusammen', 'gegenüber', 'entgegen', 'zurück', 'zurecht', 'weiter', 'wieder',
-  'herunter', 'heraus', 'herein', 'herauf', 'herbei', 'herum', 'hervor',
-  'hinunter', 'hinaus', 'hinein', 'hinauf', 'hinweg', 'hinzu',
-  'vorbei', 'voraus', 'voran', 'entlang', 'nieder', 'runter',
-  'unter', 'über', 'statt', 'teil', 'heim', 'fort', 'frei', 'fest', 'fern', 'fehl',
-  'aus', 'auf', 'ein', 'mit', 'vor', 'weg', 'bei', 'los', 'nach',
-  'ab', 'an', 'zu', 'um'
+  'gegenüber', 'dazwischen', 'hinterher', 'entgegen', 'zusammen', 'herunter',
+  'hinunter', 'zurecht', 'zurück', 'weiter', 'wieder', 'heraus', 'herein',
+  'herauf', 'herbei', 'hinaus', 'hinein', 'hinauf', 'hinweg', 'voraus',
+  'vorbei', 'voran', 'entlang', 'nieder', 'runter', 'hervor', 'hinzu',
+  'durch', 'unter', 'statt', 'teil', 'heim', 'fort', 'frei', 'fest',
+  'fern', 'fehl', 'über', 'aus', 'auf', 'ein', 'mit', 'vor', 'weg',
+  'bei', 'los', 'nach', 'ab', 'an', 'zu', 'um'
 ];
 
 const INSEPARABLE_PREFIXES = [
@@ -338,7 +402,7 @@ const INSEPARABLE_PREFIXES = [
 ];
 
 const SEIN_FULL_VERBS = new Set([
-  'aufstehen', 'untergehen', 'einschlafen', 'aufwachen', 'ankommen', 'abfahren',
+  'aufstehen', 'untergehen', 'durchgehen', 'einschlafen', 'aufwachen', 'ankommen', 'abfahren',
   'umziehen', 'auswandern', 'einsteigen', 'aussteigen', 'zurückkehren', 'zurückkommen',
   'verschwinden', 'erscheinen', 'passieren', 'begegnen', 'mitkommen', 'weggehen', 'hingehen',
   'sein', 'bleiben', 'werden', 'gehen', 'kommen', 'fahren', 'fliegen', 'laufen', 'fallen',
@@ -543,10 +607,23 @@ window.SearchNormalizer = SearchNormalizer;
 
 class GermanVerbHelper {
   static cleanInput(rawWord) {
-    return (rawWord || '')
+    if (!rawWord) return '';
+    let w = (rawWord || '')
       .trim()
-      .replace(/^(sich\s+|der\s+|die\s+|das\s+|to\s+)/i, '')
+      .replace(/^(der\s+|die\s+|das\s+|to\s+)/i, '')
+      .replace(/^(sich\s+)/i, '')
+      .replace(/\s*\(\s*sich\s*\)\s*$/i, '')
       .trim();
+
+    const parts = w.split(/\s+/);
+    if (parts.length === 2) {
+      const p = parts[0].toLowerCase();
+      const v = parts[1].toLowerCase();
+      if (SEPARABLE_PREFIXES.includes(p) || INSEPARABLE_PREFIXES.includes(p)) {
+        return `${p}${v}`;
+      }
+    }
+    return w;
   }
 
   static detectReflexive(rawWord) {
@@ -629,11 +706,13 @@ class GermanVerbHelper {
   }
 
   static splitVerbPrefix(lowerVerb) {
+    const verb = (lowerVerb || '').trim().toLowerCase();
+
     // 1. Ayrılamayan Ön Ekler (ver-, be-, er-, ent-, emp-, zer-, ge-, miss-) — KESİNLİKLE AYRILAMAZ
     for (const p of INSEPARABLE_PREFIXES) {
-      if (lowerVerb.startsWith(p) && lowerVerb.length > p.length + 1) {
-        const rest = lowerVerb.slice(p.length);
-        if (this.looksLikeVerbInfinitive(rest) || IRREGULAR_VERBS[rest] || IRREGULAR_VERBS[lowerVerb]) {
+      if (verb.startsWith(p) && verb.length > p.length + 1) {
+        const rest = verb.slice(p.length).trim();
+        if (this.looksLikeVerbInfinitive(rest) || IRREGULAR_VERBS[rest] || IRREGULAR_VERBS[verb]) {
           return { prefix: p, baseVerb: rest, isSeparable: false, isInseparable: true };
         }
       }
@@ -641,23 +720,23 @@ class GermanVerbHelper {
 
     // Ekstra güvence: 'ver' veya diğer inseparable ön eklerle başlayan fiiller ASLA ayrılabilir olamaz!
     for (const p of INSEPARABLE_PREFIXES) {
-      if (lowerVerb.startsWith(p)) {
-        const rest = lowerVerb.slice(p.length);
+      if (verb.startsWith(p)) {
+        const rest = verb.slice(p.length).trim();
         return { prefix: p, baseVerb: rest, isSeparable: false, isInseparable: true };
       }
     }
 
     // 2. Ayrılabilen Ön Ekler (Trennbar)
     for (const p of SEPARABLE_PREFIXES) {
-      if (lowerVerb.startsWith(p) && lowerVerb.length > p.length + 1) {
-        const rest = lowerVerb.slice(p.length);
+      if (verb.startsWith(p) && verb.length > p.length + 1) {
+        const rest = verb.slice(p.length).trim();
         if (this.looksLikeVerbInfinitive(rest) || IRREGULAR_VERBS[rest]) {
           return { prefix: p, baseVerb: rest, isSeparable: true, isInseparable: false };
         }
       }
     }
 
-    return { prefix: '', baseVerb: lowerVerb, isSeparable: false, isInseparable: false };
+    return { prefix: '', baseVerb: verb, isSeparable: false, isInseparable: false };
   }
 
   static extractStem(baseVerb) {
@@ -672,56 +751,190 @@ class GermanVerbHelper {
 
   static getFullConjugation(verb) {
     const clean = this.cleanInput(verb).toLowerCase();
+    const refl = this.detectReflexive(verb);
     if (FULL_CONJUGATIONS[clean]) {
-      return FULL_CONJUGATIONS[clean];
+      const fc = { ...FULL_CONJUGATIONS[clean] };
+      if (refl.isReflexive && !fc.isReflexive) {
+        fc.isReflexive = true;
+        fc.reflexiveType = refl.reflexiveType;
+      }
+      return fc;
     }
 
     // Dinamik 6-şahıs çekimi sentezle
-    const conj = this.conjugate(clean);
+    const conj = this.conjugate(verb);
     if (!conj) return null;
 
-    const stem = this.extractStem(conj.baseVerb || clean);
+    const isSep = conj.isSeparable && conj.separablePrefix;
+    const sepPrefix = conj.separablePrefix || '';
+    const sepSuffix = isSep ? ` ${sepPrefix}` : '';
+    const isRefl = Boolean(conj.isReflexive || refl.isReflexive);
+
+    const baseVerb = conj.baseVerb || clean;
+    const stem = this.extractStem(baseVerb);
     const dental = this.hasDentalEnding(stem);
-    const prefix = conj.separablePrefix ? ` ${conj.separablePrefix}` : '';
-    const insep = conj.isInseparable ? conj.inseparablePrefix : '';
+    const insep = conj.isInseparable && conj.inseparablePrefix ? conj.inseparablePrefix : '';
 
-    const pPrsIch = `${insep}${stem}e${prefix}`;
-    const pPrsDu = dental ? `${insep}${stem}est${prefix}` : `${insep}${stem}st${prefix}`;
-    const pPrsEr = `${conj.praesens}`;
-    const pPrsWir = `${insep}${stem}en${prefix}`;
-    const pPrsIhr = dental ? `${insep}${stem}et${prefix}` : `${insep}${stem}t${prefix}`;
-    const pPrsSie = `${insep}${stem}en${prefix}`;
+    const irr = IRREGULAR_VERBS[baseVerb] || IRREGULAR_VERBS[clean];
 
-    const prtStem = conj.praeteritum ? conj.praeteritum.replace(/\s.*$/, '') : (dental ? `${stem}ete` : `${stem}te`);
-    const pPrtIch = `${prtStem}${prefix}`;
-    const pPrtDu = `${prtStem}st${prefix}`;
-    const pPrtEr = `${conj.praeteritum}`;
-    const pPrtWir = `${prtStem}n${prefix}`;
-    const pPrtIhr = `${prtStem}t${prefix}`;
-    const pPrtSie = `${prtStem}n${prefix}`;
+    // Präsens 6-Person
+    let pIch, pDu, pEr, pWir, pIhr, pSie;
+
+    if (irr) {
+      let rawEr = irr.praesens;
+      if (sepPrefix && rawEr.endsWith(` ${sepPrefix}`)) {
+        rawEr = rawEr.slice(0, -(sepPrefix.length + 1)).trim();
+      }
+      const baseEr = rawEr;
+      pIch = `${stem}e`;
+      // du form
+      if (baseEr.endsWith('st')) {
+        pDu = baseEr;
+      } else if (stem.endsWith('s') || stem.endsWith('ß') || stem.endsWith('z') || stem.endsWith('x')) {
+        pDu = baseEr;
+      } else if (baseEr.endsWith('et')) {
+        pDu = baseEr.slice(0, -2) + 'est';
+      } else if (baseEr.endsWith('t')) {
+        pDu = baseEr.slice(0, -1) + 'st';
+      } else {
+        pDu = `${stem}st`;
+      }
+      pEr = baseEr;
+      pWir = `${baseVerb}`;
+      pIhr = dental ? `${stem}et` : `${stem}t`;
+      pSie = `${baseVerb}`;
+    } else {
+      pIch = `${stem}e`;
+      pDu = dental ? `${stem}est` : `${stem}st`;
+      pEr = dental ? `${stem}et` : `${stem}t`;
+      pWir = `${baseVerb}`;
+      pIhr = dental ? `${stem}et` : `${stem}t`;
+      pSie = `${baseVerb}`;
+    }
+
+    // Präteritum 6-Person
+    let ptIch, ptDu, ptEr, ptWir, ptIhr, ptSie;
+
+    if (irr) {
+      let rawPrt = irr.praeteritum;
+      if (sepPrefix && rawPrt.endsWith(` ${sepPrefix}`)) {
+        rawPrt = rawPrt.slice(0, -(sepPrefix.length + 1)).trim();
+      }
+      const basePrt = rawPrt;
+      ptIch = basePrt;
+      ptEr = basePrt;
+
+      if (basePrt.endsWith('te') || basePrt.endsWith('e')) {
+        ptDu = `${basePrt}st`;
+        ptWir = `${basePrt}n`;
+        ptIhr = `${basePrt}t`;
+        ptSie = `${basePrt}n`;
+      } else {
+        // Strong Präteritum (consonant ending, e.g. ging, stand, sah, fuhr, schnitt)
+        if (basePrt.endsWith('t') || basePrt.endsWith('d')) {
+          ptDu = `${basePrt}est`;
+          ptIhr = `${basePrt}et`;
+        } else if (basePrt.endsWith('s') || basePrt.endsWith('ß')) {
+          ptDu = `${basePrt}est`;
+          ptIhr = `${basePrt}t`;
+        } else {
+          ptDu = `${basePrt}st`;
+          ptIhr = `${basePrt}t`;
+        }
+        ptWir = `${basePrt}en`;
+        ptSie = `${basePrt}en`;
+      }
+    } else {
+      const prtStem = dental ? `${stem}ete` : `${stem}te`;
+      ptIch = prtStem;
+      ptDu = `${prtStem}st`;
+      ptEr = prtStem;
+      ptWir = `${prtStem}n`;
+      ptIhr = `${prtStem}t`;
+      ptSie = `${prtStem}n`;
+    }
+
+    // Apply inseparable prefix if not already present
+    if (insep) {
+      if (!pIch.startsWith(insep)) pIch = `${insep}${pIch}`;
+      if (!pDu.startsWith(insep)) pDu = `${insep}${pDu}`;
+      if (!pEr.startsWith(insep)) pEr = `${insep}${pEr}`;
+      if (!pWir.startsWith(insep)) pWir = `${insep}${pWir}`;
+      if (!pIhr.startsWith(insep)) pIhr = `${insep}${pIhr}`;
+      if (!pSie.startsWith(insep)) pSie = `${insep}${pSie}`;
+
+      if (!ptIch.startsWith(insep)) ptIch = `${insep}${ptIch}`;
+      if (!ptDu.startsWith(insep)) ptDu = `${insep}${ptDu}`;
+      if (!ptEr.startsWith(insep)) ptEr = `${insep}${ptEr}`;
+      if (!ptWir.startsWith(insep)) ptWir = `${insep}${ptWir}`;
+      if (!ptIhr.startsWith(insep)) ptIhr = `${insep}${ptIhr}`;
+      if (!ptSie.startsWith(insep)) ptSie = `${insep}${ptSie}`;
+    }
+
+    // Helper for formatting person row with reflexives and separable prefix
+    const formatPerson = (verbForm, pron, reflPron) => {
+      if (isRefl) {
+        return `${verbForm} ${reflPron}${sepSuffix}`;
+      }
+      return `${verbForm}${sepSuffix}`;
+    };
+
+    const praesensIch = formatPerson(pIch, 'ich', 'mich');
+    const praesensDu = formatPerson(pDu, 'du', 'dich');
+    const praesensEr = formatPerson(pEr, 'er', 'sich');
+    const praesensWir = formatPerson(pWir, 'wir', 'uns');
+    const praesensIhr = formatPerson(pIhr, 'ihr', 'euch');
+    const praesensSie = formatPerson(pSie, 'sie', 'sich');
+
+    const praeteritumIch = formatPerson(ptIch, 'ich', 'mich');
+    const praeteritumDu = formatPerson(ptDu, 'du', 'dich');
+    const praeteritumEr = formatPerson(ptEr, 'er', 'sich');
+    const praeteritumWir = formatPerson(ptWir, 'wir', 'uns');
+    const praeteritumIhr = formatPerson(ptIhr, 'ihr', 'euch');
+    const praeteritumSie = formatPerson(ptSie, 'sie', 'sich');
+
+    // Perfekt Er
+    const perfektEr = isRefl
+      ? `${conj.hilfsverb} sich ${conj.partizipZwei}`
+      : `${conj.hilfsverb} ${conj.partizipZwei}`;
+
+    // Imperativ Du
+    let impDu;
+    let baseImp = (irr && irr.imperativ && irr.imperativ !== '-')
+      ? irr.imperativ.split('/')[0].replace('!', '').trim()
+      : `${stem}e`;
+    if (sepPrefix && baseImp.endsWith(` ${sepPrefix}`)) {
+      baseImp = baseImp.slice(0, -(sepPrefix.length + 1)).trim();
+    }
+
+    if (isRefl) {
+      impDu = isSep ? `${baseImp} dich ${sepPrefix}!` : `${baseImp} dich!`;
+    } else {
+      impDu = isSep ? `${baseImp} ${sepPrefix}!` : `${baseImp}!`;
+    }
 
     return {
       infinitiv: clean,
       vowelChange: conj.regularity,
-      isReflexive: conj.isReflexive,
+      isReflexive: isRefl,
       reflexiveType: conj.reflexiveType,
       isSeparable: conj.isSeparable,
       separablePrefix: conj.separablePrefix,
-      praesensEr: pPrsEr,
-      praeteritumEr: pPrtEr,
-      perfektEr: `${conj.hilfsverb} ${conj.partizipZwei}`,
-      praesensIch: pPrsIch,
-      praesensDu: pPrsDu,
-      praesensWir: pPrsWir,
-      praesensIhr: pPrsIhr,
-      praesensSie: pPrsSie,
-      praeteritumIch: pPrtIch,
-      praeteritumDu: pPrtDu,
-      praeteritumWir: pPrtWir,
-      praeteritumIhr: pPrtIhr,
-      praeteritumSie: pPrtSie,
-      konjunktivZweiIch: `${stem}te`,
-      imperativDu: conj.imperativ || `${stem}!`
+      praesensEr,
+      praeteritumEr,
+      perfektEr,
+      praesensIch,
+      praesensDu,
+      praesensWir,
+      praesensIhr,
+      praesensSie,
+      praeteritumIch,
+      praeteritumDu,
+      praeteritumWir,
+      praeteritumIhr,
+      praeteritumSie,
+      konjunktivZweiIch: `${ptIch}${sepSuffix}`,
+      imperativDu: impDu
     };
   }
 
@@ -755,6 +968,7 @@ class GermanVerbHelper {
 
       return {
         infinitive,
+        baseVerb: prefixCheck.baseVerb || infinitive,
         praesens: entry.praesens,
         praeteritum: entry.praeteritum,
         partizipZwei: entry.partizipZwei,
@@ -791,11 +1005,12 @@ class GermanVerbHelper {
       const stem = this.extractStem(baseVerb);
       const dental = this.hasDentalEnding(stem);
       const endsWithIeren = baseVerb.endsWith('ieren');
+      const hasInsep = INSEPARABLE_PREFIXES.some(p => baseVerb.startsWith(p));
 
       const prs = dental ? `${stem}et` : `${stem}t`;
       const prt = dental ? `${stem}ete` : `${stem}te`;
       const partSuffix = dental ? `${stem}et` : `${stem}t`;
-      const p2 = (isInseparable || endsWithIeren) ? partSuffix : `ge${partSuffix}`;
+      const p2 = (isInseparable || endsWithIeren || hasInsep) ? partSuffix : `ge${partSuffix}`;
       const imp = `${stem}e! / ${ dental ? stem + 'et' : stem + 't' }!`;
 
       baseConj = {
@@ -807,7 +1022,7 @@ class GermanVerbHelper {
       };
     }
 
-    const hilfsverb = SEIN_FULL_VERBS.has(infinitive) || SEIN_FULL_VERBS.has(baseVerb) ? 'ist' : baseConj.hilfsverb;
+    const hilfsverb = SEIN_FULL_VERBS.has(infinitive) || SEIN_FULL_VERBS.has(baseVerb) || baseConj.hilfsverb === 'ist' ? 'ist' : baseConj.hilfsverb;
 
     if (isSeparable && prefix) {
       return {

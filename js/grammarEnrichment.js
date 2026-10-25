@@ -53,51 +53,25 @@ function detectGermanTags(entry) {
   const foundTags = [];
   const tagsPool = [];
 
-  // Çeşitli veri kaynaklarından etiketleri topla
+  // Çeşitli doğrulanmış meta veri kaynaklarından etiketleri topla (asla ham wikitext ekleme!)
   if (Array.isArray(entry.tags)) tagsPool.push(...entry.tags);
   if (typeof entry.tags === 'string') tagsPool.push(...entry.tags.split(/[,;\s]+/));
-  if (Array.isArray(entry.raw_tags)) tagsPool.push(...entry.raw_tags);
-  if (typeof entry.raw_tags === 'string') tagsPool.push(...entry.raw_tags.split(/[,;\s]+/));
-  if (entry.register) tagsPool.push(entry.register);
+  if (Array.isArray(entry.raw_tags)) {
+    for (const rt of entry.raw_tags) {
+      if (typeof rt === 'string' && rt.length < 50) tagsPool.push(rt);
+    }
+  }
+  if (entry.register && typeof entry.register === 'string') tagsPool.push(entry.register);
   if (Array.isArray(entry.labels)) tagsPool.push(...entry.labels);
   if (typeof entry.labels === 'string') tagsPool.push(...entry.labels.split(/[,;\s]+/));
   if (Array.isArray(entry.thesaurusLevels)) tagsPool.push(...entry.thesaurusLevels);
-  if (entry.rawWikitext) tagsPool.push(entry.rawWikitext);
 
   const rawJoined = tagsPool.join(' ').toLowerCase();
-
-  // Colloquial / Umgangssprachlich (Kehribar #FBBF24)
-  if (
-    /colloquial|umgangssprachlich|\bugs\b|\bfam\b|familiar|familiär|alltagssprache/.test(rawJoined)
-  ) {
-    foundTags.push({
-      key: 'colloquial',
-      label: '🗣️ Günlük Dil (Umgangssprachlich)',
-      color: '#FBBF24',
-      bg: 'rgba(251, 191, 36, 0.12)',
-      border: 'rgba(251, 191, 36, 0.3)',
-      className: 'badge-nuance-colloquial'
-    });
-  }
-
-  // Elevated / Gehoben / Formal (Mor/İndigo #A78BFA)
-  if (
-    /elevated|gehoben|\bgeh\b|formal|literary|literarisch|akademisch|bildungssprache|dichterisch/.test(rawJoined)
-  ) {
-    foundTags.push({
-      key: 'elevated',
-      label: '🎩 Resmi / Akademik (Gehoben)',
-      color: '#A78BFA',
-      bg: 'rgba(167, 139, 250, 0.12)',
-      border: 'rgba(167, 139, 250, 0.3)',
-      className: 'badge-nuance-formal'
-    });
-  }
+  if (!rawJoined.trim()) return [];
 
   // Slang / Jugendsprache / Vulgar (Mercan #F87171)
-  if (
-    /slang|jugendsprache|vulgar|vulgär|derb|abwertend|schimpfwort/.test(rawJoined)
-  ) {
+  const isSlang = /\b(slang|jugendsprache|vulgär|vulgar|schimpfwort|derb|abwertend)\b/.test(rawJoined);
+  if (isSlang) {
     foundTags.push({
       key: 'slang',
       label: '🔥 Slang / Sokak Dili',
@@ -108,10 +82,35 @@ function detectGermanTags(entry) {
     });
   }
 
+  // Elevated / Gehoben / Formal (Mor/İndigo #A78BFA)
+  const isGehoben = /\b(elevated|gehoben|bildungssprachlich|dichterisch|literarisch|akademisch)\b/.test(rawJoined);
+  if (isGehoben && !isSlang) {
+    foundTags.push({
+      key: 'elevated',
+      label: '🎩 Resmi / Akademik (Gehoben)',
+      color: '#A78BFA',
+      bg: 'rgba(167, 139, 250, 0.12)',
+      border: 'rgba(167, 139, 250, 0.3)',
+      className: 'badge-nuance-formal'
+    });
+  }
+
+  // Colloquial / Umgangssprachlich (Kehribar #FBBF24)
+  const isColloquial = /\b(colloquial|umgangssprachlich|ugs|familiär|alltagssprache)\b/.test(rawJoined);
+  if (isColloquial && !isSlang && !isGehoben) {
+    foundTags.push({
+      key: 'colloquial',
+      label: '🗣️ Günlük Dil (Umgangssprachlich)',
+      color: '#FBBF24',
+      bg: 'rgba(251, 191, 36, 0.12)',
+      border: 'rgba(251, 191, 36, 0.3)',
+      className: 'badge-nuance-colloquial'
+    });
+  }
+
   // Dated / Archaic / Veraltet (Gri #9CA3AF)
-  if (
-    /dated|archaic|veraltet|veraltend|altmodisch|historisch/.test(rawJoined)
-  ) {
+  const isDated = /\b(dated|archaic|veraltet|veraltend|altmodisch|historisch)\b/.test(rawJoined);
+  if (isDated) {
     foundTags.push({
       key: 'dated',
       label: '⏳ Eskimiş (Veraltet)',
@@ -158,14 +157,14 @@ async function fetchOpenThesaurus(word, signal) {
 
     if (Array.isArray(data.synsets)) {
       for (const synset of data.synsets) {
-        if (Array.isArray(synset.categories)) {
-          synset.categories.forEach((c) => levelsSet.add(c));
-        }
         if (Array.isArray(synset.terms)) {
           for (const t of synset.terms) {
             const rawTerm = (t.term || '').trim();
             const cleanTerm = rawTerm.replace(/^\(.*?\)\s*/, '').replace(/\s*\(.*?\)$/, '').trim();
-            if (t.level) levelsSet.add(t.level);
+            // YALNIZCA aranan kelimenin kendisine ait seviye varsa ekle (eş anlamlılarınkini değil!)
+            if (t.level && cleanTerm.toLowerCase() === clean) {
+              levelsSet.add(t.level);
+            }
 
             if (cleanTerm && cleanTerm.toLowerCase() !== clean) {
               if (cleanStem && cleanTerm.toLowerCase().includes(cleanStem) && cleanTerm.length > clean.length) {
@@ -421,19 +420,19 @@ function calculateSM2NextIntervals(card) {
   const interval = Number(card?.interval ?? (card?.intervalDays ?? 0));
   const easeFactor = Number(card?.easeFactor ?? 2.5);
 
-  // Tekrar (0)
+  // Tekrar (0) -> 10 dakikadan az
   const againTime = '<10dk';
 
   // Zor (1)
   const hardDays = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
   const hardTime = `${hardDays}g`;
 
-  // İyi (2)
-  const goodDays = repetitions === 0 ? 1 : (repetitions === 1 ? 3 : Math.round(interval * easeFactor));
+  // İyi (2) -> Yeni kartta 3 gün, öğrenilmiş kartta kesinlikle hard'dan fazla
+  const goodDays = repetitions === 0 ? 3 : Math.max(hardDays + 1, Math.round(interval * easeFactor));
   const goodTime = `${goodDays}g`;
 
-  // Kolay (3)
-  const easyDays = repetitions === 0 ? 4 : Math.round(interval * easeFactor * 1.3);
+  // Kolay (3) -> Yeni kartta 8 gün, öğrenilmiş kartta good'dan fazla
+  const easyDays = repetitions === 0 ? 8 : Math.max(goodDays + 2, Math.round(interval * easeFactor * 1.35));
   const easyTime = `${easyDays}g`;
 
   return { againTime, hardTime, goodTime, easyTime };

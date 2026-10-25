@@ -408,13 +408,15 @@ class WortMeisterDatabase {
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;
     } else if (r === 2) {
-      // İyi (2)
-      interval = repetitions === 0 ? 1 : (repetitions === 1 ? 3 : Math.round(interval * easeFactor));
+      // İyi (2) -> Yeni kartta 3 gün, öğrenilmiş kartta hard'dan fazla
+      const hardDays = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
+      interval = repetitions === 0 ? 3 : Math.max(hardDays + 1, Math.round(interval * easeFactor));
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;
     } else if (r === 3) {
-      // Kolay (3)
-      interval = repetitions === 0 ? 4 : Math.round(interval * easeFactor * 1.3);
+      // Kolay (3) -> Yeni kartta 8 gün, öğrenilmiş kartta good'dan fazla
+      const goodDays = repetitions === 0 ? 3 : Math.round(interval * easeFactor);
+      interval = repetitions === 0 ? 8 : Math.max(goodDays + 2, Math.round(interval * easeFactor * 1.35));
       easeFactor += 0.15;
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;

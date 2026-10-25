@@ -22,6 +22,7 @@
     haben: { praesens: 'hat', praeteritum: 'hatte', partizipZwei: 'gehabt', hilfsverb: 'hat', imperativ: 'hab!', cefr: 'A1', tr: 'sahip olmak, var olmak', en: 'to have' },
     werden: { praesens: 'wird', praeteritum: 'wurde', partizipZwei: 'geworden', hilfsverb: 'ist', imperativ: 'werde!', cefr: 'A1', tr: 'olmak, gelecekte ... olmak', en: 'to become, will' },
     gehen: { praesens: 'geht', praeteritum: 'ging', partizipZwei: 'gegangen', hilfsverb: 'ist', imperativ: 'geh!', cefr: 'A1', tr: 'gitmek, yürümek', en: 'to go, walk' },
+    durchgehen: { praesens: 'geht durch', praeteritum: 'ging durch', partizipZwei: 'durchgegangen', hilfsverb: 'ist', isSeparable: true, separablePrefix: 'durch', imperativ: 'geh durch!', cefr: 'B1', tr: 'baştan sona gözden geçirmek, incelemek', en: 'to go through, examine' },
     kommen: { praesens: 'kommt', praeteritum: 'kam', partizipZwei: 'gekommen', hilfsverb: 'ist', imperativ: 'komm!', cefr: 'A1', tr: 'gelmek', en: 'to come' },
     stehen: { praesens: 'steht', praeteritum: 'stand', partizipZwei: 'gestanden', hilfsverb: 'hat', imperativ: 'steh!', cefr: 'A1', tr: 'ayakta durmak', en: 'to stand' },
     sitzen: { praesens: 'sitzt', praeteritum: 'saß', partizipZwei: 'gesessen', hilfsverb: 'hat', imperativ: 'sitz!', cefr: 'A1', tr: 'oturmak', en: 'to sit' },
@@ -500,11 +501,23 @@
      */
     static normalize(term) {
       if (!term || typeof term !== 'string') return '';
-      return term
+      let cleaned = term
         .toLowerCase()
         .replace(/^(der|die|das|the|to|bir)\s+/i, '')
+        .replace(/^(sich\s+)/i, '')
         .replace(/[\.,:;!?"'„“”()]/g, '')
         .trim();
+
+      const parts = cleaned.split(/\s+/);
+      if (parts.length === 2) {
+        const p = parts[0].toLowerCase();
+        const v = parts[1].toLowerCase();
+        const sepList = ['durch', 'auf', 'aus', 'ein', 'mit', 'vor', 'ab', 'an', 'zu', 'um', 'nach', 'bei', 'los', 'weg', 'unter', 'über', 'fern', 'statt', 'teil', 'zurück', 'weiter', 'wieder'];
+        if (sepList.includes(p)) {
+          return `${p}${v}`;
+        }
+      }
+      return cleaned;
     }
 
     /**
