@@ -43,6 +43,7 @@ class WortCoachApp {
     }
 
     window.wmTranslator.init();
+    this.bindSmartReader();
     window.wmStudy.init();
     if (window.wmStats) window.wmStats.init();
 
@@ -157,7 +158,7 @@ class WortCoachApp {
           regs.forEach((r) => r.update());
         });
       }
-      navigator.serviceWorker.register('./sw.js?v=2.9.9').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=3.0.0').then((reg) => reg.update()).catch(() => {});
     }
   }
 
@@ -773,27 +774,60 @@ class WortCoachApp {
     this.renderSuggestions(suggs);
 
     try {
-      const entry = await window.DictionaryService.resolveToGermanEntry(query, signal);
+      // 4 Aşamalı Akıllı Arama Boru Hattı (Exact -> Stem -> Levenshtein -> DeepL Fallback)
+      let pipelineResult = null;
+      if (typeof window.executeSmartSearchPipeline === 'function') {
+        pipelineResult = await window.executeSmartSearchPipeline(query, signal);
+      }
+
       if (signal.aborted) return;
 
-      if (!entry) {
+      if (!pipelineResult) {
+        // Fallback: Eski doğrudan arama
+        const entry = await window.DictionaryService.resolveToGermanEntry(query, signal);
+        if (signal.aborted) return;
+
+        if (!entry) {
+          statusBar?.classList.add('hidden');
+          this.renderEmptyStateCard(query);
+          return;
+        }
+
+        this.currentSearchEntry = entry;
+        await this.renderSearchResultCard(entry, query);
         statusBar?.classList.add('hidden');
-        this.renderEmptyStateCard(query);
         return;
       }
 
-      this.currentSearchEntry = entry;
-      await this.renderSearchResultCard(entry, query);
       statusBar?.classList.add('hidden');
 
-      // Arka planda örnek cümleler ve Wiktionary morfolojisi ile zenginleştir
-      if (!entry.isSaved && (!entry.examples || entry.examples.length === 0 || !entry.meaningsTr)) {
-        window.DictionaryService.enrichWithNetwork(entry, signal).then(async (enriched) => {
-          if (!signal.aborted && this.currentSearchEntry === entry) {
-            this.currentSearchEntry = enriched;
-            await this.renderSearchResultCard(enriched, query);
-          }
-        }).catch(() => {});
+      if (pipelineResult.status === 'exact' || pipelineResult.status === 'stem') {
+        const entry = pipelineResult.entry;
+        this.currentSearchEntry = entry;
+        await this.renderSearchResultCard(entry, query, {
+          stem: pipelineResult.stem,
+          similarWords: pipelineResult.similarWords || []
+        });
+
+        // Arka planda örnek cümleler ve Wiktionary morfolojisi ile zenginleştir
+        if (!entry.isSaved && (!entry.examples || entry.examples.length === 0 || !entry.meaningsTr)) {
+          window.DictionaryService.enrichWithNetwork(entry, signal).then(async (enriched) => {
+            if (!signal.aborted && this.currentSearchEntry === entry) {
+              this.currentSearchEntry = enriched;
+              await this.renderSearchResultCard(enriched, query, {
+                stem: pipelineResult.stem,
+                similarWords: pipelineResult.similarWords || []
+              });
+            }
+          }).catch(() => {});
+        }
+      } else if (pipelineResult.status === 'deepl_fallback') {
+        // 4. Aşama: DeepL Fallback Dinamik Kart Arayüzü
+        await this.renderDeeplFallbackCard({
+          query: pipelineResult.originalQuery || query,
+          translation: pipelineResult.translatedText,
+          similarWords: pipelineResult.similarWords || []
+        });
       }
     } catch (e) {
       if (e.name === 'AbortError') return;
@@ -828,6 +862,776 @@ class WortCoachApp {
         wordInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
     });
+  }
+
+  /**
+   * Yerel sözlükte bulunamayıp DeepL ile çevrilen kelimeler için Dinamik Kelime Kartı Arayüzü (UI)
+   */
+  async renderDeeplFallbackCard({ query, translation, similarWords = [] }) {
+    const container = document.getElementById('search-results-container');
+    if (!container) return;
+
+    const cleanWord = (query || '').trim();
+    const safeWord = cleanWord.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const initialTranslation = (translation || '').trim();
+
+    // 2. Bunu Mu Demek İstediniz? Şeridi (Varsa)
+    const didYouMeanHtml = similarWords && similarWords.length > 0
+      ? `
+        <div class="did-you-mean-bar">
+          <span class="dym-label">
+            <svg class="svg-icon" style="width:16px; height:16px; color:#FBBF24;"><use href="#icon-bolt"></use></svg>
+            <span>🔍 Bunu mu demek istediniz:</span>
+          </span>
+          <div class="did-you-mean-chips">
+            ${similarWords.map((w) => `<button type="button" class="btn-dym-chip" data-word="${w}">${w}</button>`).join('')}
+          </div>
+        </div>
+      `
+      : '';
+
+    // Kullanıcının bu kelimeye eklediği özel anlamlar
+    const savedCustomMeanings = this.getCustomMeaningsForWord(cleanWord);
+    const existingCards = await window.wmDB.getCardsByExactWord(cleanWord);
+    const existing = existingCards && existingCards.length > 0 ? existingCards[0] : null;
+
+    // Desteler Listesi
+    const decks = await window.wmDB.getAllDecks();
+    const currentCardDeckId = existing ? Number(existing.deckId) : null;
+    const deckOptionsHtml = decks
+      .map((d) => `<option value="${d.id}" ${currentCardDeckId === Number(d.id) ? 'selected' : ''}>${d.name} (${d.cardCount || 0} kart)</option>`)
+      .join('') + `<option value="__NEW_DECK__">+ Yeni Deste Oluştur...</option>`;
+
+    // DeepL çevirilerini parçala ve varsayılan olarak seçili yap
+    const initialParts = initialTranslation
+      ? initialTranslation.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean)
+      : ['Çeviri bulunamadı'];
+
+    const meaningChips = [];
+    initialParts.forEach((m, idx) => {
+      meaningChips.push({ text: m, selected: true, isCustom: false });
+    });
+    savedCustomMeanings.forEach((cm) => {
+      if (!meaningChips.some((x) => x.text.toLowerCase() === cm.toLowerCase())) {
+        meaningChips.push({ text: cm, selected: true, isCustom: true });
+      }
+    });
+
+    const trChipsHtml = meaningChips.map((m, idx) => `
+      <div class="meaning-chip ${m.selected ? 'selected' : ''}" data-idx="${idx}" data-val="${m.text.replace(/"/g, '&quot;')}">
+        <span class="meaning-chip-check">${m.selected ? '✓' : ''}</span>
+        <span class="meaning-chip-text">${m.text}</span>
+      </div>
+    `).join('');
+
+    container.innerHTML = `
+      ${didYouMeanHtml}
+      <article class="word-detail-card">
+        <!-- 1. Bilgi ve Durum Rozeti (Header Badge) -->
+        <div class="deepl-fallback-banner">
+          <span class="dfb-icon">⚡</span>
+          <span>No matches found in local dictionary · Translated by DeepL</span>
+        </div>
+
+        <!-- 3. Kelime Başlığı + TTS + Fonetik Koç -->
+        <div class="wdc-header-row">
+          <div class="wdc-title-group">
+            <span class="lang-badge lang-badge-de">
+              <svg class="flag-svg"><use href="#flag-de"></use></svg>
+              <span>DE</span>
+            </span>
+            <span id="fallback-article-badge"></span>
+            <span class="wdc-word" style="color:#F3F4F6;">${safeWord}</span>
+          </div>
+          <div class="wdc-actions">
+            <button class="icon-btn-ghost" id="btn-fallback-tts" title="Dinle (TTS)">
+              <svg class="svg-icon" style="color:var(--brand-blue); width:22px; height:22px;"><use href="#icon-volume"></use></svg>
+            </button>
+            <button class="icon-btn-ghost btn-mic-trigger" id="btn-fallback-pronounce" title="Telaffuzunu Test Et">
+              <svg class="svg-icon" style="color:#10B981; width:21px; height:21px;"><use href="#icon-mic"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Opsiyonel Artikel & Tür Seçici Satırı -->
+        <div class="fallback-classifier-row">
+          <div class="classifier-group">
+            <span class="classifier-label">Artikel:</span>
+            <div class="classifier-btn-group" id="fallback-article-selectors">
+              <button type="button" class="btn-classifier-pill" data-art="der">der</button>
+              <button type="button" class="btn-classifier-pill" data-art="die">die</button>
+              <button type="button" class="btn-classifier-pill" data-art="das">das</button>
+              <button type="button" class="btn-classifier-pill active" data-art="">Yok</button>
+            </div>
+          </div>
+          <div class="classifier-group">
+            <span class="classifier-label">Tür:</span>
+            <div class="classifier-btn-group" id="fallback-pos-selectors">
+              <button type="button" class="btn-classifier-pill active" data-pos="OTHER">Genel</button>
+              <button type="button" class="btn-classifier-pill" data-pos="NOUN">İsim</button>
+              <button type="button" class="btn-classifier-pill" data-pos="VERB">Fiil</button>
+              <button type="button" class="btn-classifier-pill" data-pos="ADJECTIVE">Sıfat</button>
+              <button type="button" class="btn-classifier-pill" data-pos="PHRASE">Kalıp</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TÜRKÇE ANLAMLAR ÇİPLERİ + ÖZEL ANLAM EKLEME (+ Anlam Ekle) -->
+        <div class="sec-row-header" style="margin-top: 14px;">
+          <span>TÜRKÇE ANLAMLAR</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim yapabilirsiniz (en az 1)</span>
+        </div>
+        <div class="meaning-chips-container" id="fallback-tr-chips">
+          ${trChipsHtml}
+          <button type="button" class="btn-add-custom-meaning" id="btn-fallback-add-custom">+ Anlam Ekle</button>
+          <div class="custom-meaning-inline-box hidden" id="fallback-custom-box">
+            <input type="text" id="input-fallback-custom" class="custom-meaning-inline-input" placeholder="Özel anlam yazın..." maxlength="60" autocomplete="off" />
+            <button type="button" id="btn-fallback-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
+            <button type="button" id="btn-fallback-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
+          </div>
+        </div>
+
+        <!-- HEDEF DESTE SEÇİMİ -->
+        <div class="target-deck-row" style="margin-top: 16px;">
+          <label class="target-deck-label" for="fallback-target-deck">HEDEF DESTE</label>
+          <div class="target-deck-select-wrap">
+            <select class="target-deck-select" id="fallback-target-deck">
+              ${deckOptionsHtml}
+            </select>
+            <svg class="svg-icon deck-select-chevron"><use href="#icon-chevron-down"></use></svg>
+          </div>
+        </div>
+
+        <!-- 4. Desteye ve Yerel Sözlüğe Kaydetme Butonu -->
+        <button type="button" class="btn-save-card-android" id="btn-fallback-save-card" style="margin-top: 14px;">
+          <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-bookmark"></use></svg>
+          <span>Kartı Desteye Kaydet</span>
+        </button>
+      </article>
+    `;
+
+    // Olay Dinleyicileri
+    // 1. "Bunu mu demek istediniz?" butonları
+    container.querySelectorAll('.btn-dym-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const w = btn.getAttribute('data-word');
+        const input = document.getElementById('global-search-input');
+        if (input) {
+          input.value = w;
+          document.getElementById('btn-clear-search')?.classList.remove('hidden');
+        }
+        this.executeSearch(w);
+      });
+    });
+
+    let selectedArticle = '';
+    let selectedPos = 'OTHER';
+
+    // 2. Artikel & POS seçicileri
+    const artBadge = document.getElementById('fallback-article-badge');
+    const updateArticleBadge = (art) => {
+      if (!artBadge) return;
+      if (!art) {
+        artBadge.innerHTML = '';
+        return;
+      }
+      const st = window.getArticleStyle ? window.getArticleStyle(art) : null;
+      artBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${art.toLowerCase()}">${art.toUpperCase()}</span>`;
+    };
+
+    document.querySelectorAll('#fallback-article-selectors .btn-classifier-pill').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#fallback-article-selectors .btn-classifier-pill').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedArticle = btn.getAttribute('data-art') || '';
+        updateArticleBadge(selectedArticle);
+      });
+    });
+
+    document.querySelectorAll('#fallback-pos-selectors .btn-classifier-pill').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#fallback-pos-selectors .btn-classifier-pill').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedPos = btn.getAttribute('data-pos') || 'OTHER';
+      });
+    });
+
+    // 3. TTS & Fonetik Koç
+    document.getElementById('btn-fallback-tts')?.addEventListener('click', () => {
+      const spk = selectedArticle ? `${selectedArticle} ${cleanWord}` : cleanWord;
+      window.wmTTS.speak(spk, 'de-DE');
+    });
+
+    document.getElementById('btn-fallback-pronounce')?.addEventListener('click', () => {
+      this.openPronunciationCoach(
+        {
+          germanWord: cleanWord,
+          article: selectedArticle || null,
+          partOfSpeech: selectedPos || 'OTHER',
+          meaningsTr: initialTranslation
+        },
+        'word'
+      );
+    });
+
+    // 4. Çoklu Anlam Seçimi (Multi-select Meaning Chips)
+    const trChipsContainer = document.getElementById('fallback-tr-chips');
+    trChipsContainer?.addEventListener('click', (e) => {
+      const chip = e.target.closest('.meaning-chip');
+      if (!chip) return;
+      const allSelected = trChipsContainer.querySelectorAll('.meaning-chip.selected');
+      const isCurrentlySelected = chip.classList.contains('selected');
+      if (isCurrentlySelected && allSelected.length <= 1) {
+        this.showToast('En az bir anlam seçili kalmalıdır.');
+        return;
+      }
+      chip.classList.toggle('selected');
+      const checkSpan = chip.querySelector('.meaning-chip-check');
+      if (checkSpan) checkSpan.textContent = chip.classList.contains('selected') ? '✓' : '';
+    });
+
+    // 5. Özel Anlam Ekleme (+ Anlam Ekle)
+    const customBox = document.getElementById('fallback-custom-box');
+    const customInput = document.getElementById('input-fallback-custom');
+    const addCustomBtn = document.getElementById('btn-fallback-add-custom');
+    const confirmCustomBtn = document.getElementById('btn-fallback-confirm-custom');
+    const cancelCustomBtn = document.getElementById('btn-fallback-cancel-custom');
+
+    const commitCustomMeaning = async () => {
+      if (!customInput) return;
+      const val = customInput.value.trim();
+      if (!val) return;
+      const chipEl = document.createElement('div');
+      chipEl.className = 'meaning-chip selected';
+      chipEl.setAttribute('data-val', val);
+      chipEl.innerHTML = `<span class="meaning-chip-check">✓</span><span class="meaning-chip-text">${val}</span>`;
+      trChipsContainer?.insertBefore(chipEl, addCustomBtn);
+      await this.saveCustomMeaningForWord(cleanWord, val);
+      customInput.value = '';
+      customBox?.classList.add('hidden');
+      addCustomBtn?.classList.remove('hidden');
+    };
+
+    addCustomBtn?.addEventListener('click', () => {
+      addCustomBtn.classList.add('hidden');
+      customBox?.classList.remove('hidden');
+      customInput?.focus();
+    });
+    confirmCustomBtn?.addEventListener('click', commitCustomMeaning);
+    cancelCustomBtn?.addEventListener('click', () => {
+      if (customInput) customInput.value = '';
+      customBox?.classList.add('hidden');
+      addCustomBtn?.classList.remove('hidden');
+    });
+    customInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitCustomMeaning();
+      } else if (e.key === 'Escape') {
+        customBox?.classList.add('hidden');
+        addCustomBtn?.classList.remove('hidden');
+      }
+    });
+
+    // 6. Desteye ve Yerel Sözlüğe Kaydetme
+    document.getElementById('btn-fallback-save-card')?.addEventListener('click', async () => {
+      if (customBox && !customBox.classList.contains('hidden') && customInput?.value.trim()) {
+        await commitCustomMeaning();
+      }
+
+      const selectedMeanings = Array.from(trChipsContainer.querySelectorAll('.meaning-chip.selected'))
+        .map((c) => c.getAttribute('data-val') || c.innerText.replace(/^✓\s*/, '').trim())
+        .filter(Boolean);
+
+      if (selectedMeanings.length === 0) {
+        this.showToast('Lütfen karta eklenecek en az bir anlam seçin.');
+        return;
+      }
+
+      const deckSelect = document.getElementById('fallback-target-deck');
+      let targetDeckId = deckSelect ? deckSelect.value : null;
+
+      if (targetDeckId === '__NEW_DECK__') {
+        const newDeckName = prompt('Yeni deste ismi giriniz:', 'Almanca Kelimeler');
+        if (!newDeckName || !newDeckName.trim()) {
+          if (decks.length > 0 && deckSelect) deckSelect.value = String(decks[0].id);
+          return;
+        }
+        const createdDeck = await window.wmDB.createDeck(newDeckName.trim(), 'Özel kelime destesi', 'default');
+        targetDeckId = Number(createdDeck?.id ?? createdDeck);
+      } else {
+        targetDeckId = targetDeckId ? Number(targetDeckId) : (decks[0] ? Number(decks[0].id) : 1);
+      }
+
+      const finalMeaningsTr = selectedMeanings.join(', ');
+      const newCard = {
+        deckId: targetDeckId,
+        germanWord: cleanWord,
+        article: selectedArticle || null,
+        pluralForm: null,
+        partOfSpeech: selectedPos || 'OTHER',
+        meaningsTr: finalMeaningsTr,
+        meaningsEn: '',
+        exampleSentence: '',
+        targetLanguage: 'de',
+        isManual: true,
+        source: 'deepl_fallback'
+      };
+
+      await window.wmDB.createCard(newCard);
+
+      // Ayrıca customUserDictionary içine ekle ki bir sonraki aramada tam eşleşme olsun
+      if (typeof window.saveToCustomUserDictionary === 'function') {
+        window.saveToCustomUserDictionary({
+          germanWord: cleanWord,
+          article: selectedArticle || null,
+          partOfSpeech: selectedPos || 'OTHER',
+          meaningsTr: finalMeaningsTr,
+          examples: []
+        });
+      }
+
+      this.showToast(`"${cleanWord}" desteye ve yerel sözlüğe kaydedildi! ✓`);
+      await this.refreshHomeDashboard();
+      this.executeSearch(cleanWord);
+    });
+  }
+
+  /**
+   * 5. Akıllı Okuyucu (Smart Reader) & Text to Speech (TTS) Metin Okuma Modülü
+   */
+  bindSmartReader() {
+    const btnQuick = document.getElementById('btn-subview-quick-trans');
+    const btnReader = document.getElementById('btn-subview-smart-reader');
+    const panelQuick = document.getElementById('panel-quick-translate');
+    const panelReader = document.getElementById('panel-smart-reader');
+
+    if (!btnQuick || !btnReader || !panelQuick || !panelReader) return;
+
+    btnQuick.addEventListener('click', () => {
+      btnQuick.classList.add('active');
+      btnReader.classList.remove('active');
+      panelQuick.classList.remove('hidden');
+      panelReader.classList.add('hidden');
+    });
+
+    btnReader.addEventListener('click', () => {
+      btnReader.classList.add('active');
+      btnQuick.classList.remove('active');
+      panelReader.classList.remove('hidden');
+      panelQuick.classList.add('hidden');
+    });
+
+    const readerInput = document.getElementById('reader-input-text');
+    const readerDisplay = document.getElementById('reader-display-pane');
+    const sampleSelect = document.getElementById('reader-sample-select');
+    const speedSelect = document.getElementById('reader-speed-select');
+    const clearBtn = document.getElementById('btn-reader-clear');
+    const parseBtn = document.getElementById('btn-reader-parse');
+    const playAllBtn = document.getElementById('btn-reader-play-all');
+    const stopBtn = document.getElementById('btn-reader-stop');
+
+    const sampleTexts = {
+      sample_a1: `Guten Tag! Mein Name ist Lukas und ich wohne in Berlin. Jeden Tag stehe ich um sieben Uhr auf und trinke einen heißen Kaffee mit Milch. Danach fahre ich mit der U-Bahn zur Arbeit. Ich lerne gern Deutsch und treffe meine Freunde am Abend im Park.`,
+      sample_a2: `Letztes Wochenende bin ich nach München gereist. Das Wetter war herrlich und die Sonne schien hell. Zuerst habe ich das Deutsche Museum besucht, weil mich Technik sehr interessiert. Am Nachmittag aßen wir Brezeln und sprachen über unsere Reisepläne für den kommenden Sommer.`,
+      sample_b1: `Der Klimawandel stellt unsere Gesellschaft vor enorme Herausforderungen. Immer mehr Wissenschaftler betonen die Notwendigkeit erneuerbarer Energien. Wenn wir rechtzeitig nachhaltige Maßnahmen ergreifen, können wir unsere Umwelt für kommende Generationen schützen.`,
+      sample_b2: `Sehr geehrte Damen und Herren, mit großem Interesse bewerbe ich mich um die ausgeschriebene Position als Softwareentwickler. In meiner bisherigen Laufbahn habe ich fundierte Kenntnisse im Bereich agiler Methoden erworben und komplexe Projekte erfolgreich geleitet.`
+    };
+
+    const getSelectedSpeed = () => {
+      return parseFloat(speedSelect?.value || '0.90');
+    };
+
+    const renderParsedTokens = (text) => {
+      if (!readerDisplay) return;
+      const clean = (text || '').trim();
+      if (!clean) {
+        readerDisplay.innerHTML = `<span style="color:var(--text-muted); font-size:0.92rem; font-style:italic;">Metin girmediniz. Lütfen bir Almanca metin yazın veya örnek seçin.</span>`;
+        return;
+      }
+
+      const paragraphs = clean.split(/\n\s*\n/);
+      let globalOffset = 0;
+      let html = '';
+
+      for (const para of paragraphs) {
+        html += '<p style="margin: 0 0 12px 0;">';
+        const tokens = para.match(/([a-zA-ZäöüÄÖÜß]+|[^a-zA-ZäöüÄÖÜß\s]+|\s+)/g) || [para];
+
+        for (const token of tokens) {
+          if (/^[a-zA-ZäöüÄÖÜß]+$/.test(token)) {
+            const wordOffset = clean.indexOf(token, globalOffset);
+            const resolvedOffset = wordOffset >= 0 ? wordOffset : globalOffset;
+            html += `<span class="reader-token" data-word="${token}" data-offset="${resolvedOffset}">${token}</span>`;
+            globalOffset = resolvedOffset + token.length;
+          } else if (token.includes('\n')) {
+            html += '<br/>';
+            globalOffset += token.length;
+          } else {
+            html += token.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            globalOffset += token.length;
+          }
+        }
+        html += '</p>';
+      }
+
+      readerDisplay.innerHTML = html;
+      bindReaderTokens();
+    };
+
+    // Örnek Metin Seçimi
+    sampleSelect?.addEventListener('change', () => {
+      const val = sampleSelect.value;
+      if (val && sampleTexts[val]) {
+        if (readerInput) readerInput.value = sampleTexts[val];
+        renderParsedTokens(sampleTexts[val]);
+      }
+    });
+
+    // Temizle Butonu
+    clearBtn?.addEventListener('click', () => {
+      window.wmTTS.stop();
+      if (readerInput) readerInput.value = '';
+      if (sampleSelect) sampleSelect.value = '';
+      if (readerDisplay) {
+        readerDisplay.innerHTML = `<span style="color:var(--text-muted); font-size:0.92rem; font-style:italic;">Yukarıdaki alana Almanca bir metin yazıp "Metni Ayrıştır ve Oku" butonuna basın veya hazır örnek metinlerden birini seçin.</span>`;
+      }
+    });
+
+    // Ayrıştır Butonu
+    parseBtn?.addEventListener('click', () => {
+      renderParsedTokens(readerInput?.value || '');
+    });
+
+    // Metni Baştan Oku
+    playAllBtn?.addEventListener('click', () => {
+      const text = readerInput?.value.trim() || readerDisplay?.innerText.trim();
+      if (!text) {
+        this.showToast('Okunacak metin bulunamadı.');
+        return;
+      }
+      window.wmTTS.speak(text, 'de-DE', getSelectedSpeed(), () => {
+        readerDisplay?.querySelectorAll('.reader-token.speaking').forEach((t) => t.classList.remove('speaking'));
+      });
+      this.showToast('Metin seslendiriliyor... ▶');
+    });
+
+    // Durdur
+    stopBtn?.addEventListener('click', () => {
+      window.wmTTS.stop();
+      readerDisplay?.querySelectorAll('.reader-token.speaking').forEach((t) => t.classList.remove('speaking'));
+      this.showToast('Okuma durduruldu. ⏹');
+    });
+
+    // Reader Kelime Modalı Elemanları
+    const modalReader = document.getElementById('modal-reader-word');
+    const modalWordTitle = document.getElementById('reader-modal-word');
+    const modalArticleBadge = document.getElementById('reader-modal-article-badge');
+    const modalGrammarRow = document.getElementById('reader-modal-grammar-row');
+    const modalBannerContainer = document.getElementById('reader-modal-banner-container');
+    const modalTrChips = document.getElementById('reader-modal-tr-chips');
+    const modalDeckSelect = document.getElementById('reader-target-deck');
+    const btnCloseReaderModal = document.getElementById('btn-close-reader-modal');
+    const btnReadFromWord = document.getElementById('btn-read-from-selected-word');
+    const btnStopReaderWord = document.getElementById('btn-stop-from-selected-word');
+    const btnReaderWordTTS = document.getElementById('btn-reader-word-tts');
+    const btnReaderWordPronounce = document.getElementById('btn-reader-word-pronounce');
+    const btnReaderSaveCard = document.getElementById('btn-reader-save-card');
+
+    let currentSelectedTokenWord = '';
+    let currentSelectedTokenOffset = 0;
+    let currentSelectedPipelineResult = null;
+
+    btnCloseReaderModal?.addEventListener('click', () => {
+      modalReader?.classList.add('hidden');
+      readerDisplay?.querySelectorAll('.reader-token.active').forEach((t) => t.classList.remove('active'));
+    });
+
+    modalReader?.addEventListener('click', (e) => {
+      if (e.target === modalReader) {
+        modalReader.classList.add('hidden');
+        readerDisplay?.querySelectorAll('.reader-token.active').forEach((t) => t.classList.remove('active'));
+      }
+    });
+
+    // "Bu Kelimeden İtibaren Oku" Butonu
+    btnReadFromWord?.addEventListener('click', () => {
+      const fullText = readerInput?.value.trim() || readerDisplay?.innerText.trim();
+      if (!fullText) return;
+      window.wmTTS.speakFromOffset(fullText, currentSelectedTokenOffset, 'de-DE', getSelectedSpeed(), () => {
+        readerDisplay?.querySelectorAll('.reader-token.speaking').forEach((t) => t.classList.remove('speaking'));
+      });
+      readerDisplay?.querySelectorAll('.reader-token.speaking').forEach((t) => t.classList.remove('speaking'));
+      const activeTok = readerDisplay?.querySelector(`.reader-token[data-offset="${currentSelectedTokenOffset}"]`);
+      if (activeTok) activeTok.classList.add('speaking');
+      this.showToast(`"${currentSelectedTokenWord}" kelimesinden itibaren okunuyor... ▶`);
+    });
+
+    // "Durdur" Butonu
+    btnStopReaderWord?.addEventListener('click', () => {
+      window.wmTTS.stop();
+      readerDisplay?.querySelectorAll('.reader-token.speaking').forEach((t) => t.classList.remove('speaking'));
+      this.showToast('Okuma durduruldu. ⏹');
+    });
+
+    // Yalnızca Bu Kelimeyi Dinle
+    btnReaderWordTTS?.addEventListener('click', () => {
+      if (currentSelectedTokenWord) {
+        window.wmTTS.speak(currentSelectedTokenWord, 'de-DE', getSelectedSpeed());
+      }
+    });
+
+    // Fonetik Koç Butonu
+    btnReaderWordPronounce?.addEventListener('click', () => {
+      if (!currentSelectedTokenWord) return;
+      modalReader?.classList.add('hidden');
+      this.openPronunciationCoach(
+        {
+          germanWord: currentSelectedTokenWord,
+          partOfSpeech: currentSelectedPipelineResult?.entry?.partOfSpeech || 'OTHER',
+          article: currentSelectedPipelineResult?.entry?.article || null,
+          meaningsTr: currentSelectedPipelineResult?.entry?.meaningsTr || currentSelectedPipelineResult?.translatedText || ''
+        },
+        'word'
+      );
+    });
+
+    // Kartı Desteye Kaydet
+    btnReaderSaveCard?.addEventListener('click', async () => {
+      if (!currentSelectedTokenWord) return;
+      const selectedMeanings = Array.from(modalTrChips.querySelectorAll('.meaning-chip.selected'))
+        .map((c) => c.getAttribute('data-val') || c.innerText.replace(/^✓\s*/, '').trim())
+        .filter(Boolean);
+
+      if (selectedMeanings.length === 0) {
+        this.showToast('Lütfen en az bir anlam seçin.');
+        return;
+      }
+
+      const targetDeckId = Number(modalDeckSelect?.value || 1);
+      const article = currentSelectedPipelineResult?.entry?.article || null;
+      const pos = currentSelectedPipelineResult?.entry?.partOfSpeech || 'OTHER';
+      const finalTr = selectedMeanings.join(', ');
+
+      await window.wmDB.createCard({
+        deckId: targetDeckId,
+        germanWord: currentSelectedTokenWord,
+        article,
+        partOfSpeech: pos,
+        meaningsTr: finalTr,
+        targetLanguage: 'de',
+        source: 'smart_reader'
+      });
+
+      if (typeof window.saveToCustomUserDictionary === 'function') {
+        window.saveToCustomUserDictionary({
+          germanWord: currentSelectedTokenWord,
+          article,
+          partOfSpeech: pos,
+          meaningsTr: finalTr
+        });
+      }
+
+      this.showToast(`"${currentSelectedTokenWord}" desteye ve yerel sözlüğe kaydedildi! ✓`);
+      modalReader?.classList.add('hidden');
+    });
+
+    const bindReaderTokens = () => {
+      readerDisplay?.querySelectorAll('.reader-token').forEach((tokenEl) => {
+        tokenEl.addEventListener('click', async () => {
+          readerDisplay.querySelectorAll('.reader-token.active').forEach((t) => t.classList.remove('active'));
+          tokenEl.classList.add('active');
+
+          const word = tokenEl.getAttribute('data-word');
+          const offset = parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
+          currentSelectedTokenWord = word;
+          currentSelectedTokenOffset = offset;
+
+          if (modalWordTitle) modalWordTitle.textContent = word;
+          if (modalArticleBadge) modalArticleBadge.innerHTML = '';
+          if (modalGrammarRow) modalGrammarRow.innerHTML = '<span style="font-size:0.78rem; color:var(--text-muted);">Sözlük taranıyor...</span>';
+          if (modalBannerContainer) modalBannerContainer.innerHTML = '';
+          if (modalTrChips) modalTrChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Anlamlar yükleniyor...</span>';
+
+          const decks = await window.wmDB.getAllDecks();
+          if (modalDeckSelect) {
+            modalDeckSelect.innerHTML = decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
+          }
+
+          modalReader?.classList.remove('hidden');
+
+          try {
+            const res = await window.executeSmartSearchPipeline(word);
+            currentSelectedPipelineResult = res;
+
+            if (!res) {
+              if (modalGrammarRow) modalGrammarRow.innerHTML = '<span style="font-size:0.78rem; color:var(--text-muted);">Genel Kelime</span>';
+              if (modalTrChips) modalTrChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Anlam bulunamadı.</span>';
+              return;
+            }
+
+            if (res.status === 'exact' || res.status === 'stem') {
+              const ent = res.entry;
+              const art = ent.article || '';
+              if (art && modalArticleBadge) {
+                const st = window.getArticleStyle ? window.getArticleStyle(art) : null;
+                modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${art.toLowerCase()}">${art.toUpperCase()}</span>`;
+              }
+
+              if (modalGrammarRow) {
+                const posStr = ent.partOfSpeech || 'Kelime';
+                const stemNote = res.stem ? `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60A5FA;">Kök: ${res.stem}</span>` : '';
+                modalGrammarRow.innerHTML = `<span class="badge badge-pos-${ent.partOfSpeech || 'OTHER'}">${posStr}</span> ${stemNote}`;
+              }
+
+              const rawTr = ent.meaningsTr || ent.tr || '';
+              const trParts = rawTr.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+              if (trParts.length === 0) trParts.push('Genel Karşılık');
+
+              const userCustoms = this.getCustomMeaningsForWord(word);
+              for (const uc of userCustoms) {
+                if (!trParts.some((p) => p.toLowerCase() === uc.toLowerCase())) {
+                  trParts.push(uc);
+                }
+              }
+
+              if (modalTrChips) {
+                modalTrChips.innerHTML = trParts.map((t, idx) => `
+                  <div class="meaning-chip ${idx === 0 ? 'selected' : ''}" data-val="${t.replace(/"/g, '&quot;')}">
+                    <span class="meaning-chip-check">${idx === 0 ? '✓' : ''}</span>
+                    <span class="meaning-chip-text">${t}</span>
+                  </div>
+                `).join('') + `
+                  <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
+                  <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
+                    <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
+                    <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning">✓</button>
+                    <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning">✕</button>
+                  </div>
+                `;
+
+                bindReaderModalMeaningChips(word);
+              }
+            } else if (res.status === 'deepl_fallback') {
+              if (modalBannerContainer) {
+                const dymHtml = res.similarWords && res.similarWords.length > 0
+                  ? `<div class="did-you-mean-bar" style="margin-bottom:8px;">
+                      <span class="dym-label" style="font-size:0.75rem;">💡 Bunu mu demek istediniz:</span>
+                      <div class="did-you-mean-chips">
+                        ${res.similarWords.map((w) => `<button type="button" class="btn-dym-chip" data-word="${w}">${w}</button>`).join('')}
+                      </div>
+                     </div>`
+                  : '';
+
+                modalBannerContainer.innerHTML = `
+                  <div class="deepl-fallback-banner" style="padding:7px 10px; font-size:0.78rem; margin-bottom:8px;">
+                    <span class="dfb-icon">⚡</span>
+                    <span>Yerel sözlükte bulunamadı · DeepL ile Çevrildi</span>
+                  </div>
+                  ${dymHtml}
+                `;
+
+                modalBannerContainer.querySelectorAll('.btn-dym-chip').forEach((b) => {
+                  b.addEventListener('click', () => {
+                    const simWord = b.getAttribute('data-word');
+                    tokenEl.setAttribute('data-word', simWord);
+                    tokenEl.textContent = simWord;
+                    tokenEl.click();
+                  });
+                });
+              }
+
+              if (modalGrammarRow) {
+                modalGrammarRow.innerHTML = `<span class="badge" style="background:#242B3A; color:#9CA3AF;">Otomatik Çeviri</span>`;
+              }
+
+              const transTr = res.translatedText || 'Çeviri bulunamadı';
+              const parts = transTr.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+              if (parts.length === 0) parts.push(transTr);
+
+              if (modalTrChips) {
+                modalTrChips.innerHTML = parts.map((t, idx) => `
+                  <div class="meaning-chip selected" data-val="${t.replace(/"/g, '&quot;')}">
+                    <span class="meaning-chip-check">✓</span>
+                    <span class="meaning-chip-text">${t}</span>
+                  </div>
+                `).join('') + `
+                  <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
+                  <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
+                    <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
+                    <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning">✓</button>
+                    <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning">✕</button>
+                  </div>
+                `;
+
+                bindReaderModalMeaningChips(word);
+              }
+            }
+          } catch (err) {
+            console.error("Reader token resolution failed:", err);
+          }
+        });
+      });
+    };
+
+    const bindReaderModalMeaningChips = (word) => {
+      modalTrChips?.querySelectorAll('.meaning-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          const allSelected = modalTrChips.querySelectorAll('.meaning-chip.selected');
+          const isSelected = chip.classList.contains('selected');
+          if (isSelected && allSelected.length <= 1) {
+            this.showToast('En az bir anlam seçili kalmalıdır.');
+            return;
+          }
+          chip.classList.toggle('selected');
+          const chk = chip.querySelector('.meaning-chip-check');
+          if (chk) chk.textContent = chip.classList.contains('selected') ? '✓' : '';
+        });
+      });
+
+      const addBtn = document.getElementById('btn-reader-add-custom');
+      const box = document.getElementById('reader-custom-box');
+      const inp = document.getElementById('input-reader-custom');
+      const conf = document.getElementById('btn-reader-confirm-custom');
+      const canc = document.getElementById('btn-reader-cancel-custom');
+
+      const commitCustom = async () => {
+        const val = inp?.value.trim();
+        if (!val) return;
+        const newChip = document.createElement('div');
+        newChip.className = 'meaning-chip selected';
+        newChip.setAttribute('data-val', val);
+        newChip.innerHTML = `<span class="meaning-chip-check">✓</span><span class="meaning-chip-text">${val}</span>`;
+        modalTrChips?.insertBefore(newChip, addBtn);
+        newChip.addEventListener('click', () => {
+          newChip.classList.toggle('selected');
+          const chk = newChip.querySelector('.meaning-chip-check');
+          if (chk) chk.textContent = newChip.classList.contains('selected') ? '✓' : '';
+        });
+        await this.saveCustomMeaningForWord(word, val);
+        if (inp) inp.value = '';
+        box?.classList.add('hidden');
+        addBtn?.classList.remove('hidden');
+      };
+
+      addBtn?.addEventListener('click', () => {
+        addBtn.classList.add('hidden');
+        box?.classList.remove('hidden');
+        inp?.focus();
+      });
+      conf?.addEventListener('click', commitCustom);
+      canc?.addEventListener('click', () => {
+        if (inp) inp.value = '';
+        box?.classList.add('hidden');
+        addBtn?.classList.remove('hidden');
+      });
+      inp?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitCustom();
+        }
+      });
+    };
   }
 
   initUmlautBars() {
@@ -978,9 +1782,30 @@ class WortCoachApp {
     `;
   }
 
-  async renderSearchResultCard(entry, searchedTerm) {
+  async renderSearchResultCard(entry, searchedTerm, extra = {}) {
     const container = document.getElementById('search-results-container');
     if (!container || !entry) return;
+
+    // "Bunu mu demek istediniz?" ve "Kök kelime" şeritleri
+    const didYouMeanHtml = extra && extra.similarWords && extra.similarWords.length > 0
+      ? `
+        <div class="did-you-mean-bar">
+          <span class="dym-label">
+            <svg class="svg-icon" style="width:16px; height:16px; color:#FBBF24;"><use href="#icon-bolt"></use></svg>
+            <span>💡 Bunu mu demek istediniz:</span>
+          </span>
+          <div class="did-you-mean-chips">
+            ${extra.similarWords.map((w) => `<button type="button" class="btn-dym-chip" data-word="${w}">${w}</button>`).join('')}
+          </div>
+        </div>
+      `
+      : '';
+
+    const stemBannerHtml = extra && extra.stem
+      ? `<div style="font-size:0.82rem; color:#60A5FA; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:8px 12px; margin-bottom:12px;">
+           💡 „${searchedTerm}“ çekimli hali için kök kelime bulundu: <strong>${entry.germanWord || searchedTerm}</strong>
+         </div>`
+      : '';
 
     // 1. Otomatik & Normatif Artikel Koruması (İsimler her zaman artikelle eşleştirilir)
     let canonicalArticle = entry.article || '';
@@ -1168,6 +1993,8 @@ class WortCoachApp {
       `;
 
     container.innerHTML = `
+      ${didYouMeanHtml}
+      ${stemBannerHtml}
       <article class="word-detail-card">
         <div class="wdc-header-row">
           <div class="wdc-title-group">
@@ -1258,6 +2085,17 @@ class WortCoachApp {
     `;
 
     // Olay Dinleyicileri
+    container.querySelectorAll('.btn-dym-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const w = btn.getAttribute('data-word');
+        const input = document.getElementById('global-search-input');
+        if (input) {
+          input.value = w;
+          document.getElementById('btn-clear-search')?.classList.remove('hidden');
+        }
+        this.executeSearch(w);
+      });
+    });
     document.getElementById('btn-res-tts')?.addEventListener('click', () => {
       const spk = isNoun && canonicalArticle ? `${canonicalArticle} ${cleanWord}` : cleanWord;
       window.wmTTS.speak(spk, 'de-DE');

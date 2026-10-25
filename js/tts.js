@@ -10,6 +10,8 @@ class WortMeisterTTS {
   constructor() {
     this.synth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
     this.voices = [];
+    this.currentAudio = null;
+    this.isPlaying = false;
     if (this.synth) {
       this.loadVoices();
       if (typeof this.synth.onvoiceschanged !== 'undefined') {
@@ -54,18 +56,43 @@ class WortMeisterTTS {
     return null;
   }
 
-  speak(text, lang = 'de-DE') {
-    if (!text) return;
+  stop() {
+    this.isPlaying = false;
+    if (this.synth) {
+      try {
+        this.synth.cancel();
+      } catch (_) {}
+    }
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch (_) {}
+      this.currentAudio = null;
+    }
+  }
+
+  speak(text, lang = 'de-DE', rate = 0.90, onEnd = null) {
+    if (!text) {
+      if (onEnd) onEnd();
+      return;
+    }
     const clean = String(text).trim();
-    if (!clean) return;
+    if (!clean) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    this.stop();
+    this.isPlaying = true;
 
     const targetLang = (lang || 'de-DE').toLowerCase();
     const isGerman = targetLang.startsWith('de');
+    const speechRate = Math.min(Math.max(Number(rate) || 0.90, 0.5), 2.0);
 
     // Almanca telaffuz için KESİN ALMANCA KİLİDİ:
     if (isGerman) {
       if (this.synth) {
-        this.synth.cancel();
         const deVoice = this.getStrictGermanVoice();
 
         // Yalnızca ve yalnızca gerçek bir Almanca ses bulunduysa Web Speech API kullan
@@ -73,8 +100,16 @@ class WortMeisterTTS {
           const utterance = new SpeechSynthesisUtterance(clean);
           utterance.lang = 'de-DE';
           utterance.voice = deVoice;
-          utterance.rate = 0.90;
+          utterance.rate = speechRate;
           utterance.pitch = 1.0;
+          utterance.onend = () => {
+            this.isPlaying = false;
+            if (typeof onEnd === 'function') onEnd();
+          };
+          utterance.onerror = () => {
+            this.isPlaying = false;
+            if (typeof onEnd === 'function') onEnd();
+          };
           if (navigator.vibrate) navigator.vibrate(10);
           this.synth.speak(utterance);
           return;
@@ -83,38 +118,81 @@ class WortMeisterTTS {
 
       // Cihazda yerel Almanca ses yoksa: Otantik ana dili Almanca olan ses akışını çal
       // (ASLA ve ASLA Türkçe ses motoruna düşmez!)
-      this.playNativeGermanAudio(clean);
+      this.playNativeGermanAudio(clean, onEnd);
       return;
     }
 
-    // İngilizce seslendirme
+    // İngilizce veya Türkçe seslendirme
     if (this.synth) {
-      this.synth.cancel();
       const utterance = new SpeechSynthesisUtterance(clean);
       utterance.lang = targetLang.startsWith('en') ? 'en-US' : 'tr-TR';
-      utterance.rate = 0.92;
+      utterance.rate = speechRate;
+      utterance.onend = () => {
+        this.isPlaying = false;
+        if (typeof onEnd === 'function') onEnd();
+      };
+      utterance.onerror = () => {
+        this.isPlaying = false;
+        if (typeof onEnd === 'function') onEnd();
+      };
       this.synth.speak(utterance);
+    } else {
+      this.isPlaying = false;
+      if (typeof onEnd === 'function') onEnd();
     }
   }
 
-  playNativeGermanAudio(text) {
+  speakFromOffset(fullText, startIndex = 0, lang = 'de-DE', rate = 0.90, onEnd = null) {
+    if (!fullText) return;
+    const textToSpeak = typeof startIndex === 'number' && startIndex > 0
+      ? String(fullText).slice(startIndex).trim()
+      : String(fullText).trim();
+    if (!textToSpeak) return;
+    this.speak(textToSpeak, lang, rate, onEnd);
+  }
+
+  playNativeGermanAudio(text, onEnd = null) {
     try {
       const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=de&q=${encodeURIComponent(text)}`;
       const audio = new Audio(audioUrl);
+      this.currentAudio = audio;
+
+      const finishHandler = () => {
+        this.isPlaying = false;
+        if (this.currentAudio === audio) {
+          this.currentAudio = null;
+        }
+        if (typeof onEnd === 'function') onEnd();
+      };
+
+      audio.onended = finishHandler;
+      audio.onerror = () => {
+        // Fallback stream: gtx client
+        const altUrl = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=de&q=${encodeURIComponent(text)}`;
+        const altAudio = new Audio(altUrl);
+        this.currentAudio = altAudio;
+        altAudio.onended = finishHandler;
+        altAudio.onerror = () => {
+          this.isPlaying = false;
+          this.currentAudio = null;
+          console.warn("Almanca ses akışı engellendi, Türkçe okuma KESİNLİKLE engellendi.");
+          if (typeof onEnd === 'function') onEnd();
+        };
+        altAudio.play().catch(() => finishHandler());
+      };
+
       if (navigator.vibrate) navigator.vibrate(10);
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // Fallback stream: gtx client
-          const altUrl = `https://translate.googleapis.com/translate_tts?client=gtx&ie=UTF-8&tl=de&q=${encodeURIComponent(text)}`;
-          const altAudio = new Audio(altUrl);
-          altAudio.play().catch(() => {
-            // ASLA Türkçe ses motoruna DÜŞME. Sessizce logla.
-            console.warn("Almanca ses akışı engellendi, Türkçe okuma KESİNLİKLE engellendi.");
-          });
+          audio.onerror();
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      this.isPlaying = false;
+      this.currentAudio = null;
+      if (typeof onEnd === 'function') onEnd();
+    }
   }
 }
 

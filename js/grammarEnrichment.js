@@ -501,6 +501,428 @@ function createClozeSentence(exampleSentence, targetWord, verbForms = {}) {
   };
 }
 
+// =========================================================================
+// 6. 4 AŞAMALI AKILLI ARAMA BORU HATTI (SMART SEARCH PIPELINE)
+// =========================================================================
+
+/**
+ * Umlaut normalizasyonu (ae->ä, oe->ö, ue->ü, ss->ß) ve temizleme
+ */
+function normalizeGermanSearch(text) {
+  if (!text) return '';
+  let str = String(text).trim().toLowerCase();
+  // Umlaut katlamalarını tersine çevirerek Almanca standart karakterlere normalize et
+  str = str
+    .replace(/ae/g, 'ä')
+    .replace(/oe/g, 'ö')
+    .replace(/ue/g, 'ü')
+    .replace(/ss/g, 'ß');
+  return str;
+}
+
+/**
+ * Almanca çekim eklerini ve Partizip II (ge-) önekini soyarak olası kök/mastar adaylarını üretir
+ */
+function stemGermanCandidates(word) {
+  if (!word) return [];
+  const clean = String(word).trim().toLowerCase();
+  if (clean.length < 3) return [clean];
+
+  const candidates = new Set();
+  candidates.add(clean);
+
+  // 1. Partizip II öneki "ge-" soyma (örn: gesagt -> sagt, gekauft -> kauft, gearbeitet -> arbeitet)
+  let strippedPrefix = clean;
+  if (clean.startsWith('ge') && clean.length > 4) {
+    strippedPrefix = clean.slice(2);
+    candidates.add(strippedPrefix);
+  }
+
+  // 2. Çekim ekleri listesi (uzundan kısaya doğru)
+  const suffixes = [
+    'test', 'ten', 'tet', 'est',
+    'en', 'st', 'te', 'et', 'er', 'es', 'em', 'el',
+    'e', 't', 'n', 's'
+  ];
+
+  const testWords = [clean];
+  if (strippedPrefix !== clean) testWords.push(strippedPrefix);
+
+  for (const base of testWords) {
+    for (const suffix of suffixes) {
+      if (base.endsWith(suffix) && base.length - suffix.length >= 2) {
+        const root = base.slice(0, base.length - suffix.length);
+        candidates.add(root);
+        // Fiil mastar hali adayı: root + 'en' ve root + 'n'
+        candidates.add(root + 'en');
+        candidates.add(root + 'n');
+      }
+    }
+  }
+
+  // 3. Çoğul isimlerde Umlaut çözümü (Häuser -> Haus, Bücher -> Buch, Bäume -> Baum)
+  if (clean.includes('ä')) candidates.add(clean.replace(/ä/g, 'a'));
+  if (clean.includes('ö')) candidates.add(clean.replace(/ö/g, 'o'));
+  if (clean.includes('ü')) candidates.add(clean.replace(/ü/g, 'u'));
+
+  return Array.from(candidates);
+}
+
+/**
+ * Hızlı Levenshtein Mesafesi (Edit Distance) Hesaplayıcı
+ */
+function levenshteinDistance(s1, s2) {
+  if (s1 === s2) return 0;
+  const len1 = s1.length;
+  const len2 = s2.length;
+  if (len1 === 0) return len2;
+  if (len2 === 0) return len1;
+  if (Math.abs(len1 - len2) > 3) return 999;
+
+  let prevRow = new Array(len2 + 1);
+  let currRow = new Array(len2 + 1);
+
+  for (let j = 0; j <= len2; j++) {
+    prevRow[j] = j;
+  }
+
+  for (let i = 1; i <= len1; i++) {
+    currRow[0] = i;
+    const char1 = s1.charCodeAt(i - 1);
+    for (let j = 1; j <= len2; j++) {
+      const cost = char1 === s2.charCodeAt(j - 1) ? 0 : 1;
+      currRow[j] = Math.min(
+        prevRow[j] + 1,       // silme
+        currRow[j - 1] + 1,   // ekleme
+        prevRow[j - 1] + cost // değiştirme
+      );
+    }
+    for (let j = 0; j <= len2; j++) {
+      prevRow[j] = currRow[j];
+    }
+  }
+
+  return currRow[len2];
+}
+
+/**
+ * Yerel sözlük kelimelerini tarayarak Levenshtein mesafesi <= 2 olan benzer kelimeleri bulur
+ */
+function findSimilarWords(query, maxResults = 5) {
+  if (!query || typeof query !== 'string') return [];
+  const cleanQ = query.trim().toLowerCase();
+  const normQ = normalizeGermanSearch(cleanQ);
+  if (normQ.length < 2) return [];
+
+  const wordPool = new Map(); // normalized -> canonical
+
+  // 1. Doğrulanmış Çekirdek Sözlük (VERIFIED_CORE_VOCABULARY)
+  if (typeof window !== 'undefined' && window.VERIFIED_CORE_VOCABULARY) {
+    for (const key of Object.keys(window.VERIFIED_CORE_VOCABULARY)) {
+      const item = window.VERIFIED_CORE_VOCABULARY[key];
+      const canon = item.germanWord || key;
+      wordPool.set(canon.toLowerCase(), canon);
+    }
+  }
+
+  // 2. Standalone Çevrimdışı Sözlük Motoru (OfflineDictionary)
+  if (typeof window !== 'undefined' && window.OfflineDictionaryEngine) {
+    try {
+      const nouns = window.CORE_NOUNS || {};
+      for (const k of Object.keys(nouns)) {
+        const it = nouns[k];
+        if (it && it.de) wordPool.set(it.de.toLowerCase(), it.de);
+      }
+      const verbs = window.IRREGULAR_VERBS || {};
+      for (const k of Object.keys(verbs)) {
+        wordPool.set(k.toLowerCase(), k);
+      }
+      const adjs = window.CORE_ADJECTIVES || {};
+      for (const k of Object.keys(adjs)) {
+        const it = adjs[k];
+        if (it && it.de) wordPool.set(it.de.toLowerCase(), it.de);
+      }
+    } catch (_) {}
+  }
+
+  // 3. Dilbilgisi Zenginleştirme Havuzu (Rektion & False Friends)
+  for (const k of Object.keys(GERMAN_GRAMMAR_ENRICHMENT)) {
+    wordPool.set(k.toLowerCase(), k);
+  }
+
+  // 4. Kullanıcının Özel Sözlüğü (customUserDictionary)
+  try {
+    const customUserDict = JSON.parse(localStorage.getItem('customUserDictionary') || '{}');
+    for (const k of Object.keys(customUserDict)) {
+      const it = customUserDict[k];
+      const canon = it.germanWord || k;
+      wordPool.set(canon.toLowerCase(), canon);
+    }
+  } catch (_) {}
+
+  const matches = [];
+
+  for (const [lowerWord, canonical] of wordPool.entries()) {
+    if (lowerWord === cleanQ || lowerWord === normQ) continue; // Tam eşleşmeyi atla
+
+    const normTarget = normalizeGermanSearch(lowerWord);
+    const dist = levenshteinDistance(normQ, normTarget);
+
+    // Edit mesafesi en fazla 2 (veya 7+ harfli uzun kelimelerde 3)
+    const maxAllowedDist = normQ.length >= 7 ? 3 : 2;
+
+    if (dist <= maxAllowedDist) {
+      let score = dist * 10;
+      // İlk harf veya ilk 2 harf aynıysa puan bonusu
+      if (normTarget[0] === normQ[0]) score -= 3;
+      if (normTarget.slice(0, 2) === normQ.slice(0, 2)) score -= 2;
+      // Uzunluk farkı
+      score += Math.abs(normTarget.length - normQ.length);
+
+      matches.push({
+        word: canonical,
+        distance: dist,
+        score
+      });
+    }
+  }
+
+  matches.sort((a, b) => a.score - b.score);
+
+  const uniqueWords = [];
+  const seen = new Set();
+  for (const m of matches) {
+    const low = m.word.toLowerCase();
+    if (!seen.has(low)) {
+      seen.add(low);
+      uniqueWords.push(m.word);
+      if (uniqueWords.length >= maxResults) break;
+    }
+  }
+
+  return uniqueWords;
+}
+
+/**
+ * DeepL Fallback Önbelleğini okur
+ */
+function getDeeplFallbackFromCache(word) {
+  try {
+    const cache = JSON.parse(localStorage.getItem('deeplFallbackCache') || '{}');
+    const key = String(word).trim().toLowerCase();
+    return cache[key] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * DeepL Fallback Çevirisini önbelleğe kaydeder
+ */
+function saveDeeplFallbackToCache(word, translation) {
+  try {
+    const cache = JSON.parse(localStorage.getItem('deeplFallbackCache') || '{}');
+    const key = String(word).trim().toLowerCase();
+    cache[key] = {
+      translation,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('deeplFallbackCache', JSON.stringify(cache));
+  } catch (_) {}
+}
+
+/**
+ * Kullanıcının özel sözlüğüne (customUserDictionary) yeni kelime ekler
+ */
+function saveToCustomUserDictionary(entry) {
+  if (!entry || !entry.germanWord) return;
+  try {
+    const dict = JSON.parse(localStorage.getItem('customUserDictionary') || '{}');
+    const key = entry.germanWord.trim().toLowerCase();
+    dict[key] = entry;
+    localStorage.setItem('customUserDictionary', JSON.stringify(dict));
+
+    // Standalone Offline Dictionary motoruna da anında kaydet
+    if (typeof window !== 'undefined' && window.OfflineDictionary && typeof window.OfflineDictionary.importAdditionalDictionary === 'function') {
+      window.OfflineDictionary.importAdditionalDictionary([entry]);
+    }
+  } catch (_) {}
+}
+
+/**
+ * Kullanıcı özel sözlüğünde arama yapar
+ */
+function searchCustomUserDictionary(word) {
+  if (!word) return null;
+  try {
+    const dict = JSON.parse(localStorage.getItem('customUserDictionary') || '{}');
+    const key = String(word).trim().toLowerCase();
+    if (dict[key]) return dict[key];
+    const norm = normalizeGermanSearch(key);
+    for (const k of Object.keys(dict)) {
+      if (normalizeGermanSearch(k) === norm) {
+        return dict[k];
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+/**
+ * 4 Aşamalı Akıllı Arama Boru Hattı
+ * 1. Tam Eşleşme (Exact Match)
+ * 2. Kök Bulma (Lemmatization / Stemming)
+ * 3. Yazım Hatası Yakalama ("Bunu mu demek istediniz?")
+ * 4. Otomatik DeepL Fallback ("No matches found · Translated by DeepL")
+ */
+async function executeSmartSearchPipeline(query, signal) {
+  const rawQuery = String(query || '').trim();
+  if (!rawQuery) return null;
+
+  const lowerQuery = rawQuery.toLowerCase();
+  const normQuery = normalizeGermanSearch(lowerQuery);
+
+  // -------------------------------------------------------------
+  // ADIM 1: Tam Eşleşme (Exact Match)
+  // -------------------------------------------------------------
+  // 1.a Özel kullanıcı sözlüğü kontrolü
+  const customHit = searchCustomUserDictionary(rawQuery);
+  if (customHit) {
+    return {
+      status: 'exact',
+      entry: customHit,
+      originalQuery: rawQuery,
+      similarWords: []
+    };
+  }
+
+  // 1.b Yerel Sözlük (VERIFIED_CORE_VOCABULARY)
+  if (typeof window !== 'undefined' && window.VERIFIED_CORE_VOCABULARY) {
+    if (window.VERIFIED_CORE_VOCABULARY[lowerQuery]) {
+      const entry = window.DictionaryService
+        ? window.DictionaryService.synthesizeInstantEntry(window.VERIFIED_CORE_VOCABULARY[lowerQuery].germanWord || rawQuery)
+        : window.VERIFIED_CORE_VOCABULARY[lowerQuery];
+      return { status: 'exact', entry, originalQuery: rawQuery, similarWords: [] };
+    }
+    // Umlaut normalize haliyle ara
+    for (const [k, v] of Object.entries(window.VERIFIED_CORE_VOCABULARY)) {
+      if (normalizeGermanSearch(k) === normQuery) {
+        const entry = window.DictionaryService
+          ? window.DictionaryService.synthesizeInstantEntry(v.germanWord || k)
+          : v;
+        return { status: 'exact', entry, originalQuery: rawQuery, similarWords: [] };
+      }
+    }
+  }
+
+  // 1.c Standalone OfflineDictionary motoru
+  if (typeof window !== 'undefined' && window.OfflineDictionary && typeof window.OfflineDictionary.search === 'function') {
+    const offHit = window.OfflineDictionary.search(rawQuery) || window.OfflineDictionary.search(normQuery);
+    if (offHit) {
+      const entry = window.DictionaryService
+        ? window.DictionaryService.synthesizeInstantEntry(offHit.germanWord)
+        : offHit;
+      return { status: 'exact', entry, originalQuery: rawQuery, similarWords: [] };
+    }
+  }
+
+  // 1.d Genel DictionaryService çözümlemesi (Wiktionary & Tatoeba desteği ile)
+  if (typeof window !== 'undefined' && window.DictionaryService && typeof window.DictionaryService.resolveToGermanEntry === 'function') {
+    try {
+      const resolved = await window.DictionaryService.resolveToGermanEntry(rawQuery, signal);
+      if (resolved && !signal?.aborted) {
+        return { status: 'exact', entry: resolved, originalQuery: rawQuery, similarWords: [] };
+      }
+    } catch (_) {}
+  }
+
+  if (signal?.aborted) return null;
+
+  // -------------------------------------------------------------
+  // ADIM 2: Kök Bulma (Lemmatization / Stemming)
+  // -------------------------------------------------------------
+  const stemCandidates = stemGermanCandidates(rawQuery);
+  for (const cand of stemCandidates) {
+    if (cand === lowerQuery) continue;
+
+    // Özel sözlükte kök ara
+    const cHit = searchCustomUserDictionary(cand);
+    if (cHit) {
+      return { status: 'stem', entry: cHit, stem: cand, originalQuery: rawQuery, similarWords: [] };
+    }
+
+    // Yerel sözlükte kök ara
+    if (typeof window !== 'undefined' && window.VERIFIED_CORE_VOCABULARY && window.VERIFIED_CORE_VOCABULARY[cand]) {
+      const entry = window.DictionaryService
+        ? window.DictionaryService.synthesizeInstantEntry(window.VERIFIED_CORE_VOCABULARY[cand].germanWord || cand)
+        : window.VERIFIED_CORE_VOCABULARY[cand];
+      return { status: 'stem', entry, stem: cand, originalQuery: rawQuery, similarWords: [] };
+    }
+
+    // OfflineDictionary'de kök ara
+    if (typeof window !== 'undefined' && window.OfflineDictionary && typeof window.OfflineDictionary.search === 'function') {
+      const offHit = window.OfflineDictionary.search(cand);
+      if (offHit) {
+        const entry = window.DictionaryService
+          ? window.DictionaryService.synthesizeInstantEntry(offHit.germanWord)
+          : offHit;
+        return { status: 'stem', entry, stem: cand, originalQuery: rawQuery, similarWords: [] };
+      }
+    }
+  }
+
+  if (signal?.aborted) return null;
+
+  // -------------------------------------------------------------
+  // ADIM 3: Yazım Hatası Yakalama ("Bunu mu demek istediniz?" / Levenshtein <= 2)
+  // -------------------------------------------------------------
+  const similarWords = findSimilarWords(rawQuery, 5);
+
+  // -------------------------------------------------------------
+  // ADIM 4: Otomatik DeepL Fallback ("No matches found · Translated by DeepL")
+  // -------------------------------------------------------------
+  let translatedText = '';
+  const cachedFallback = getDeeplFallbackFromCache(rawQuery);
+
+  if (cachedFallback && cachedFallback.translation) {
+    translatedText = cachedFallback.translation;
+  } else {
+    try {
+      // Girdi Türkçe mi yoksa Almanca mı tespit et
+      const isTurkishInput = /[çğıöşüÇĞİÖŞÜ]/.test(rawQuery) && !/[äöüßÄÖÜ]/.test(rawQuery);
+      const srcLang = isTurkishInput ? 'tr' : 'de';
+      const tgtLang = isTurkishInput ? 'de' : 'tr';
+
+      if (typeof window !== 'undefined' && window.wmTranslator && typeof window.wmTranslator.translateTextHybrid === 'function') {
+        translatedText = await window.wmTranslator.translateTextHybrid(rawQuery, srcLang, tgtLang, signal);
+      } else {
+        // Doğrudan Google/DeepL HTTP isteği fallback
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${srcLang}&tl=${tgtLang}&dt=t&q=${encodeURIComponent(rawQuery)}`;
+        const res = await fetch(gUrl, { signal });
+        const data = await res.json();
+        if (data && Array.isArray(data[0])) {
+          translatedText = data[0].map((item) => item[0]).join('').trim();
+        }
+      }
+
+      if (translatedText && translatedText !== rawQuery) {
+        saveDeeplFallbackToCache(rawQuery, translatedText);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return null;
+      console.warn("DeepL fallback translation failed:", err);
+      translatedText = '';
+    }
+  }
+
+  return {
+    status: 'deepl_fallback',
+    originalQuery: rawQuery,
+    translatedText: translatedText || 'Çeviri alınamadı',
+    similarWords
+  };
+}
+
 // Global Export
 window.getArticleStyle = getArticleStyle;
 window.detectGermanTags = detectGermanTags;
@@ -513,3 +935,12 @@ window.getStammformenRibbon = getStammformenRibbon;
 window.getCardMaturity = getCardMaturity;
 window.calculateSM2NextIntervals = calculateSM2NextIntervals;
 window.createClozeSentence = createClozeSentence;
+window.normalizeGermanSearch = normalizeGermanSearch;
+window.stemGermanCandidates = stemGermanCandidates;
+window.levenshteinDistance = levenshteinDistance;
+window.findSimilarWords = findSimilarWords;
+window.getDeeplFallbackFromCache = getDeeplFallbackFromCache;
+window.saveDeeplFallbackToCache = saveDeeplFallbackToCache;
+window.saveToCustomUserDictionary = saveToCustomUserDictionary;
+window.searchCustomUserDictionary = searchCustomUserDictionary;
+window.executeSmartSearchPipeline = executeSmartSearchPipeline;

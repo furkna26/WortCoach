@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.9.9" />
-  <link rel="stylesheet" href="css/components.css?v=2.9.9" />
+  <link rel="stylesheet" href="css/app.css?v=3.0.0" />
+  <link rel="stylesheet" href="css/components.css?v=3.0.0" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -466,88 +466,165 @@
       <section id="tab-translate" class="tab-view">
         <div class="translator-header-row">
           <div>
-            <h1 class="page-title">Çeviri</h1>
-            <p class="page-subtitle">DeepL Destekli Metin Çevirisi &amp; Gramer Analizi</p>
+            <h1 class="page-title">Çeviri &amp; Okuyucu</h1>
+            <p class="page-subtitle">DeepL Destekli Çeviri &amp; Sesli Akıllı Metin Okuyucu</p>
           </div>
         </div>
 
-        <!-- Dil Seçim Segment Barı: [TR] [DE] [EN] <-> [TR] [DE] -->
-        <div class="lang-toggle-bar">
-          <div class="lang-segment-group" id="source-lang-segments">
-            <button class="lang-pill-btn active" data-lang="tr">TR</button>
-            <button class="lang-pill-btn" data-lang="de">DE</button>
-            <button class="lang-pill-btn" data-lang="en">EN</button>
-          </div>
-
-          <button id="btn-swap-langs" class="lang-swap-btn" title="Dilleri Değiştir">
-            <svg class="svg-icon"><use href="#icon-swap"></use></svg>
+        <!-- Görünüm Seçici: [ 🌐 Hızlı Çeviri ] | [ 📖 Akıllı Okuyucu ] -->
+        <div class="subview-toggle-row" style="margin-bottom: 16px;">
+          <button type="button" class="subview-toggle-btn active" id="btn-subview-quick-trans">
+            <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-translate"></use></svg>
+            <span>Hızlı Çeviri</span>
           </button>
-
-          <div class="lang-segment-group" id="target-lang-segments">
-            <button class="lang-pill-btn" data-lang="tr">TR</button>
-            <button class="lang-pill-btn active" data-lang="de">DE</button>
-          </div>
-        </div>
-
-        <!-- Giriş Kartı -->
-        <div class="trans-input-card">
-          <div class="trans-card-top">
-            <div id="trans-source-flag-badge">
-              <span class="lang-badge lang-badge-tr">
-                <svg class="flag-svg"><use href="#flag-tr"></use></svg>
-                <span>TR</span>
-              </span>
-            </div>
-            <span id="trans-char-counter" class="char-counter-text">0 / 150</span>
-          </div>
-
-          <textarea
-            id="trans-input-text"
-            class="trans-textarea"
-            maxlength="150"
-            rows="3"
-            placeholder="Çevrilecek metin veya kelimeyi yazın (maks. 150 karakter)..."
-          ></textarea>
-
-          <!-- Hızlı Umlaut Toolbar -->
-          <div class="umlaut-bar" data-target-input="trans-input-text" style="margin-bottom: 10px;">
-            <button type="button" class="umlaut-btn" data-char="ä" title="ä">ä</button>
-            <button type="button" class="umlaut-btn" data-char="ö" title="ö">ö</button>
-            <button type="button" class="umlaut-btn" data-char="ü" title="ü">ü</button>
-            <button type="button" class="umlaut-btn" data-char="ß" title="ß">ß</button>
-            <button type="button" class="umlaut-btn" data-char="Ä" title="Ä">Ä</button>
-            <button type="button" class="umlaut-btn" data-char="Ö" title="Ö">Ö</button>
-            <button type="button" class="umlaut-btn" data-char="Ü" title="Ü">Ü</button>
-          </div>
-
-          <button id="btn-run-translate" class="trans-submit-btn">
-            <svg class="svg-icon"><use href="#icon-translate"></use></svg>
-            <span>Çevir</span>
+          <button type="button" class="subview-toggle-btn" id="btn-subview-smart-reader">
+            <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-cards"></use></svg>
+            <span>Akıllı Okuyucu</span>
           </button>
         </div>
 
-        <!-- Çeviri Sonucu Kartı -->
-        <div id="trans-result-wrapper" class="trans-result-card hidden">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div id="trans-target-flag-badge">
-              <span class="lang-badge lang-badge-de">
-                <svg class="flag-svg"><use href="#flag-de"></use></svg>
-                <span>DE</span>
-              </span>
+        <!-- ================= GÖRÜNÜM 1: HIZLI ÇEVİRİ PANELİ ================= -->
+        <div id="panel-quick-translate">
+          <!-- Dil Seçim Segment Barı: [TR] [DE] [EN] <-> [TR] [DE] -->
+          <div class="lang-toggle-bar">
+            <div class="lang-segment-group" id="source-lang-segments">
+              <button class="lang-pill-btn active" data-lang="tr">TR</button>
+              <button class="lang-pill-btn" data-lang="de">DE</button>
+              <button class="lang-pill-btn" data-lang="en">EN</button>
             </div>
-            <div style="display: flex; gap: 6px;">
-              <button id="btn-tts-target" class="icon-btn-sm" title="Sesli Dinle">
-                <svg class="svg-icon"><use href="#icon-volume"></use></svg>
-              </button>
-              <button id="btn-trans-to-card" class="btn-primary-compact">
-                <svg class="svg-icon"><use href="#icon-plus"></use></svg>
-                <span>Desteye Ekle</span>
-              </button>
+
+            <button id="btn-swap-langs" class="lang-swap-btn" title="Dilleri Değiştir">
+              <svg class="svg-icon"><use href="#icon-swap"></use></svg>
+            </button>
+
+            <div class="lang-segment-group" id="target-lang-segments">
+              <button class="lang-pill-btn" data-lang="tr">TR</button>
+              <button class="lang-pill-btn active" data-lang="de">DE</button>
             </div>
           </div>
 
-          <div id="trans-output-text" class="trans-result-text"></div>
-          <div id="trans-grammar-hint" class="trans-grammar-pill hidden"></div>
+          <!-- Giriş Kartı -->
+          <div class="trans-input-card">
+            <div class="trans-card-top">
+              <div id="trans-source-flag-badge">
+                <span class="lang-badge lang-badge-tr">
+                  <svg class="flag-svg"><use href="#flag-tr"></use></svg>
+                  <span>TR</span>
+                </span>
+              </div>
+              <span id="trans-char-counter" class="char-counter-text">0 / 150</span>
+            </div>
+
+            <textarea
+              id="trans-input-text"
+              class="trans-textarea"
+              maxlength="150"
+              rows="3"
+              placeholder="Çevrilecek metin veya kelimeyi yazın (maks. 150 karakter)..."
+            ></textarea>
+
+            <!-- Hızlı Umlaut Toolbar -->
+            <div class="umlaut-bar" data-target-input="trans-input-text" style="margin-bottom: 10px;">
+              <button type="button" class="umlaut-btn" data-char="ä" title="ä">ä</button>
+              <button type="button" class="umlaut-btn" data-char="ö" title="ö">ö</button>
+              <button type="button" class="umlaut-btn" data-char="ü" title="ü">ü</button>
+              <button type="button" class="umlaut-btn" data-char="ß" title="ß">ß</button>
+              <button type="button" class="umlaut-btn" data-char="Ä" title="Ä">Ä</button>
+              <button type="button" class="umlaut-btn" data-char="Ö" title="Ö">Ö</button>
+              <button type="button" class="umlaut-btn" data-char="Ü" title="Ü">Ü</button>
+            </div>
+
+            <button id="btn-run-translate" class="trans-submit-btn">
+              <svg class="svg-icon"><use href="#icon-translate"></use></svg>
+              <span>Çevir</span>
+            </button>
+          </div>
+
+          <!-- Çeviri Sonucu Kartı -->
+          <div id="trans-result-wrapper" class="trans-result-card hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div id="trans-target-flag-badge">
+                <span class="lang-badge lang-badge-de">
+                  <svg class="flag-svg"><use href="#flag-de"></use></svg>
+                  <span>DE</span>
+                </span>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <button id="btn-tts-target" class="icon-btn-sm" title="Sesli Dinle">
+                  <svg class="svg-icon"><use href="#icon-volume"></use></svg>
+                </button>
+                <button id="btn-trans-to-card" class="btn-primary-compact">
+                  <svg class="svg-icon"><use href="#icon-plus"></use></svg>
+                  <span>Desteye Ekle</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="trans-output-text" class="trans-result-text"></div>
+            <div id="trans-grammar-hint" class="trans-grammar-pill hidden"></div>
+          </div>
+        </div>
+
+        <!-- ================= GÖRÜNÜM 2: AKILLI OKUYUCU PANELİ ================= -->
+        <div id="panel-smart-reader" class="hidden">
+          <div class="smart-reader-container">
+            <!-- Okuyucu Üst Araç Çubuğu -->
+            <div class="reader-toolbar">
+              <div class="reader-btn-group">
+                <button type="button" id="btn-reader-play-all" class="reader-btn-primary" title="Metni Baştan Oku">
+                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-volume"></use></svg>
+                  <span>▶ Metni Baştan Oku</span>
+                </button>
+                <button type="button" id="btn-reader-stop" class="reader-btn-danger" title="Sesli Okumayı Durdur">
+                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-close"></use></svg>
+                  <span>⏹ Durdur</span>
+                </button>
+              </div>
+
+              <div class="reader-btn-group">
+                <select id="reader-speed-select" class="reader-select" title="Okuma Hızı">
+                  <option value="0.75">Hız: 0.75x</option>
+                  <option value="0.90" selected>Hız: 0.90x</option>
+                  <option value="1.0">Hız: 1.0x</option>
+                  <option value="1.15">Hız: 1.15x</option>
+                </select>
+
+                <select id="reader-sample-select" class="reader-select" title="Hazır Örnek Metinler">
+                  <option value="">-- Örnek Metin Yükle --</option>
+                  <option value="sample_a1">Der Alltag in Berlin (A1)</option>
+                  <option value="sample_a2">Ein Wochenende in München (A2)</option>
+                  <option value="sample_b1">Klimawandel und Zukunft (B1)</option>
+                  <option value="sample_b2">Berufliches Bewerbungsgespräch (B2)</option>
+                </select>
+
+                <button type="button" id="btn-reader-clear" class="icon-btn-ghost" title="Metni Temizle">
+                  <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-trash"></use></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Metin Giriş Alanı -->
+            <div class="reader-text-input-wrap">
+              <textarea
+                id="reader-input-text"
+                class="reader-textarea"
+                placeholder="Almanca bir metin, haber veya hikaye yapıştırın. Kelimelere tıklayarak anında sözlük çözümlemesi yapabilir ve seçtiğiniz yerden itibaren sesli dinleyebilirsiniz..."
+              ></textarea>
+              <div class="reader-parse-btn-row">
+                <button type="button" id="btn-reader-parse" class="btn-primary-compact">
+                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-check"></use></svg>
+                  <span>Metni Ayrıştır ve Oku</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- İnteraktif Okuma Alanı (Ayrıştırılmış Tıklanabilir Kelimeler) -->
+            <div id="reader-display-pane" class="reader-display-pane">
+              <span style="color:var(--text-muted); font-size:0.92rem; font-style:italic;">
+                Yukarıdaki alana Almanca bir metin yazıp "Metni Ayrıştır ve Oku" butonuna basın veya hazır örnek metinlerden birini seçin.
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1774,23 +1851,87 @@
     </div>
   </div>
 
+  <!-- MODAL: AKILLI OKUYUCU KELİME DETAYI & SESLİ KONTROL (modal-reader-word) -->
+  <div id="modal-reader-word" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet reader-modal-sheet">
+      <div class="reader-modal-header">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="lang-badge lang-badge-de">
+              <svg class="flag-svg"><use href="#flag-de"></use></svg>
+              <span>DE</span>
+            </span>
+            <span id="reader-modal-article-badge"></span>
+            <h3 id="reader-modal-word" class="reader-word-title">-</h3>
+          </div>
+          <div id="reader-modal-grammar-row" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+        </div>
+        <button id="btn-close-reader-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- Sesli Kontrol Eylemleri: Bu Kelimeden İtibaren Oku & Durdur -->
+      <div class="reader-audio-actions">
+        <button type="button" id="btn-read-from-selected-word" class="btn-read-from-word" title="Bu kelimeden itibaren sesli oku">
+          <svg class="svg-icon" style="width:17px; height:17px;"><use href="#icon-volume"></use></svg>
+          <span>▶ Bu Kelimeden İtibaren Oku</span>
+        </button>
+        <button type="button" id="btn-stop-from-selected-word" class="btn-stop-reader" title="Sesli okumayı durdur">
+          <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-close"></use></svg>
+          <span>⏹ Durdur</span>
+        </button>
+        <button type="button" id="btn-reader-word-tts" class="icon-btn-ghost" title="Yalnızca Bu Kelimeyi Dinle">
+          <svg class="svg-icon" style="color:var(--brand-blue); width:20px; height:20px;"><use href="#icon-volume"></use></svg>
+        </button>
+        <button type="button" id="btn-reader-word-pronounce" class="icon-btn-ghost" title="Telaffuzunu Test Et">
+          <svg class="svg-icon" style="color:#10B981; width:20px; height:20px;"><use href="#icon-mic"></use></svg>
+        </button>
+      </div>
+
+      <!-- Bilgi Rozeti & Bunu Mu Demek İstediniz (Varsa) -->
+      <div id="reader-modal-banner-container"></div>
+
+      <!-- Anlam Seçimi (Çoklu Seçim + Özel Anlam) -->
+      <div class="sec-row-header" style="margin-top: 10px;">
+        <span>TÜRKÇE ANLAMLAR</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim</span>
+      </div>
+      <div class="meaning-chips-container" id="reader-modal-tr-chips"></div>
+
+      <!-- Hedef Deste ve Kaydet -->
+      <div class="target-deck-row" style="margin-top: 14px;">
+        <label class="target-deck-label" for="reader-target-deck">HEDEF DESTE</label>
+        <div class="target-deck-select-wrap">
+          <select class="target-deck-select" id="reader-target-deck"></select>
+          <svg class="svg-icon deck-select-chevron"><use href="#icon-chevron-down"></use></svg>
+        </div>
+      </div>
+
+      <button type="button" class="btn-save-card-android" id="btn-reader-save-card" style="margin-top: 14px;">
+        <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-bookmark"></use></svg>
+        <span>Kartı Desteye Kaydet</span>
+      </button>
+    </div>
+  </div>
+
   <!-- TOAST BİLDİRİM ALANI -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.9.9"></script>
-  <script src="js/verbHelper.js?v=2.9.9"></script>
-  <script src="js/grammarEnrichment.js?v=2.9.9"></script>
-  <script src="js/offlineDictionary.js?v=2.9.9"></script>
-  <script src="js/dictionary.js?v=2.9.9"></script>
-  <script src="js/curatedPacks.js?v=2.9.9"></script>
-  <script src="js/seeder.js?v=2.9.9"></script>
-  <script src="js/tts.js?v=2.9.9"></script>
-  <script src="js/pronunciation.js?v=2.9.9"></script>
-  <script src="js/translator.js?v=2.9.9"></script>
-  <script src="js/game.js?v=2.9.9"></script>
-  <script src="js/study.js?v=2.9.9"></script>
-  <script src="js/stats.js?v=2.9.9"></script>
-  <script src="js/app.js?v=2.9.9"></script>
+  <script src="js/db.js?v=3.0.0"></script>
+  <script src="js/verbHelper.js?v=3.0.0"></script>
+  <script src="js/grammarEnrichment.js?v=3.0.0"></script>
+  <script src="js/offlineDictionary.js?v=3.0.0"></script>
+  <script src="js/dictionary.js?v=3.0.0"></script>
+  <script src="js/curatedPacks.js?v=3.0.0"></script>
+  <script src="js/seeder.js?v=3.0.0"></script>
+  <script src="js/tts.js?v=3.0.0"></script>
+  <script src="js/pronunciation.js?v=3.0.0"></script>
+  <script src="js/translator.js?v=3.0.0"></script>
+  <script src="js/game.js?v=3.0.0"></script>
+  <script src="js/study.js?v=3.0.0"></script>
+  <script src="js/stats.js?v=3.0.0"></script>
+  <script src="js/app.js?v=3.0.0"></script>
 </body>
 </html>

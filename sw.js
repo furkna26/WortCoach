@@ -1,31 +1,31 @@
 /**
- * WortCoach Service Worker v2.8.0
+ * WortCoach Service Worker v3.0.0
  * Strateji: Yerel varlıklar için Network-First with Cache Fallback,
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v2.9.9';
+const CACHE_NAME = 'wortcoach-v3.0.0';
 
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=2.9.9',
-  './css/components.css?v=2.9.9',
-  './js/db.js?v=2.9.9',
-  './js/verbHelper.js?v=2.9.9',
-  './js/grammarEnrichment.js?v=2.9.9',
-  './js/offlineDictionary.js?v=2.9.9',
-  './js/dictionary.js?v=2.9.9',
-  './js/curatedPacks.js?v=2.9.9',
-  './js/seeder.js?v=2.9.9',
-  './js/tts.js?v=2.9.9',
-  './js/pronunciation.js?v=2.9.9',
-  './js/translator.js?v=2.9.9',
-  './js/game.js?v=2.9.9',
-  './js/study.js?v=2.9.9',
-  './js/stats.js?v=2.9.9',
-  './js/app.js?v=2.9.9',
+  './css/app.css?v=3.0.0',
+  './css/components.css?v=3.0.0',
+  './js/db.js?v=3.0.0',
+  './js/verbHelper.js?v=3.0.0',
+  './js/grammarEnrichment.js?v=3.0.0',
+  './js/offlineDictionary.js?v=3.0.0',
+  './js/dictionary.js?v=3.0.0',
+  './js/curatedPacks.js?v=3.0.0',
+  './js/seeder.js?v=3.0.0',
+  './js/tts.js?v=3.0.0',
+  './js/pronunciation.js?v=3.0.0',
+  './js/translator.js?v=3.0.0',
+  './js/game.js?v=3.0.0',
+  './js/study.js?v=3.0.0',
+  './js/stats.js?v=3.0.0',
+  './js/app.js?v=3.0.0',
   './icons/icon-192.svg',
   './icons/icon-512.svg'
 ];

@@ -4004,3 +4004,383 @@
   color: #9CA3AF;
   font-style: italic;
 }
+
+/* --------------------------------------------------------------------------
+   Akıllı Arama (Fuzzy Search), DeepL Fallback & Akıllı Okuyucu (Smart Reader)
+   -------------------------------------------------------------------------- */
+
+/* DeepL Fallback Rozeti / Banner */
+.deepl-fallback-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #FBBF24;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.deepl-fallback-banner .dfb-icon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+/* "💡 Bunu mu demek istediniz?" Şeridi */
+.did-you-mean-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.did-you-mean-bar .dym-label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #60A5FA;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.did-you-mean-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-dym-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1.5px solid #3B82F6;
+  border-radius: 20px;
+  color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-dym-chip:hover {
+  background: #3B82F6;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.btn-dym-chip:active {
+  transform: scale(0.96);
+}
+
+/* Opsiyonel Artikel & Tür Seçici Satırı (DeepL Kartı İçin) */
+.fallback-classifier-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid #242B3A;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 12px 0;
+}
+
+.classifier-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.classifier-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #9CA3AF;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.classifier-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-classifier-pill {
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1px solid #2D3748;
+  background: #1A202C;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-classifier-pill.active {
+  background: #3B82F6;
+  border-color: #3B82F6;
+  color: #FFFFFF;
+}
+
+/* Görünüm Değiştirici: Hızlı Çeviri vs Akıllı Okuyucu */
+.subview-toggle-row {
+  display: flex;
+  background: #111827;
+  border: 1px solid #242B3A;
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.subview-toggle-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subview-toggle-btn.active {
+  background: #1E293B;
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+/* Akıllı Okuyucu Ana Panel */
+.smart-reader-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.reader-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: #111827;
+  border: 1px solid #242B3A;
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+.reader-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reader-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reader-btn-primary:hover {
+  background: #1D4ED8;
+}
+
+.reader-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #F87171;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reader-btn-danger:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.reader-select {
+  padding: 7px 12px;
+  background: #1B202C;
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  color: #E5E7EB;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.reader-text-input-wrap {
+  position: relative;
+  background: #111827;
+  border: 1px solid #242B3A;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.reader-textarea {
+  width: 100%;
+  min-height: 120px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #F3F4F6;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.reader-parse-btn-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.reader-display-pane {
+  background: #111827;
+  border: 1px solid #242B3A;
+  border-radius: 14px;
+  padding: 18px;
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: #E5E7EB;
+  min-height: 160px;
+  user-select: text;
+}
+
+.reader-display-pane .reader-token {
+  display: inline-block;
+  padding: 1px 4px;
+  margin: 0 1px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.reader-display-pane .reader-token:hover {
+  background: rgba(59, 130, 246, 0.22);
+  color: #60A5FA;
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.2);
+}
+
+.reader-display-pane .reader-token.active {
+  background: #2563EB;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.reader-display-pane .reader-token.speaking {
+  background: rgba(251, 191, 36, 0.25);
+  color: #FBBF24;
+  border-bottom: 2px solid #F59E0B;
+}
+
+/* Akıllı Okuyucu Kelime Modalı */
+.reader-modal-sheet {
+  background: #131825;
+  border: 1px solid #283144;
+  border-radius: 20px;
+  max-width: 520px;
+  width: 95%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.reader-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.reader-word-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #F3F4F6;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reader-audio-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.btn-read-from-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: #10B981;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-read-from-word:hover {
+  background: #059669;
+}
+
+.btn-stop-reader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #F87171;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-stop-reader:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
