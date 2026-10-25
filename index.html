@@ -614,55 +614,56 @@
           </div>
         </div>
 
-        <!-- GÖRÜNÜM 2: TAM EKRAN OKUMA SAYFASI (FULLSCREEN READING VIEW) -->
+        <!-- GÖRÜNÜM 2: TAM EKRAN ODAKLI OKUMA SAYFASI (FULLSCREEN READING VIEW) -->
         <div id="reader-fullscreen-view" class="reader-fullscreen-view hidden">
-          <div class="reader-fs-header">
+          <!-- Çok Sade Üst Bar (Minimalist Reader Bar) -->
+          <div class="reader-fs-topbar">
             <button type="button" id="btn-reader-back-setup" class="btn-fs-back" title="Metin Girişine Dön">
-              <svg class="svg-icon"><use href="#icon-arrow-right" style="transform: rotate(180deg);"></use></svg>
+              <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-arrow-right" style="transform: rotate(180deg);"></use></svg>
               <span>Metin Girişi</span>
             </button>
+            <div class="reader-topbar-center">
+              <span class="reader-mode-title">Okuma Modu</span>
+              <span id="reader-word-count-badge" class="reader-word-count-badge"></span>
+            </div>
+            <button type="button" id="btn-toggle-reader-dock" class="btn-fs-icon-action" title="Kontrolleri Aç / Kapat">
+              <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-sliders"></use></svg>
+            </button>
+          </div>
 
-            <div class="reader-fs-controls">
-              <div class="reader-font-controls">
-                <button type="button" id="btn-reader-font-dec" class="btn-font-size" title="Yazıyı Küçült">A-</button>
-                <button type="button" id="btn-reader-font-inc" class="btn-font-size" title="Yazıyı Büyüt">A+</button>
-              </div>
+          <!-- Okuma Tuvali (Distraction-Free Reading Canvas) -->
+          <div class="reader-fs-body">
+            <div id="reader-display-pane" class="reader-fs-canvas"></div>
+          </div>
 
-              <select id="reader-fs-speed-select" class="reader-select-compact" title="Okuma Hızı">
+          <!-- Alt Yüzen Okuma & Ses Çubuğu (Floating Bottom Dock) -->
+          <div id="reader-floating-dock" class="reader-floating-dock">
+            <div class="dock-group font-group">
+              <button type="button" id="btn-reader-font-dec" class="dock-btn-compact" title="Yazıyı Küçült">A-</button>
+              <button type="button" id="btn-reader-font-inc" class="dock-btn-compact" title="Yazıyı Büyüt">A+</button>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <div class="dock-group">
+              <select id="reader-fs-speed-select" class="dock-select" title="Okuma Hızı">
                 <option value="0.75">0.75x</option>
                 <option value="0.90" selected>0.90x</option>
                 <option value="1.0">1.0x</option>
                 <option value="1.15">1.15x</option>
               </select>
+            </div>
 
-              <button type="button" id="btn-reader-play-all" class="btn-fs-action btn-fs-play" title="Metni Baştan Dinle">
-                <svg class="svg-icon"><use href="#icon-volume"></use></svg>
+            <div class="dock-divider"></div>
+
+            <div class="dock-group audio-group">
+              <button type="button" id="btn-reader-play-all" class="dock-action-btn dock-btn-play" title="Metni Baştan Dinle">
+                <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-volume"></use></svg>
                 <span>Dinle</span>
               </button>
-              <button type="button" id="btn-reader-stop" class="btn-fs-action btn-fs-stop" title="Durdur">
-                <svg class="svg-icon"><use href="#icon-close"></use></svg>
+              <button type="button" id="btn-reader-stop" class="dock-action-btn dock-btn-stop" title="Durdur">
+                <svg class="svg-icon" style="width:15px; height:15px;"><use href="#icon-close"></use></svg>
                 <span>Durdur</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Okuma Tuvali -->
-          <div class="reader-fs-body">
-            <div id="reader-display-pane" class="reader-fs-canvas"></div>
-          </div>
-
-          <!-- Çoklu Kelime / Kalıp Seçim Barı (Floating Action Bar) -->
-          <div id="reader-selection-bar" class="reader-selection-bar hidden">
-            <div class="rsb-info">
-              <span class="rsb-badge">Seçilen Kalıp / Kelime:</span>
-              <span id="rsb-selected-text" class="rsb-text">...</span>
-            </div>
-            <div class="rsb-actions">
-              <button type="button" id="btn-rsb-lookup" class="btn-rsb-primary">
-                <span>Anlamını Gör</span>
-              </button>
-              <button type="button" id="btn-rsb-clear" class="btn-rsb-ghost" title="Seçimi Temizle">
-                <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-close"></use></svg>
               </button>
             </div>
           </div>

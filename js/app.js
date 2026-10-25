@@ -320,6 +320,7 @@ class WortCoachApp {
   }
 
   async closeAllFullScreenPages() {
+    document.body.classList.remove('reader-active-mode');
     if (this.gameTimerInterval) {
       clearInterval(this.gameTimerInterval);
       this.gameTimerInterval = null;
@@ -1217,19 +1218,16 @@ class WortCoachApp {
     const btnTriggerFileInput = document.getElementById('btn-trigger-file-input');
     const uploadStatus = document.getElementById('reader-upload-status');
 
-    // Tam Ekran Üst Bar Elemanları
+    // Tam Ekran Üst Bar & Yüzen Dock Elemanları
     const btnBackSetup = document.getElementById('btn-reader-back-setup');
     const btnFontDec = document.getElementById('btn-reader-font-dec');
     const btnFontInc = document.getElementById('btn-reader-font-inc');
     const fsSpeedSelect = document.getElementById('reader-fs-speed-select');
-    const btnFsPlay = document.getElementById('btn-reader-fs-play');
-    const btnFsStop = document.getElementById('btn-reader-fs-stop');
-
-    // Çoklu Seçim Yüzen Barı
-    const selectionBar = document.getElementById('reader-selection-bar');
-    const rsbSelectedText = document.getElementById('rsb-selected-text');
-    const btnRsbLookup = document.getElementById('btn-rsb-lookup');
-    const btnRsbClear = document.getElementById('btn-rsb-clear');
+    const btnFsPlay = document.getElementById('btn-reader-play-all') || document.getElementById('btn-reader-fs-play');
+    const btnFsStop = document.getElementById('btn-reader-stop') || document.getElementById('btn-reader-fs-stop');
+    const btnToggleDock = document.getElementById('btn-toggle-reader-dock');
+    const floatingDock = document.getElementById('reader-floating-dock');
+    const wordCountBadge = document.getElementById('reader-word-count-badge');
 
     // Reader Kelime Modalı Elemanları
     const modalReader = document.getElementById('modal-reader-word');
@@ -1366,9 +1364,14 @@ class WortCoachApp {
 
     btnBackSetup?.addEventListener('click', () => {
       window.wmTTS.stop();
-      clearSelectedTokens();
+      document.body.classList.remove('reader-active-mode');
+      readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
       readerFsView?.classList.add('hidden');
       readerSetupPane?.classList.remove('hidden');
+    });
+
+    btnToggleDock?.addEventListener('click', () => {
+      floatingDock?.classList.toggle('dock-hidden');
     });
 
     const parseAndEnterFullScreen = (text) => {
@@ -1377,50 +1380,20 @@ class WortCoachApp {
         this.showToast('Lütfen önce bir metin girin veya belge yükleyin.');
         return;
       }
+      document.body.classList.add('reader-active-mode');
       readerSetupPane?.classList.add('hidden');
       readerFsView?.classList.remove('hidden');
+
+      const wordMatches = clean.match(/[a-zA-ZäöüÄÖÜß]+/g) || [];
+      if (wordCountBadge) {
+        wordCountBadge.textContent = `${wordMatches.length} Kelime`;
+      }
       renderParsedTokens(clean);
     };
 
-    // --- 3. ÇOKLU KELİME SEÇİMİ VE TAM EKRAN TOKEN OLUŞTURUCU ---
-    const selectedTokenSet = new Set();
-
-    const clearSelectedTokens = () => {
-      selectedTokenSet.forEach((t) => t.classList.remove('selected'));
-      selectedTokenSet.clear();
-      selectionBar?.classList.add('hidden');
-    };
-
-    const updateSelectionBar = () => {
-      if (selectedTokenSet.size === 0) {
-        selectionBar?.classList.add('hidden');
-        return;
-      }
-      const sortedTokens = Array.from(selectedTokenSet).sort((a, b) => {
-        return parseInt(a.getAttribute('data-index') || '0', 10) - parseInt(b.getAttribute('data-index') || '0', 10);
-      });
-      const phrase = sortedTokens.map((t) => t.getAttribute('data-word')).join(' ');
-      if (rsbSelectedText) rsbSelectedText.textContent = phrase;
-      selectionBar?.classList.remove('hidden');
-    };
-
-    btnRsbClear?.addEventListener('click', () => {
-      clearSelectedTokens();
-    });
-
-    btnRsbLookup?.addEventListener('click', () => {
-      const sortedTokens = Array.from(selectedTokenSet).sort((a, b) => {
-        return parseInt(a.getAttribute('data-index') || '0', 10) - parseInt(b.getAttribute('data-index') || '0', 10);
-      });
-      if (sortedTokens.length === 0) return;
-      const phrase = sortedTokens.map((t) => t.getAttribute('data-word')).join(' ');
-      const firstOffset = parseInt(sortedTokens[0].getAttribute('data-offset') || '0', 10);
-      openReaderModalForTarget(phrase, firstOffset);
-    });
-
     const renderParsedTokens = (text) => {
       if (!readerDisplay) return;
-      clearSelectedTokens();
+      readerDisplay.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
       const clean = (text || '').trim();
       if (!clean) {
         readerDisplay.innerHTML = `<span style="color:var(--text-muted); font-size:0.92rem; font-style:italic;">Metin bulunamadı.</span>`;
@@ -1471,7 +1444,7 @@ class WortCoachApp {
       window.wmTTS.stop();
       if (readerInput) readerInput.value = '';
       if (sampleSelect) sampleSelect.value = '';
-      clearSelectedTokens();
+      readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
     });
 
     // Ayrıştır ve Oku Butonu
@@ -1502,13 +1475,16 @@ class WortCoachApp {
     btnFsStop?.addEventListener('click', stopSpeakAll);
 
     // --- 4. KELİME MODALI & ETKİLEŞİM ---
-    btnCloseReaderModal?.addEventListener('click', () => {
+    const closeReaderModal = () => {
       modalReader?.classList.add('hidden');
-    });
+      readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
+    };
+
+    btnCloseReaderModal?.addEventListener('click', closeReaderModal);
 
     modalReader?.addEventListener('click', (e) => {
       if (e.target === modalReader) {
-        modalReader.classList.add('hidden');
+        closeReaderModal();
       }
     });
 
@@ -1651,8 +1627,7 @@ class WortCoachApp {
       }
 
       this.showToast(`"${wordOrPhrase}" desteye ve yerel sözlüğe kaydedildi.`);
-      modalReader?.classList.add('hidden');
-      clearSelectedTokens();
+      closeReaderModal();
       await this.renderDecksTab?.();
       await this.renderCardsTab?.();
     });
@@ -1796,81 +1771,22 @@ class WortCoachApp {
       }
     };
 
-    // --- 7. BASILI TUTMA (LONG-PRESS) VE TEK DOKUNUŞ SEÇİM BAĞLAYICI ---
+    // --- 7. TEK TIKLAMAYLA ANLAM GÖRÜNTÜLEME (INSTANT SINGLE-TAP LOOKUP) ---
     const bindReaderTokens = () => {
       readerDisplay?.querySelectorAll('.reader-token').forEach((tokenEl) => {
-        let longPressTimer = null;
-        let isLongPressTriggered = false;
-        let startX = 0;
-        let startY = 0;
-
-        const clearTimer = () => {
-          if (longPressTimer) {
-            clearTimeout(longPressTimer);
-            longPressTimer = null;
-          }
-        };
-
-        // Basılı tutma başlatıcı (450ms)
-        tokenEl.addEventListener('pointerdown', (e) => {
-          isLongPressTriggered = false;
-          startX = e.clientX;
-          startY = e.clientY;
-
-          longPressTimer = setTimeout(() => {
-            isLongPressTriggered = true;
-            try {
-              if (navigator.vibrate) navigator.vibrate(40);
-            } catch (_) {}
-
-            // Eğer basılı tutulan kelime zaten seçili kelimeler arasındaysa tüm kalıbı getir;
-            // değilse ve başka seçim yoksa bu kelimeyi seç
-            if (!tokenEl.classList.contains('selected') && selectedTokenSet.size === 0) {
-              tokenEl.classList.add('selected');
-              selectedTokenSet.add(tokenEl);
-            }
-
-            const sortedTokens = Array.from(selectedTokenSet).sort((a, b) => {
-              return parseInt(a.getAttribute('data-index') || '0', 10) - parseInt(b.getAttribute('data-index') || '0', 10);
-            });
-
-            const phrase = sortedTokens.length > 0
-              ? sortedTokens.map((t) => t.getAttribute('data-word')).join(' ')
-              : tokenEl.getAttribute('data-word');
-
-            const firstOffset = sortedTokens.length > 0
-              ? parseInt(sortedTokens[0].getAttribute('data-offset') || '0', 10)
-              : parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
-
-            openReaderModalForTarget(phrase, firstOffset);
-          }, 450);
-        });
-
-        tokenEl.addEventListener('pointermove', (e) => {
-          if (Math.hypot(e.clientX - startX, e.clientY - startY) > 12) {
-            clearTimer();
-          }
-        });
-
-        tokenEl.addEventListener('pointerup', clearTimer);
-        tokenEl.addEventListener('pointercancel', clearTimer);
-
-        // Tek Basış (Single Tap): Yalnızca SEÇ (Toggle Selection)
         tokenEl.addEventListener('click', (e) => {
-          if (isLongPressTriggered) {
-            e.preventDefault();
-            return;
-          }
+          e.preventDefault();
+          e.stopPropagation();
 
-          if (tokenEl.classList.contains('selected')) {
-            tokenEl.classList.remove('selected');
-            selectedTokenSet.delete(tokenEl);
-          } else {
-            tokenEl.classList.add('selected');
-            selectedTokenSet.add(tokenEl);
-          }
+          // Tıklanan kelimeyi görsel olarak belirginleştir
+          readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
+          tokenEl.classList.add('active-inspect');
 
-          updateSelectionBar();
+          const word = tokenEl.getAttribute('data-word');
+          const offset = parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
+          if (word) {
+            openReaderModalForTarget(word, offset);
+          }
         });
       });
     };
