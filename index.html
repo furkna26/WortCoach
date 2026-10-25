@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=2.9.8" />
-  <link rel="stylesheet" href="css/components.css?v=2.9.8" />
+  <link rel="stylesheet" href="css/app.css?v=2.9.9" />
+  <link rel="stylesheet" href="css/components.css?v=2.9.9" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -555,14 +555,14 @@
            TAB 3: TEKRAR / SRS FLASHCARD (tab-study) — Screenshots 4 & 5 Parity
            ==================================================================== -->
       <!-- ====================================================================
-           TAB 2: KARTLAR / FLASHCARD (tab-study) - ARALIKLI TEKRAR (SRS)
+           TAB 2: KARTLAR / FLASHCARD (tab-study) - ARALIKLI TEKRAR (SM-2)
            ==================================================================== -->
       <section id="tab-study" class="tab-view">
         <div class="games-hub-header" style="margin-bottom:18px;">
           <div class="section-header-row">
             <div>
               <h2 class="section-title" style="font-size:1.45rem; font-weight:900; margin:0;">Kartlar (Flashcard)</h2>
-              <p style="font-size:0.84rem; color:var(--text-muted); margin-top:3px;">Aralıklı Tekrar (SRS Leitner) ile kalıcı öğrenin</p>
+              <p style="font-size:0.84rem; color:var(--text-muted); margin-top:3px;">4'lü SM-2 Aralıklı Tekrar ile kalıcı öğrenin</p>
             </div>
           </div>
         </div>
@@ -584,6 +584,18 @@
           </button>
           <button id="btn-study-reset-session" class="icon-btn-square" title="Tekrarı Sıfırla / Başa Al">
             <svg class="svg-icon"><use href="#icon-refresh"></use></svg>
+          </button>
+        </div>
+
+        <!-- Çalışma Modu Seçici: Standart Kart | Cümle Boşluk (Cloze) -->
+        <div class="study-mode-toggle-bar">
+          <button type="button" class="study-mode-toggle-btn active" id="btn-mode-standard" data-mode="standard">
+            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-cards"></use></svg>
+            <span>Standart Kart</span>
+          </button>
+          <button type="button" class="study-mode-toggle-btn" id="btn-mode-cloze" data-mode="cloze">
+            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-sparkle"></use></svg>
+            <span>Cümle Boşluk (Cloze)</span>
           </button>
         </div>
 
@@ -613,79 +625,109 @@
           <div id="flashcard-3d-wrapper" class="study-card-container">
             <div id="flashcard-inner" class="study-card-inner">
 
-              <!-- KART ÖN YÜZÜ (FRONT — Screenshot 5 Parity) -->
+              <!-- KART ÖN YÜZÜ (FRONT) -->
               <div class="study-card-face study-card-front">
                 <div class="scf-top-row">
-                  <div id="fc-front-pos-badge">
-                    <span class="badge badge-pos-VERB">Fiil</span>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <div id="fc-front-pos-badge">
+                      <span class="badge badge-pos-VERB">Fiil</span>
+                    </div>
+                    <span id="fc-front-maturity-badge" class="badge badge-maturity maturity-new">Yeni</span>
                   </div>
                   <button id="btn-fc-priority" class="icon-btn-ghost" title="Önemli Yıldızı">
                     <svg class="svg-icon"><use href="#icon-star"></use></svg>
                   </button>
                 </div>
 
-                <div class="scf-word-center">
-                  <div class="scf-word-group">
-                    <span class="lang-badge lang-badge-de">
-                      <svg class="flag-svg"><use href="#flag-de"></use></svg>
-                      <span>DE</span>
-                    </span>
-                    <div id="fc-front-word" class="scf-main-word">---</div>
+                <!-- STANDART MOD ÖN YÜZ -->
+                <div id="fc-front-standard-container">
+                  <div class="scf-word-center">
+                    <div class="scf-word-group">
+                      <span class="lang-badge lang-badge-de">
+                        <svg class="flag-svg"><use href="#flag-de"></use></svg>
+                        <span>DE</span>
+                      </span>
+                      <div id="fc-front-word" class="scf-main-word">---</div>
+                    </div>
+                    <div class="scf-actions">
+                      <button type="button" id="btn-fc-tts" class="icon-btn-ghost" title="Dinle" aria-label="Dinle">
+                        <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
+                      </button>
+                      <button type="button" id="btn-fc-pronounce" class="icon-btn-ghost btn-mic-trigger" title="Telaffuzunu Test Et" aria-label="Telaffuzunu Test Et">
+                        <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
+                      </button>
+                    </div>
                   </div>
-                  <div class="scf-actions">
-                    <button type="button" id="btn-fc-tts" class="icon-btn-ghost" title="Dinle" aria-label="Dinle">
+
+                  <!-- Stammformen Şeridi (Fiiller için) -->
+                  <div id="fc-front-stammformen-box" class="hidden"></div>
+
+                  <!-- İsim Detayı ([ DIE ] badge) -->
+                  <div id="fc-front-noun-container" class="fc-noun-center-box hidden" style="margin-top: 14px; display: flex; justify-content: center; gap: 8px;">
+                    <span id="fc-front-noun-article" class="badge badge-die" style="font-size: 0.92rem; padding: 6px 14px; font-weight: 800;">DIE</span>
+                    <span id="fc-front-noun-plural" class="badge-regularity hidden" style="font-size: 0.85rem; padding: 6px 12px;">-</span>
+                  </div>
+
+                  <!-- Edat & Hal (Rektion) Rozeti & False Friend Notu -->
+                  <div id="fc-front-rektion-box" class="fc-rektion-box hidden" style="margin-top:10px; display:flex; justify-content:center; gap:8px;">
+                    <span id="fc-front-rektion-badge" class="badge-rektion">🔗 -</span>
+                  </div>
+                  <div id="fc-front-false-friend-box" class="false-friend-box hidden">
+                    <span class="ff-icon">💡</span>
+                    <span id="fc-front-false-friend-text" class="ff-text">-</span>
+                  </div>
+
+                  <!-- Fiil Zamanları ve Çekimleri (4'lü Grid) -->
+                  <div id="fc-front-grammar-container">
+                    <div class="scf-section-title">FİİL ZAMANLARI &amp; ÇEKİMLERİ</div>
+                    <div class="tense-2x2-grid" id="fc-front-tense-grid">
+                      <div class="tense-tile">
+                        <div class="tense-tile-header">
+                          <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-clock"></use></svg>
+                          <span>Präsens (3. Sg)</span>
+                        </div>
+                        <div class="tense-tile-val" id="fc-front-prs">-</div>
+                      </div>
+                      <div class="tense-tile">
+                        <div class="tense-tile-header">
+                          <svg class="svg-icon" style="color:#A78BFA"><use href="#icon-history"></use></svg>
+                          <span>Präteritum</span>
+                        </div>
+                        <div class="tense-tile-val" id="fc-front-prt">-</div>
+                      </div>
+                      <div class="tense-tile full-width">
+                        <div class="tense-tile-header">
+                          <svg class="svg-icon" style="color:var(--palette-green)"><use href="#icon-check"></use></svg>
+                          <span>Perfekt (Geçmiş Zaman)</span>
+                        </div>
+                        <div class="tense-tile-val">
+                          <span id="fc-front-p2">-</span>
+                          <span class="tile-link-pill" id="fc-front-hilfsverb-pill">
+                            <svg class="svg-icon" style="width:12px;height:12px;"><use href="#icon-link"></use></svg>
+                            <span id="fc-front-hilfsverb-text">haben (hat)</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="tense-tile full-width">
+                        <div class="tense-tile-header">
+                          <svg class="svg-icon" style="color:var(--palette-yellow)"><use href="#icon-bolt"></use></svg>
+                          <span>Imperativ (Emir Kipi)</span>
+                        </div>
+                        <div class="tense-tile-val" id="fc-front-imp">-</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CLOZE (BOŞLUK DOLDURMA) MODU ÖN YÜZ -->
+                <div id="fc-front-cloze-container" class="fc-cloze-container hidden">
+                  <div class="fc-cloze-badge">CÜMLE BOŞLUK DOLDURMA</div>
+                  <div id="fc-front-cloze-sentence" class="fc-cloze-sentence">---</div>
+                  <div id="fc-front-cloze-hint" class="fc-cloze-hint">---</div>
+                  <div style="margin-top:14px;">
+                    <button type="button" id="btn-fc-cloze-tts-front" class="icon-btn-ghost" title="İpucu Cümleyi Dinle">
                       <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
                     </button>
-                    <button type="button" id="btn-fc-pronounce" class="icon-btn-ghost btn-mic-trigger" title="Telaffuzunu Test Et" aria-label="Telaffuzunu Test Et">
-                      <svg class="svg-icon" style="color:#10B981"><use href="#icon-mic"></use></svg>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- İsim Detayı (Screenshot 5: [ DIE ] badge) -->
-                <div id="fc-front-noun-container" class="fc-noun-center-box hidden" style="margin-top: 14px; display: flex; justify-content: center; gap: 8px;">
-                  <span id="fc-front-noun-article" class="badge badge-die" style="font-size: 0.92rem; padding: 6px 14px; font-weight: 800;">DIE</span>
-                  <span id="fc-front-noun-plural" class="badge-regularity hidden" style="font-size: 0.85rem; padding: 6px 12px;">-</span>
-                </div>
-
-                <!-- Fiil Zamanları ve Çekimleri (Screenshot 6: 4'lü Grid) -->
-                <div id="fc-front-grammar-container">
-                  <div class="scf-section-title">FİİL ZAMANLARI &amp; ÇEKİMLERİ</div>
-                  <div class="tense-2x2-grid" id="fc-front-tense-grid">
-                    <div class="tense-tile">
-                      <div class="tense-tile-header">
-                        <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-clock"></use></svg>
-                        <span>Präsens (3. Sg)</span>
-                      </div>
-                      <div class="tense-tile-val" id="fc-front-prs">-</div>
-                    </div>
-                    <div class="tense-tile">
-                      <div class="tense-tile-header">
-                        <svg class="svg-icon" style="color:#A78BFA"><use href="#icon-history"></use></svg>
-                        <span>Präteritum</span>
-                      </div>
-                      <div class="tense-tile-val" id="fc-front-prt">-</div>
-                    </div>
-                    <div class="tense-tile full-width">
-                      <div class="tense-tile-header">
-                        <svg class="svg-icon" style="color:var(--palette-green)"><use href="#icon-check"></use></svg>
-                        <span>Perfekt (Geçmiş Zaman)</span>
-                      </div>
-                      <div class="tense-tile-val">
-                        <span id="fc-front-p2">-</span>
-                        <span class="tile-link-pill" id="fc-front-hilfsverb-pill">
-                          <svg class="svg-icon" style="width:12px;height:12px;"><use href="#icon-link"></use></svg>
-                          <span id="fc-front-hilfsverb-text">haben (hat)</span>
-                        </span>
-                      </div>
-                    </div>
-                    <div class="tense-tile full-width">
-                      <div class="tense-tile-header">
-                        <svg class="svg-icon" style="color:var(--palette-yellow)"><use href="#icon-bolt"></use></svg>
-                        <span>Imperativ (Emir Kipi)</span>
-                      </div>
-                      <div class="tense-tile-val" id="fc-front-imp">-</div>
-                    </div>
                   </div>
                 </div>
 
@@ -695,7 +737,7 @@
                 </div>
               </div>
 
-              <!-- KART ARKA YÜZÜ (BACK — Screenshot 4 Parity) -->
+              <!-- KART ARKA YÜZÜ (BACK) -->
               <div class="study-card-face study-card-back">
                 <div class="scb-top-label">TÜRKÇE ANLAMI</div>
                 <div id="fc-back-meaning-tr" class="scb-main-translation">-</div>
@@ -706,6 +748,12 @@
                 </div>
 
                 <div id="fc-back-subtext" class="scb-subtext">Almanca: -</div>
+
+                <!-- CLOZE ÇÖZÜMÜ -->
+                <div id="fc-back-cloze-container" class="fc-cloze-container hidden">
+                  <div class="fc-cloze-badge fc-cloze-badge-revealed">CÜMLE TAMAMLANDI ✓</div>
+                  <div id="fc-back-cloze-sentence" class="fc-cloze-sentence">---</div>
+                </div>
 
                 <div id="fc-back-example-card" class="scb-example-card hidden">
                   <div class="scb-example-header">
@@ -731,19 +779,23 @@
             </div>
           </div>
 
-          <!-- 3 SRS Butonu: Tekrar Et (Kırmızı), Önemli (Turuncu), Öğrendim (Yeşil) -->
-          <div class="srs-buttons-row">
-            <button class="btn-srs-android btn-again" data-rating="again">
-              <span class="srs-btn-label">Tekrar Et</span>
-              <span class="srs-btn-sub" id="srs-again-interval-label">1 Gün (Kutu 1)</span>
+          <!-- 4'LÜ SM-2 DERECE BUTONLARI: Tekrar (0), Zor (1), İyi (2), Kolay (3) -->
+          <div class="srs-buttons-row srs-sm2-buttons-row" id="srs-sm2-actions">
+            <button type="button" class="btn-srs-sm2 btn-srs-again" data-rating="0" title="Tekrar (0)">
+              <span class="srs-btn-time" id="srs-again-time">&lt;10dk</span>
+              <span class="srs-btn-label">Tekrar</span>
             </button>
-            <button class="btn-srs-android btn-hard" data-rating="hard">
-              <span class="srs-btn-label">Önemli</span>
-              <span class="srs-btn-sub" id="srs-hard-interval-label">12 Saat (Zor)</span>
+            <button type="button" class="btn-srs-sm2 btn-srs-hard" data-rating="1" title="Zor (1)">
+              <span class="srs-btn-time" id="srs-hard-time">1g</span>
+              <span class="srs-btn-label">Zor</span>
             </button>
-            <button class="btn-srs-android btn-good" data-rating="good">
-              <span class="srs-btn-label">Öğrendim</span>
-              <span class="srs-btn-sub" id="srs-good-interval-label">3 Gün</span>
+            <button type="button" class="btn-srs-sm2 btn-srs-good" data-rating="2" title="İyi (2)">
+              <span class="srs-btn-time" id="srs-good-time">3g</span>
+              <span class="srs-btn-label">İyi</span>
+            </button>
+            <button type="button" class="btn-srs-sm2 btn-srs-easy" data-rating="3" title="Kolay (3)">
+              <span class="srs-btn-time" id="srs-easy-time">4g</span>
+              <span class="srs-btn-label">Kolay</span>
             </button>
           </div>
         </div>
@@ -1726,18 +1778,19 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/db.js?v=2.9.8"></script>
-  <script src="js/verbHelper.js?v=2.9.8"></script>
-  <script src="js/offlineDictionary.js?v=2.9.8"></script>
-  <script src="js/dictionary.js?v=2.9.8"></script>
-  <script src="js/curatedPacks.js?v=2.9.8"></script>
-  <script src="js/seeder.js?v=2.9.8"></script>
-  <script src="js/tts.js?v=2.9.8"></script>
-  <script src="js/pronunciation.js?v=2.9.8"></script>
-  <script src="js/translator.js?v=2.9.8"></script>
-  <script src="js/game.js?v=2.9.8"></script>
-  <script src="js/study.js?v=2.9.8"></script>
-  <script src="js/stats.js?v=2.9.8"></script>
-  <script src="js/app.js?v=2.9.8"></script>
+  <script src="js/db.js?v=2.9.9"></script>
+  <script src="js/verbHelper.js?v=2.9.9"></script>
+  <script src="js/grammarEnrichment.js?v=2.9.9"></script>
+  <script src="js/offlineDictionary.js?v=2.9.9"></script>
+  <script src="js/dictionary.js?v=2.9.9"></script>
+  <script src="js/curatedPacks.js?v=2.9.9"></script>
+  <script src="js/seeder.js?v=2.9.9"></script>
+  <script src="js/tts.js?v=2.9.9"></script>
+  <script src="js/pronunciation.js?v=2.9.9"></script>
+  <script src="js/translator.js?v=2.9.9"></script>
+  <script src="js/game.js?v=2.9.9"></script>
+  <script src="js/study.js?v=2.9.9"></script>
+  <script src="js/stats.js?v=2.9.9"></script>
+  <script src="js/app.js?v=2.9.9"></script>
 </body>
 </html>

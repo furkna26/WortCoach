@@ -170,19 +170,34 @@ class WortMeisterDatabase {
         const raw = req.result || [];
         const valid = [];
         const badIds = [];
+        const toMigrate = [];
+        const now = Date.now();
+
         for (const c of raw) {
           if (c && typeof c.germanWord === 'string' && c.germanWord.trim().length > 0) {
+            // SM-2 Geriye Dönük Otomatik Migrasyon
+            if (c.easeFactor === undefined || c.interval === undefined || c.repetitions === undefined || c.dueDate === undefined) {
+              c.easeFactor = Number(c.easeFactor ?? 2.5);
+              c.interval = Number(c.interval ?? (c.intervalDays ?? 0));
+              c.repetitions = Number(c.repetitions ?? (c.srsStage ?? 0));
+              c.lapses = Number(c.lapses ?? 0);
+              c.dueDate = Number(c.dueDate ?? (c.nextReviewDate ?? now));
+              toMigrate.push(c);
+            }
             valid.push(c);
           } else if (c && c.id) {
             badIds.push(c.id);
           }
         }
-        if (badIds.length > 0) {
-          // Arka planda boş ve bozuk kartları temizle (uygulamayı buga sokmasını önler)
+
+        // Arka planda migrasyon ve temizlik
+        if (badIds.length > 0 || toMigrate.length > 0) {
           this._tx('cards', 'readwrite').then((rw) => {
             badIds.forEach((id) => rw.delete(id));
+            toMigrate.forEach((card) => rw.put(card));
           }).catch(() => {});
         }
+
         resolve(valid);
       };
       req.onerror = (e) => reject(e.target.error);
@@ -228,6 +243,12 @@ class WortMeisterDatabase {
 
     const store = await this._tx('cards', 'readwrite');
     const now = Date.now();
+    const easeFactor = Number(cardData.easeFactor ?? 2.5);
+    const interval = Number(cardData.interval ?? (cardData.intervalDays ?? 0));
+    const repetitions = Number(cardData.repetitions ?? (cardData.srsStage ?? 0));
+    const lapses = Number(cardData.lapses ?? 0);
+    const dueDate = Number(cardData.dueDate ?? (cardData.nextReviewDate ?? now));
+
     const record = {
       deckId: resolvedDeckId,
       germanWord: cleanWord,
@@ -247,9 +268,16 @@ class WortMeisterDatabase {
       regularity: cardData.regularity || '',
       imperativ: cardData.imperativ || '',
       cefr: cardData.cefr || 'A1',
-      srsStage: Number(cardData.srsStage ?? 0),
-      nextReviewDate: Number(cardData.nextReviewDate ?? now),
-      intervalDays: Number(cardData.intervalDays ?? 0),
+      // 4'lü SM-2 Veri Yapısı
+      easeFactor,
+      interval,
+      repetitions,
+      lapses,
+      dueDate,
+      // Geriye dönük uyumluluk
+      srsStage: repetitions,
+      nextReviewDate: dueDate,
+      intervalDays: interval,
       isPriority: Boolean(cardData.isPriority),
       createdAt: now
     };
@@ -271,6 +299,18 @@ class WortMeisterDatabase {
     const rawDeckId = card.deckId && typeof card.deckId === 'object' ? card.deckId.id : card.deckId;
     card.deckId = Number(rawDeckId) || 1;
     card.germanWord = cleanWord;
+
+    // SM-2 ve Leitner alanlarını senkronize tut
+    if (card.easeFactor === undefined) card.easeFactor = 2.5;
+    if (card.interval === undefined) card.interval = Number(card.intervalDays ?? 0);
+    if (card.repetitions === undefined) card.repetitions = Number(card.srsStage ?? 0);
+    if (card.lapses === undefined) card.lapses = 0;
+    if (card.dueDate === undefined) card.dueDate = Number(card.nextReviewDate ?? Date.now());
+
+    card.srsStage = card.repetitions;
+    card.intervalDays = card.interval;
+    card.nextReviewDate = card.dueDate;
+
     const store = await this._tx('cards', 'readwrite');
     return new Promise((resolve, reject) => {
       const req = store.put(card);
@@ -305,12 +345,17 @@ class WortMeisterDatabase {
         ? allCards
         : allCards.filter((c) => Number(c.deckId) === Number(deckId));
 
-    const due = filteredByDeck.filter((c) => Number(c.nextReviewDate || 0) <= now);
+    const due = filteredByDeck.filter((c) => {
+      const dueTime = Number(c.dueDate ?? (c.nextReviewDate ?? 0));
+      return dueTime <= now;
+    });
 
     // Önce öncelikli (yıldızlı) kartlar, ardından en eski tekrar tarihi
     due.sort((a, b) => {
       if (a.isPriority !== b.isPriority) return a.isPriority ? -1 : 1;
-      return (a.nextReviewDate || 0) - (b.nextReviewDate || 0);
+      const timeA = Number(a.dueDate ?? (a.nextReviewDate ?? 0));
+      const timeB = Number(b.dueDate ?? (b.nextReviewDate ?? 0));
+      return timeA - timeB;
     });
 
     if (due.length === 0 && includeAllIfEmpty) {
@@ -320,40 +365,83 @@ class WortMeisterDatabase {
   }
 
   /**
-   * Leitner SRS Algoritması
-   * - again (Tekrar Et): srsStage = 0, intervalDays = 1, nextReviewDate = +1 gün
-   * - hard (Önemli): isPriority = true, nextReviewDate = +4 saat
-   * - good (Öğrendim): srsStage (max 5), interval 1 -> 2 -> 4 -> 8 -> 16 gün
+   * 4'lü SM-2 Aralıklı Tekrar Algoritması (Geriye Dönük Uyumlu)
+   * - Tekrar (0 / again): repetitions = 0, lapses += 1, interval = 0, easeFactor = Math.max(1.3, easeFactor - 0.20)
+   * - Zor (1 / hard):     interval = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2)), easeFactor = Math.max(1.3, easeFactor - 0.15), repetitions += 1
+   * - İyi (2 / good):     interval = repetitions === 0 ? 1 : (repetitions === 1 ? 3 : Math.round(interval * easeFactor)), repetitions += 1
+   * - Kolay (3 / easy):   interval = repetitions === 0 ? 4 : Math.round(interval * easeFactor * 1.3), easeFactor += 0.15, repetitions += 1
    */
-  async applySRSReview(cardId, rating) {
+  async applySM2Review(cardId, rating) {
     const allCards = await this.getAllCards();
     const card = allCards.find((c) => Number(c.id) === Number(cardId));
     if (!card) return null;
 
-    const now = Date.now();
-    const ONE_HOUR = 3600 * 1000;
-    const ONE_DAY = 24 * ONE_HOUR;
+    let r = rating;
+    if (r === 'again') r = 0;
+    else if (r === 'hard') r = 1;
+    else if (r === 'good') r = 2;
+    else if (r === 'easy') r = 3;
+    r = Number(r);
+    if (isNaN(r) || r < 0 || r > 3) r = 2;
 
-    if (rating === 'again') {
-      card.srsStage = 0;
-      card.intervalDays = 1;
-      card.nextReviewDate = now + ONE_DAY;
-    } else if (rating === 'hard') {
-      card.isPriority = true;
-      card.intervalDays = 1;
-      card.nextReviewDate = now + 12 * ONE_HOUR;
-    } else if (rating === 'good') {
-      const currentStage = Math.max(0, Math.min(5, Number(card.srsStage) || 0));
-      const leitnerSchedule = [3, 7, 14, 30, 60];
-      const nextDays = leitnerSchedule[Math.min(currentStage, leitnerSchedule.length - 1)];
-      card.srsStage = Math.min(5, currentStage + 1);
-      card.intervalDays = nextDays;
-      card.nextReviewDate = now + nextDays * ONE_DAY;
+    let easeFactor = Number(card.easeFactor ?? 2.5);
+    let interval = Number(card.interval ?? (card.intervalDays ?? 0));
+    let repetitions = Number(card.repetitions ?? (card.srsStage ?? 0));
+    let lapses = Number(card.lapses ?? 0);
+
+    const now = Date.now();
+    const TEN_MINUTES = 10 * 60 * 1000;
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    let dueDate = now;
+
+    if (r === 0) {
+      // Tekrar (0)
+      repetitions = 0;
+      lapses += 1;
+      interval = 0; // 10 dakika sonra / aynı gün tekrar sor
+      easeFactor = Math.max(1.3, easeFactor - 0.20);
+      dueDate = now + TEN_MINUTES;
+    } else if (r === 1) {
+      // Zor (1)
+      interval = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
+      easeFactor = Math.max(1.3, easeFactor - 0.15);
+      repetitions += 1;
+      dueDate = now + interval * ONE_DAY;
+    } else if (r === 2) {
+      // İyi (2)
+      interval = repetitions === 0 ? 1 : (repetitions === 1 ? 3 : Math.round(interval * easeFactor));
+      repetitions += 1;
+      dueDate = now + interval * ONE_DAY;
+    } else if (r === 3) {
+      // Kolay (3)
+      interval = repetitions === 0 ? 4 : Math.round(interval * easeFactor * 1.3);
+      easeFactor += 0.15;
+      repetitions += 1;
+      dueDate = now + interval * ONE_DAY;
     }
 
+    // 2 ondalık basamağa yuvarla
+    easeFactor = Math.round(easeFactor * 100) / 100;
+
+    card.easeFactor = easeFactor;
+    card.interval = interval;
+    card.repetitions = repetitions;
+    card.lapses = lapses;
+    card.dueDate = dueDate;
+
+    // Geriye dönük uyumluluk
+    card.intervalDays = interval;
+    card.srsStage = repetitions;
+    card.nextReviewDate = dueDate;
+
     await this.updateCard(card);
-    await this.addStudyLog(card.id, rating);
+    const ratingLabels = ['again', 'hard', 'good', 'easy'];
+    await this.addStudyLog(card.id, ratingLabels[r] || 'good');
     return card;
+  }
+
+  async applySRSReview(cardId, rating) {
+    return this.applySM2Review(cardId, rating);
   }
 
   // --- STUDY LOGS ---

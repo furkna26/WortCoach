@@ -1,6 +1,7 @@
 /**
- * WortMeister — SRS Leitner Flashcard Çalışma Yöneticisi (tab-study)
- * Pixel-Perfect Parity with Android APK Screenshots 4 & 5
+ * WortMeister — 4'lü SM-2 Aralıklı Tekrar & Cloze (Boşluk Doldurma) Çalışma Yöneticisi
+ * Faz 2: SM-2 Algoritması (<10dk, 1g, 3g, 8g), Olgunluk Rozetleri (Yeni, Öğreniliyor, Genç, Olgun),
+ * Standart Kart & Cloze (Boşluk Doldurma) Modu, Rektion & Nüans Gösterimi
  */
 
 class WortMeisterStudy {
@@ -14,21 +15,37 @@ class WortMeisterStudy {
     this.queue = [];
     this.currentIndex = 0;
     this.isFlipped = false;
+    this.studyMode = localStorage.getItem('wortcoach_study_mode') || 'standard';
   }
 
   init() {
     if (!this.cardWrapper) return;
 
+    // Kart çevirme (Flip) dinleyicisi
     this.cardWrapper.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return;
+      if (e.target.closest('button') || e.target.closest('.scf-actions')) return;
       this.toggleFlip();
     });
 
-    this.deckSelect.addEventListener('change', () => {
+    // Deste seçici
+    this.deckSelect?.addEventListener('change', () => {
       this.loadSession(this.deckSelect.value, false);
     });
 
-    document.getElementById('btn-fc-tts').addEventListener('click', (e) => {
+    // Çalışma Modu Seçici Butonları: Standart vs Cloze
+    const btnStandard = document.getElementById('btn-mode-standard');
+    const btnCloze = document.getElementById('btn-mode-cloze');
+
+    btnStandard?.addEventListener('click', () => {
+      this.setStudyMode('standard');
+    });
+
+    btnCloze?.addEventListener('click', () => {
+      this.setStudyMode('cloze');
+    });
+
+    // TTS Seslendirme Dinleyicileri
+    document.getElementById('btn-fc-tts')?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.speakCurrentCard();
     });
@@ -38,6 +55,17 @@ class WortMeisterStudy {
       const card = this.getCurrentCard();
       if (card && window.wmApp) {
         window.wmApp.openPronunciationCoach(card, 'word');
+      }
+    });
+
+    document.getElementById('btn-fc-cloze-tts-front')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const card = this.getCurrentCard();
+      if (card && card.exampleSentence) {
+        const cleanEx = card.exampleSentence.replace(/\s*\(.*?\)\s*$/, '').trim();
+        window.wmTTS.speak(cleanEx || card.germanWord, 'de-DE');
+      } else {
+        this.speakCurrentCard();
       }
     });
 
@@ -79,9 +107,19 @@ class WortMeisterStudy {
       }
     });
 
-    // 3 SRS Butonu
+    // 4'lü SM-2 Butonları Dinleyicisi
+    document.querySelectorAll('.btn-srs-sm2').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const rating = btn.getAttribute('data-rating');
+        await this.submitRating(rating);
+      });
+    });
+
+    // Geriye dönük uyumluluk için eski buton sınıfı varsa dinle
     document.querySelectorAll('.btn-srs-android').forEach((btn) => {
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const rating = btn.getAttribute('data-rating');
         await this.submitRating(rating);
       });
@@ -94,15 +132,39 @@ class WortMeisterStudy {
     document.getElementById('btn-study-add-new')?.addEventListener('click', () => {
       if (window.wmApp) window.wmApp.openAddCardModal();
     });
+
+    this.updateModeToggleUI();
+  }
+
+  setStudyMode(mode) {
+    this.studyMode = mode;
+    localStorage.setItem('wortcoach_study_mode', mode);
+    this.updateModeToggleUI();
+    this.renderCurrentCard();
+  }
+
+  updateModeToggleUI() {
+    const btnStandard = document.getElementById('btn-mode-standard');
+    const btnCloze = document.getElementById('btn-mode-cloze');
+    if (this.studyMode === 'cloze') {
+      btnStandard?.classList.remove('active');
+      btnCloze?.classList.add('active');
+    } else {
+      btnCloze?.classList.remove('active');
+      btnStandard?.classList.add('active');
+    }
   }
 
   async populateDeckSelector(selectedDeckId = 'all') {
     const decks = await window.wmDB.getAllDecks();
+    if (!this.deckSelect) this.deckSelect = document.getElementById('study-deck-select');
+    if (!this.deckSelect) return;
+
     this.deckSelect.innerHTML = `<option value="all">Tüm Kartlar</option>`;
     for (const d of decks) {
       const opt = document.createElement('option');
       opt.value = String(d.id);
-      opt.textContent = `${d.name} (${d.cardCount})`;
+      opt.textContent = `${d.name} (${d.cardCount || 0})`;
       if (String(selectedDeckId) === String(d.id)) {
         opt.selected = true;
       }
@@ -143,16 +205,16 @@ class WortMeisterStudy {
     const fillEl = document.getElementById('study-progress-fill-bar');
 
     if (total === 0) {
-      countEl.textContent = 'Kart 0 / 0';
-      pctEl.textContent = '%0';
-      fillEl.style.width = '0%';
+      if (countEl) countEl.textContent = 'Kart 0 / 0';
+      if (pctEl) pctEl.textContent = '%0';
+      if (fillEl) fillEl.style.width = '0%';
       return;
     }
 
     const pct = Math.round((cur / total) * 100);
-    countEl.textContent = `Kart ${cur + 1} / ${total}`;
-    pctEl.textContent = `%${pct}`;
-    fillEl.style.width = `${pct}%`;
+    if (countEl) countEl.textContent = `Kart ${cur + 1} / ${total}`;
+    if (pctEl) pctEl.textContent = `%${pct}`;
+    if (fillEl) fillEl.style.width = `${pct}%`;
 
     // Günlük seri ve sayaç
     const logs = await window.wmDB.getTodayStudyLogs();
@@ -189,7 +251,7 @@ class WortMeisterStudy {
     const card = this.getCurrentCard();
     if (!card) return;
 
-    // Anlam veya gramer eksikse anlık çözümle
+    // Anlam eksikse anlık sentezle
     if (!card.meaningsTr || card.meaningsTr === '-') {
       try {
         if (window.DictionaryService) {
@@ -204,20 +266,31 @@ class WortMeisterStudy {
     this.isFlipped = false;
     if (this.cardInner) this.cardInner.classList.remove('is-flipped');
 
-    // POS Rozeti
+    // 1. POS Rozeti
     const posLabels = { VERB: 'Fiil', NOUN: 'İsim', ADJECTIVE: 'Sıfat', OTHER: 'İfade' };
     const posBadgeEl = document.getElementById('fc-front-pos-badge');
     if (posBadgeEl) {
       posBadgeEl.innerHTML = `<span class="badge badge-pos-${card.partOfSpeech}">${posLabels[card.partOfSpeech] || 'Kelime'}</span>`;
     }
 
-    // Yıldız (Priority)
+    // 2. Olgunluk Rozeti (Yeni, Öğreniliyor, Genç, Olgun - Leitner Kutu Metinleri Yerine)
+    const maturityBadgeEl = document.getElementById('fc-front-maturity-badge');
+    if (maturityBadgeEl && window.getCardMaturity) {
+      const maturity = window.getCardMaturity(card);
+      maturityBadgeEl.textContent = maturity.label;
+      maturityBadgeEl.className = `badge badge-maturity ${maturity.className}`;
+      maturityBadgeEl.style.color = maturity.color;
+      maturityBadgeEl.style.backgroundColor = maturity.bg;
+      maturityBadgeEl.style.border = `1px solid ${maturity.border}`;
+    }
+
+    // 3. Öncelik Yıldızı (Priority)
     const btnPriority = document.getElementById('btn-fc-priority');
     if (btnPriority) {
       btnPriority.innerHTML = `<svg class="svg-icon" style="color:${card.isPriority ? '#FBBF24' : 'var(--text-muted)'}"><use href="${card.isPriority ? '#icon-star-filled' : '#icon-star'}"></use></svg>`;
     }
 
-    // Ön Yüz Kelimesi (Büyük ve Kesin Almanca)
+    // 4. İsim / Fiil ve Kelime Formatı
     const isNoun = (card.partOfSpeech || '').toUpperCase() === 'NOUN' || Boolean(card.article);
     const nounArticle = card.article ? card.article.toLowerCase() : '';
     const cleanWord = (card.germanWord || '').replace(/^(der|die|das)\s+/i, '').trim();
@@ -225,55 +298,132 @@ class WortMeisterStudy {
       ? `${nounArticle} ${cleanWord.charAt(0).toUpperCase() + cleanWord.slice(1)}`
       : card.germanWord;
 
-    document.getElementById('fc-front-word').textContent = formattedWord;
+    const wordEl = document.getElementById('fc-front-word');
+    if (wordEl) wordEl.textContent = formattedWord;
 
-    const nounContainer = document.getElementById('fc-front-noun-container');
-    const nounArtBadge = document.getElementById('fc-front-noun-article');
-    const nounPluralBadge = document.getElementById('fc-front-noun-plural');
-    const verbContainer = document.getElementById('fc-front-grammar-container');
+    // 5. ÇALIŞMA MODU: CLOZE (BOŞLUK DOLDURMA) VS STANDART
+    const standardContainer = document.getElementById('fc-front-standard-container');
+    const clozeFrontContainer = document.getElementById('fc-front-cloze-container');
+    const clozeBackContainer = document.getElementById('fc-back-cloze-container');
 
-    // Gramer Detayları (İsim için [ DIE ] rozeti, Fiil için 4'lü Grid)
-    if (isNoun && nounArticle) {
-      if (nounContainer) nounContainer.classList.remove('hidden');
-      if (verbContainer) verbContainer.classList.add('hidden');
+    const hasExample = Boolean(card.exampleSentence && card.exampleSentence.trim().length > 3);
+    const isClozeActive = this.studyMode === 'cloze';
 
-      if (nounArtBadge) {
-        nounArtBadge.className = `badge badge-${nounArticle}`;
-        nounArtBadge.textContent = nounArticle.toUpperCase();
-      }
-      if (nounPluralBadge) {
-        if (card.pluralForm) {
-          nounPluralBadge.textContent = card.pluralForm;
-          nounPluralBadge.classList.remove('hidden');
-        } else {
-          nounPluralBadge.classList.add('hidden');
-        }
-      }
-    } else if ((card.partOfSpeech || '').toUpperCase() === 'VERB') {
-      if (nounContainer) nounContainer.classList.add('hidden');
-      if (verbContainer) verbContainer.classList.remove('hidden');
+    if (isClozeActive && hasExample) {
+      standardContainer?.classList.add('hidden');
+      clozeFrontContainer?.classList.remove('hidden');
+      clozeBackContainer?.classList.remove('hidden');
 
-      const prsEl = document.getElementById('fc-front-prs');
-      const prtEl = document.getElementById('fc-front-prt');
-      const p2El = document.getElementById('fc-front-p2');
-      const impEl = document.getElementById('fc-front-imp');
-      const hilfsverbPill = document.getElementById('fc-front-hilfsverb-pill');
-      const hilfsverbText = document.getElementById('fc-front-hilfsverb-text');
+      const clozeData = window.createClozeSentence
+        ? window.createClozeSentence(card.exampleSentence, card.germanWord, {
+            praesens: card.praesens,
+            praeteritum: card.praeteritum,
+            partizipZwei: card.partizipZwei
+          })
+        : { maskedHtml: '[ _______ ]', revealedHtml: card.germanWord, turkishHint: '' };
 
-      const hilfs = card.hilfsverb || 'hat';
-      const cleanP2 = (card.partizipZwei || '-').replace(/^(hat|ist)\s+/i, '');
-      if (prsEl) prsEl.textContent = card.praesens || '-';
-      if (prtEl) prtEl.textContent = card.praeteritum || '-';
-      if (p2El) p2El.textContent = cleanP2;
-      if (impEl) impEl.textContent = card.imperativ || `${card.germanWord}!`;
-      if (hilfsverbPill) hilfsverbPill.style.display = 'inline-flex';
-      if (hilfsverbText) hilfsverbText.textContent = `${hilfs === 'ist' ? 'sein (ist)' : 'haben (hat)'}`;
+      const clozeFrontSent = document.getElementById('fc-front-cloze-sentence');
+      const clozeFrontHint = document.getElementById('fc-front-cloze-hint');
+      const clozeBackSent = document.getElementById('fc-back-cloze-sentence');
+
+      if (clozeFrontSent) clozeFrontSent.innerHTML = clozeData.maskedHtml;
+      if (clozeFrontHint) clozeFrontHint.innerHTML = clozeData.turkishHint || `💡 İpucu: ${card.meaningsTr || ''}`;
+      if (clozeBackSent) clozeBackSent.innerHTML = clozeData.revealedHtml;
     } else {
-      if (nounContainer) nounContainer.classList.add('hidden');
-      if (verbContainer) verbContainer.classList.add('hidden');
+      // Standart Mod
+      standardContainer?.classList.remove('hidden');
+      clozeFrontContainer?.classList.add('hidden');
+      clozeBackContainer?.classList.add('hidden');
+
+      const nounContainer = document.getElementById('fc-front-noun-container');
+      const nounArtBadge = document.getElementById('fc-front-noun-article');
+      const nounPluralBadge = document.getElementById('fc-front-noun-plural');
+      const verbContainer = document.getElementById('fc-front-grammar-container');
+      const stammformenBox = document.getElementById('fc-front-stammformen-box');
+      const rektionBox = document.getElementById('fc-front-rektion-box');
+      const rektionBadge = document.getElementById('fc-front-rektion-badge');
+      const falseFriendBox = document.getElementById('fc-front-false-friend-box');
+      const falseFriendText = document.getElementById('fc-front-false-friend-text');
+
+      // Evrensel Artikel Renk Kodlaması (der / die / das)
+      if (isNoun && nounArticle) {
+        if (nounContainer) nounContainer.classList.remove('hidden');
+        if (verbContainer) verbContainer.classList.add('hidden');
+        if (stammformenBox) stammformenBox.classList.add('hidden');
+
+        if (nounArtBadge) {
+          const artStyle = window.getArticleStyle ? window.getArticleStyle(nounArticle) : null;
+          nounArtBadge.textContent = nounArticle.toUpperCase();
+          nounArtBadge.className = `badge badge-${nounArticle}`;
+          if (artStyle) {
+            nounArtBadge.style.color = artStyle.color;
+            nounArtBadge.style.backgroundColor = artStyle.bg;
+            nounArtBadge.style.border = `1px solid ${artStyle.border}`;
+          }
+        }
+        if (nounPluralBadge) {
+          if (card.pluralForm) {
+            nounPluralBadge.textContent = card.pluralForm;
+            nounPluralBadge.classList.remove('hidden');
+          } else {
+            nounPluralBadge.classList.add('hidden');
+          }
+        }
+      } else if ((card.partOfSpeech || '').toUpperCase() === 'VERB') {
+        if (nounContainer) nounContainer.classList.add('hidden');
+        if (verbContainer) verbContainer.classList.remove('hidden');
+
+        // Stammformen Şeridi
+        if (stammformenBox && window.getStammformenRibbon) {
+          const ribbonHtml = window.getStammformenRibbon(card);
+          if (ribbonHtml) {
+            stammformenBox.innerHTML = ribbonHtml;
+            stammformenBox.classList.remove('hidden');
+          } else {
+            stammformenBox.classList.add('hidden');
+          }
+        }
+
+        const prsEl = document.getElementById('fc-front-prs');
+        const prtEl = document.getElementById('fc-front-prt');
+        const p2El = document.getElementById('fc-front-p2');
+        const impEl = document.getElementById('fc-front-imp');
+        const hilfsverbPill = document.getElementById('fc-front-hilfsverb-pill');
+        const hilfsverbText = document.getElementById('fc-front-hilfsverb-text');
+
+        const hilfs = card.hilfsverb || 'hat';
+        const cleanP2 = (card.partizipZwei || '-').replace(/^(hat|ist)\s+/i, '');
+        if (prsEl) prsEl.textContent = card.praesens || '-';
+        if (prtEl) prtEl.textContent = card.praeteritum || '-';
+        if (p2El) p2El.textContent = cleanP2;
+        if (impEl) impEl.textContent = card.imperativ || `${card.germanWord}!`;
+        if (hilfsverbPill) hilfsverbPill.style.display = 'inline-flex';
+        if (hilfsverbText) hilfsverbText.textContent = `${hilfs === 'ist' ? 'sein (ist)' : 'haben (hat)'}`;
+      } else {
+        if (nounContainer) nounContainer.classList.add('hidden');
+        if (verbContainer) verbContainer.classList.add('hidden');
+        if (stammformenBox) stammformenBox.classList.add('hidden');
+      }
+
+      // Rektion (Verben mit Präpositionen) & Karıştırılan Kelime (False Friends)
+      const enrichment = window.getGrammarEnrichment ? window.getGrammarEnrichment(card.germanWord) : null;
+      if (enrichment && rektionBox && rektionBadge) {
+        rektionBadge.textContent = enrichment.badge;
+        rektionBox.classList.remove('hidden');
+      } else if (rektionBox) {
+        rektionBox.classList.add('hidden');
+      }
+
+      const confused = window.getConfusedWordPair ? window.getConfusedWordPair(card.germanWord) : null;
+      if (confused && falseFriendBox && falseFriendText) {
+        falseFriendText.textContent = confused.note;
+        falseFriendBox.classList.remove('hidden');
+      } else if (falseFriendBox) {
+        falseFriendBox.classList.add('hidden');
+      }
     }
 
-    // KART ARKA YÜZÜ (Screenshot 4 Parity)
+    // 6. KART ARKA YÜZÜ
     const meaningTrEl = document.getElementById('fc-back-meaning-tr');
     if (meaningTrEl) {
       meaningTrEl.textContent = card.meaningsTr || 'Anlam belirtilmedi';
@@ -282,10 +432,10 @@ class WortMeisterStudy {
     const enRow = document.getElementById('fc-back-en-row');
     const meaningEnEl = document.getElementById('fc-back-meaning-en');
     if (card.meaningsEn) {
-      enRow.classList.remove('hidden');
-      meaningEnEl.textContent = card.meaningsEn;
+      enRow?.classList.remove('hidden');
+      if (meaningEnEl) meaningEnEl.textContent = card.meaningsEn;
     } else {
-      enRow.classList.add('hidden');
+      enRow?.classList.add('hidden');
     }
 
     const subtextEl = document.getElementById('fc-back-subtext');
@@ -293,28 +443,28 @@ class WortMeisterStudy {
       subtextEl.textContent = `Almanca: ${formattedWord}`;
     }
 
-    // Örnek Cümle Kartı
+    // Örnek Cümle Kartı (Arka Yüz)
     const exCard = document.getElementById('fc-back-example-card');
     const exText = document.getElementById('fc-back-example');
-    if (card.exampleSentence) {
-      exCard.classList.remove('hidden');
-      exText.textContent = card.exampleSentence;
+    if (card.exampleSentence && !isClozeActive) {
+      exCard?.classList.remove('hidden');
+      if (exText) exText.textContent = card.exampleSentence;
     } else {
-      exCard.classList.add('hidden');
+      exCard?.classList.add('hidden');
     }
 
-    // SRS Leitner Kutu ve Aralık Hesabı
-    const currentStage = Math.max(0, Math.min(5, Number(card.srsStage) || 0));
-    const leitnerSchedule = [3, 7, 14, 30, 60];
-    const nextGoodDays = leitnerSchedule[Math.min(currentStage, leitnerSchedule.length - 1)];
+    // 7. 4'LÜ SM-2 TAHMİNİ SÜRE ETİKETLERİ (<10dk, 1g, 3g, 4g vb.)
+    if (window.calculateSM2NextIntervals) {
+      const intervals = window.calculateSM2NextIntervals(card);
+      const againTime = document.getElementById('srs-again-time');
+      const hardTime = document.getElementById('srs-hard-time');
+      const goodTime = document.getElementById('srs-good-time');
+      const easyTime = document.getElementById('srs-easy-time');
 
-    const againLabel = document.getElementById('srs-again-interval-label');
-    if (againLabel) againLabel.textContent = '1 Gün (Kutu 1)';
-    const hardLabel = document.getElementById('srs-hard-interval-label');
-    if (hardLabel) hardLabel.textContent = '12 Saat (Zor)';
-    const goodLabel = document.getElementById('srs-good-interval-label');
-    if (goodLabel) {
-      goodLabel.textContent = `${nextGoodDays} Gün (Kutu ${Math.min(5, currentStage + 2)})`;
+      if (againTime) againTime.textContent = intervals.againTime;
+      if (hardTime) hardTime.textContent = intervals.hardTime;
+      if (goodTime) goodTime.textContent = intervals.goodTime;
+      if (easyTime) easyTime.textContent = intervals.easyTime;
     }
   }
 
@@ -323,17 +473,19 @@ class WortMeisterStudy {
     if (!card) return;
 
     if (navigator.vibrate) {
-      navigator.vibrate(rating === 'good' ? [15, 30, 15] : 20);
+      const rNum = Number(rating);
+      navigator.vibrate(rNum >= 2 ? [15, 30, 15] : 20);
     }
 
-    await window.wmDB.applySRSReview(card.id, rating);
+    // 4'lü SM-2 Değerlendirmesini Uygula
+    await window.wmDB.applySM2Review(card.id, rating);
 
     this.currentIndex += 1;
     await this.updateProgress();
 
     if (this.currentIndex >= this.queue.length) {
-      this.arena.classList.add('hidden');
-      this.emptyState.classList.remove('hidden');
+      this.arena?.classList.add('hidden');
+      this.emptyState?.classList.remove('hidden');
       if (window.wmApp) window.wmApp.refreshHomeDashboard();
     } else {
       this.renderCurrentCard();

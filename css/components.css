@@ -3622,3 +3622,385 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ==========================================================================
+   FAZ 2: SÖZLÜK ZENGİNLEŞTİRME, DİLBİLGİSİ DERİNLİĞİ & 4'LÜ SM-2 STİLLERİ
+   ========================================================================== */
+
+/* 1. Evrensel Artikel Renk Kodlaması */
+.badge-der {
+  color: #60A5FA !important;
+  background-color: rgba(96, 165, 250, 0.12) !important;
+  border: 1px solid rgba(96, 165, 250, 0.3) !important;
+}
+
+.badge-die {
+  color: #F87171 !important;
+  background-color: rgba(248, 113, 113, 0.12) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+}
+
+.badge-das {
+  color: #34D399 !important;
+  background-color: rgba(52, 211, 153, 0.12) !important;
+  border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+/* 2. Anlam Chip'leri & + Anlam Ekle */
+.meaning-chip {
+  background-color: #1B202C !important;
+  border: 1px solid #242B3A !important;
+  color: #9CA3AF !important;
+}
+
+.meaning-chip.selected,
+.meaning-chip.chip-selected {
+  background-color: rgba(59, 130, 246, 0.14) !important;
+  border: 1.5px solid #3B82F6 !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+}
+
+.meaning-chip.selected .chip-check-icon,
+.meaning-chip.chip-selected .chip-check-icon {
+  display: inline-block !important;
+  color: #60A5FA !important;
+}
+
+.btn-add-custom-meaning {
+  border: 1px dashed #3B82F6 !important;
+  color: #60A5FA !important;
+  background-color: transparent !important;
+}
+
+/* 3. Nüans ve Tag Rozetleri */
+.badge-nuance {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.badge-nuance-colloquial {
+  color: #FBBF24 !important;
+  background-color: rgba(251, 191, 36, 0.12) !important;
+  border: 1px solid rgba(251, 191, 36, 0.3) !important;
+}
+
+.badge-nuance-formal {
+  color: #A78BFA !important;
+  background-color: rgba(167, 139, 250, 0.12) !important;
+  border: 1px solid rgba(167, 139, 250, 0.3) !important;
+}
+
+.badge-nuance-slang {
+  color: #F87171 !important;
+  background-color: rgba(248, 113, 113, 0.12) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+}
+
+.badge-nuance-dated {
+  color: #9CA3AF !important;
+  background-color: rgba(156, 163, 175, 0.12) !important;
+  border: 1px solid rgba(156, 163, 175, 0.3) !important;
+}
+
+/* 4. OpenThesaurus Eş Anlamlılar & Kelime Ailesi */
+.synonym-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.synonym-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background-color: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: #A5B4FC;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.synonym-chip:hover {
+  background-color: rgba(99, 102, 241, 0.22);
+  border-color: #6366F1;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.synonym-chip.wortfamilie-chip {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #6EE7B7;
+}
+
+.synonym-chip.wortfamilie-chip:hover {
+  background-color: rgba(16, 185, 129, 0.22);
+  border-color: #10B981;
+  color: #FFFFFF;
+}
+
+/* 5. Rektion, Stammformen Şeridi & False Friend Notu */
+.badge-rektion {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background-color: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  color: #C4B5FD;
+}
+
+.verb-stammformen-ribbon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #60A5FA;
+  margin: 10px 0;
+  letter-spacing: 0.2px;
+}
+
+.false-friend-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #FDE68A;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 10px 0;
+}
+
+.false-friend-box .ff-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* 6. 4'lü SM-2 Buton Sistemi */
+.srs-buttons-row.srs-sm2-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 18px;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-srs-sm2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.15s ease, box-shadow 0.15s ease;
+  min-height: 58px;
+}
+
+.btn-srs-sm2:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.btn-srs-sm2 .srs-btn-time {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-bottom: 2px;
+  letter-spacing: 0.2px;
+}
+
+.btn-srs-sm2 .srs-btn-label {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+/* Tekrar (Again - 0): Arka plan rgba(239, 68, 68, 0.15), Kenarlık #EF4444, Metin #F87171 */
+.btn-srs-sm2.btn-srs-again {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border: 1.5px solid #EF4444 !important;
+  color: #F87171 !important;
+}
+
+/* Zor (Hard - 1): Arka plan rgba(245, 158, 11, 0.15), Kenarlık #F59E0B, Metin #FBBF24 */
+.btn-srs-sm2.btn-srs-hard {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  border: 1.5px solid #F59E0B !important;
+  color: #FBBF24 !important;
+}
+
+/* İyi (Good - 2): Arka plan rgba(59, 130, 246, 0.15), Kenarlık #3B82F6, Metin #60A5FA */
+.btn-srs-sm2.btn-srs-good {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border: 1.5px solid #3B82F6 !important;
+  color: #60A5FA !important;
+}
+
+/* Kolay (Easy - 3): Arka plan rgba(16, 185, 129, 0.15), Kenarlık #10B981, Metin #34D399 */
+.btn-srs-sm2.btn-srs-easy {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border: 1.5px solid #10B981 !important;
+  color: #34D399 !important;
+}
+
+/* 7. Kart Olgunluk Rozetleri (Maturity Badges) */
+.badge-maturity {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.maturity-new {
+  color: #60A5FA !important;
+  background-color: rgba(96, 165, 250, 0.12) !important;
+  border: 1px solid rgba(96, 165, 250, 0.3) !important;
+}
+
+.maturity-learning {
+  color: #FBBF24 !important;
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.maturity-young {
+  color: #34D399 !important;
+  background-color: rgba(52, 211, 153, 0.12) !important;
+  border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+.maturity-mature {
+  color: #A78BFA !important;
+  background-color: rgba(167, 139, 250, 0.12) !important;
+  border: 1px solid rgba(167, 139, 250, 0.3) !important;
+}
+
+/* 8. Çalışma Modu Seçici & Cloze (Boşluk Doldurma) Stilleri */
+.study-mode-toggle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px;
+  background: #171B26;
+  border: 1px solid #242B3A;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.study-mode-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.study-mode-toggle-btn.active {
+  background: var(--brand-blue);
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.fc-cloze-container {
+  margin: 16px 0;
+  padding: 18px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  text-align: center;
+}
+
+.fc-cloze-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.fc-cloze-badge-revealed {
+  color: #34D399;
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.fc-cloze-sentence {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #FFFFFF;
+  word-break: break-word;
+}
+
+.fc-cloze-blank {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 0 4px;
+  border-bottom: 2.5px dashed #38BDF8;
+  color: #38BDF8;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.fc-cloze-revealed-word {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 0 4px;
+  border-radius: 6px;
+  background: rgba(52, 211, 153, 0.18);
+  border: 1px solid #10B981;
+  color: #34D399;
+  font-weight: 800;
+}
+
+.fc-cloze-hint {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #9CA3AF;
+  font-style: italic;
+}

@@ -157,14 +157,14 @@ class WortCoachApp {
           regs.forEach((r) => r.update());
         });
       }
-      navigator.serviceWorker.register('./sw.js?v=2.9.8').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=2.9.9').then((reg) => reg.update()).catch(() => {});
     }
   }
 
-  // --- KULLANICI ÖZEL ANLAM DEPOSU (localStorage + OFFLINE_DICTIONARY KALICI ENTEGRASYONU) ---
+  // --- KULLANICI ÖZEL ANLAM DEPOSU (localStorage / IndexedDB customMeanings) ---
   getCustomMeaningsMap() {
     try {
-      const raw = localStorage.getItem('wm_custom_meanings_v1');
+      const raw = localStorage.getItem('customMeanings') || localStorage.getItem('wm_custom_meanings_v1');
       return raw ? JSON.parse(raw) : {};
     } catch (_) {
       return {};
@@ -178,7 +178,7 @@ class WortCoachApp {
     return Array.isArray(map[key]) ? map[key] : [];
   }
 
-  saveCustomMeaningForWord(word, meaning) {
+  async saveCustomMeaningForWord(word, meaning) {
     const key = (word || '').trim().toLowerCase();
     const cleanMeaning = (meaning || '').trim();
     if (!key || !cleanMeaning) return [];
@@ -190,7 +190,19 @@ class WortCoachApp {
     }
     map[key] = list;
     try {
+      localStorage.setItem('customMeanings', JSON.stringify(map));
       localStorage.setItem('wm_custom_meanings_v1', JSON.stringify(map));
+    } catch (_) {}
+
+    // İlgili kelime IndexedDB'de kart olarak kayıtlıysa customMeanings alanına ekle
+    try {
+      if (window.wmDB) {
+        const existingCard = await window.wmDB.getCardByWord(key);
+        if (existingCard) {
+          existingCard.customMeanings = list;
+          await window.wmDB.updateCard(existingCard);
+        }
+      }
     } catch (_) {}
 
     // Yerel sözlük verisine de kalıcı olarak ekle
@@ -998,16 +1010,41 @@ class WortCoachApp {
     // Reflexiv Badge
     const reflexivBadge = entry.isReflexive ? `<span class="badge-reflexiv">Reflexiv</span>` : '';
 
-    // Artikel Badge (İsimler için)
-    const articleBadge = canonicalArticle
-      ? `<span class="badge badge-${canonicalArticle.toLowerCase()}">${canonicalArticle.toUpperCase()}</span>`
-      : '';
+    // Evrensel Artikel Renk Kodlaması (der / die / das)
+    const articleStyle = window.getArticleStyle ? window.getArticleStyle(canonicalArticle) : null;
+    const articleBadge = articleStyle
+      ? articleStyle.badgeHtml
+      : (canonicalArticle ? `<span class="badge badge-${canonicalArticle.toLowerCase()}">${canonicalArticle.toUpperCase()}</span>` : '');
 
     const posBadge = `<span class="badge badge-pos-${pos}">${posLabels[pos] || 'Kelime'}</span>`;
 
     const pluralVal = entry.pluralForm || (nounInfo ? nounInfo.plural : '');
     const pluralBadge = isNoun && pluralVal
       ? `<span class="badge-regularity" style="font-size:0.78rem;">Çoğul: ${pluralVal}</span>`
+      : '';
+
+    // Açık Kaynak Veriden Otomatik Tag / Resmiyet / Nüans Okuma
+    const nuanceTags = window.detectGermanTags ? window.detectGermanTags(entry) : [];
+    const nuanceTagsHtml = nuanceTags.length > 0
+      ? `<div class="wdc-tags-row" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+          ${nuanceTags.map((t) => `<span class="badge-nuance ${t.className}" style="color:${t.color}; background-color:${t.bg}; border:1px solid ${t.border};">${t.label}</span>`).join('')}
+         </div>`
+      : `<div class="wdc-tags-row" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>`;
+
+    // Fiillerde Stammformen Şeridi (spricht · sprach · hat gesprochen)
+    const stammformenRibbon = (pos === 'VERB' && window.getStammformenRibbon)
+      ? window.getStammformenRibbon(entry)
+      : '';
+
+    // Fiil + Edat + Hal (Rektion) ve Karıştırılan Kelime Çiftleri (False Friends)
+    const grammarEnrichment = window.getGrammarEnrichment ? window.getGrammarEnrichment(cleanWord) : null;
+    const rektionBadgeHtml = grammarEnrichment
+      ? `<div style="margin-top:8px;"><span class="badge-rektion">${grammarEnrichment.badge}</span></div>`
+      : '';
+
+    const confusedPair = window.getConfusedWordPair ? window.getConfusedWordPair(cleanWord) : null;
+    const confusedBoxHtml = confusedPair
+      ? `<div class="false-friend-box"><span class="ff-icon">💡</span><span class="ff-text">${confusedPair.note}</span></div>`
       : '';
 
     const verbTable = pos === 'VERB' ? this.buildVerbTenseTableHTML(entry) : '';
@@ -1152,18 +1189,24 @@ class WortCoachApp {
           </div>
         </div>
 
+        ${nuanceTagsHtml}
+
         <div class="wdc-badges-subrow">
           ${posBadge}
           ${pluralBadge}
           ${reflexivBadge}
         </div>
 
+        ${stammformenRibbon}
+        ${rektionBadgeHtml}
+        ${confusedBoxHtml}
+
         ${verbTable}
 
         <!-- TÜRKÇE ANLAMLAR ÇİPLERİ + ÖZEL ANLAM EKLEME -->
         <div class="sec-row-header" style="margin-top: 14px;">
           <span>TÜRKÇE ANLAMLAR</span>
-          <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim yapabilirsiniz</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim yapabilirsiniz (en az 1)</span>
         </div>
         <div class="meaning-chips-container" id="inline-tr-chips">
           ${trChipsHtml}
@@ -1185,6 +1228,9 @@ class WortCoachApp {
             ${enChipsHtml}
           </div>
         ` : ''}
+
+        <!-- EŞ ANLAMLILAR (SYNONYME) & KELİME AİLESİ (OPENTHESAURUS) -->
+        <div id="inline-thesaurus-container" class="thesaurus-enrichment-box"></div>
 
         <!-- ÖRNEK CÜMLELER SEÇİMİ -->
         <div class="sec-row-header" style="margin-top: 14px;">
@@ -1259,9 +1305,70 @@ class WortCoachApp {
       });
     });
 
-    // Anlam Çiplerini Aç / Kapa (Multi-Select Toggle)
-    container.querySelectorAll('.meaning-chip').forEach((chip) => {
+    // OpenThesaurus Eş Anlamlılar ve Kelime Ailesi (Asenkron Yükleme & Tıklanabilir Chip)
+    if (window.fetchOpenThesaurus) {
+      window.fetchOpenThesaurus(cleanWord).then((data) => {
+        const thContainer = document.getElementById('inline-thesaurus-container');
+        if (!thContainer) return;
+        let thHtml = '';
+        if (data.synonyms && data.synonyms.length > 0) {
+          thHtml += `
+            <div class="sec-row-header" style="margin-top:10px;">
+              <span>EŞ ANLAMLILAR (SYNONYME)</span>
+              <span style="font-size:0.74rem; color:var(--text-muted);">Sözlükte aramak için tıklayın</span>
+            </div>
+            <div class="synonym-chips-container">
+              ${data.synonyms.map((s) => `<button type="button" class="synonym-chip" data-word="${s.replace(/"/g, '&quot;')}"><svg class="svg-icon" style="width:13px;height:13px;color:#818CF8;"><use href="#icon-search"></use></svg><span>${s}</span></button>`).join('')}
+            </div>
+          `;
+        }
+        if (data.wordFamily && data.wordFamily.length > 0) {
+          thHtml += `
+            <div class="sec-row-header" style="margin-top:10px;">
+              <span>KELİME AİLESİ (WORTFAMILIE)</span>
+            </div>
+            <div class="synonym-chips-container">
+              ${data.wordFamily.map((w) => `<button type="button" class="synonym-chip wortfamilie-chip" data-word="${w.replace(/"/g, '&quot;')}"><svg class="svg-icon" style="width:13px;height:13px;color:#34D399;"><use href="#icon-link"></use></svg><span>${w}</span></button>`).join('')}
+            </div>
+          `;
+        }
+        if (data.levels && data.levels.length > 0) {
+          const extraTags = window.detectGermanTags ? window.detectGermanTags({ thesaurusLevels: data.levels }) : [];
+          const tagsRow = container.querySelector('.wdc-tags-row');
+          if (tagsRow && extraTags.length > 0) {
+            extraTags.forEach((et) => {
+              if (!tagsRow.innerHTML.includes(et.label)) {
+                tagsRow.innerHTML += `<span class="badge-nuance ${et.className}" style="color:${et.color}; background-color:${et.bg}; border:1px solid ${et.border};">${et.label}</span>`;
+              }
+            });
+          }
+        }
+        thContainer.innerHTML = thHtml;
+        thContainer.querySelectorAll('.synonym-chip').forEach((chip) => {
+          chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetWord = chip.getAttribute('data-word');
+            if (targetWord) {
+              const searchInput = document.getElementById('search-input');
+              if (searchInput) searchInput.value = targetWord;
+              this.executeSearch(targetWord);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          });
+        });
+      }).catch(() => {});
+    }
+
+    // Anlam Çiplerini Aç / Kapa (Multi-Select Toggle — En az 1 anlam seçili kalmalı)
+    container.querySelectorAll('#inline-tr-chips .meaning-chip, #inline-en-chips .meaning-chip').forEach((chip) => {
       chip.addEventListener('click', () => {
+        const parentContainer = chip.parentElement;
+        const isSelected = chip.classList.contains('selected');
+        const selectedCount = parentContainer ? parentContainer.querySelectorAll('.meaning-chip.selected').length : 0;
+        if (isSelected && selectedCount <= 1) {
+          this.showToast('En az 1 anlam seçili kalmalıdır.');
+          return;
+        }
         chip.classList.toggle('selected');
       });
     });
@@ -1297,6 +1404,12 @@ class WortCoachApp {
         newChip.setAttribute('data-val', val);
         newChip.innerHTML = `<span class="chip-check-icon">✓</span><span>${val}</span>`;
         newChip.addEventListener('click', () => {
+          const isSel = newChip.classList.contains('selected');
+          const selCount = trChipsContainer ? trChipsContainer.querySelectorAll('.meaning-chip.selected').length : 0;
+          if (isSel && selCount <= 1) {
+            this.showToast('En az 1 anlam seçili kalmalıdır.');
+            return;
+          }
           newChip.classList.toggle('selected');
         });
         trChipsContainer?.insertBefore(newChip, addCustomBtn);
@@ -2716,6 +2829,17 @@ class WortCoachApp {
           }
           if (!trMeaning) trMeaning = c.meaningsEn || 'Anlam belirtilmedi';
 
+          const artStyle = window.getArticleStyle ? window.getArticleStyle(c.article) : null;
+          const artBadge = artStyle
+            ? artStyle.badgeHtml
+            : (c.article ? `<span class="badge badge-${c.article}">${c.article}</span>` : '');
+
+          const maturity = window.getCardMaturity ? window.getCardMaturity(c) : null;
+          const maturityBadge = maturity ? maturity.badgeHtml : '';
+
+          const enrichment = window.getGrammarEnrichment ? window.getGrammarEnrichment(c.germanWord) : null;
+          const rektionBadge = enrichment ? `<span class="badge-rektion" style="font-size:0.7rem; padding:2px 6px;">${enrichment.badge}</span>` : '';
+
           return `
         <div class="deck-item-card" data-card-id="${c.id}" style="margin-bottom:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px;" title="Düzenlemek için tıklayın">
           <div style="flex:1; min-width:0; padding-right:4px;">
@@ -2724,9 +2848,11 @@ class WortCoachApp {
                 <svg class="flag-svg"><use href="#flag-de"></use></svg>
                 <span>DE</span>
               </span>
-              ${c.article ? `<span class="badge badge-${c.article}">${c.article}</span>` : ''}
+              ${artBadge}
               <strong style="font-size:1.05rem; color:var(--text-primary); word-break:break-word;">${c.germanWord}</strong>
               <span class="badge badge-pos-${c.partOfSpeech}">${c.partOfSpeech}</span>
+              ${maturityBadge}
+              ${rektionBadge}
               ${c.isReflexive ? `<span class="badge-reflexiv">Reflexiv</span>` : ''}
             </div>
             <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; word-break:break-word;">${trMeaning}</div>
