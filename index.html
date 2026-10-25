@@ -15,8 +15,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.0.0" />
-  <link rel="stylesheet" href="css/components.css?v=3.0.0" />
+  <link rel="stylesheet" href="css/app.css?v=3.0.1" />
+  <link rel="stylesheet" href="css/components.css?v=3.0.1" />
+  <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -412,7 +415,7 @@
                 </div>
                 <div>
                   <div style="font-size:1.02rem; font-weight:800; color:var(--text-primary);">Kelime Oyunları</div>
-                  <div style="font-size:0.80rem; color:var(--text-secondary); margin-top:2px;">Kablo eşleştirme, artikel testleri ve interaktif quizler ➔</div>
+                  <div style="font-size:0.80rem; color:var(--text-secondary); margin-top:2px;">Kablo eşleştirme, artikel testleri ve interaktif quizler </div>
                 </div>
               </div>
               <span class="featured-badge" style="position:static;">OYNA</span>
@@ -461,29 +464,16 @@
       </section>
 
       <!-- ====================================================================
-           TAB 2: ÇEVİRİ (tab-translate) — Screenshot 1 Parity
+           TAB 2: ÇEVİRİ (tab-translate)
            ==================================================================== -->
       <section id="tab-translate" class="tab-view">
         <div class="translator-header-row">
           <div>
-            <h1 class="page-title">Çeviri &amp; Okuyucu</h1>
-            <p class="page-subtitle">DeepL Destekli Çeviri &amp; Sesli Akıllı Metin Okuyucu</p>
+            <h1 class="page-title">Çeviri</h1>
+            <p class="page-subtitle">DeepL Destekli Anlık Çeviri &amp; Sesli Telaffuz</p>
           </div>
         </div>
 
-        <!-- Görünüm Seçici: [ 🌐 Hızlı Çeviri ] | [ 📖 Akıllı Okuyucu ] -->
-        <div class="subview-toggle-row" style="margin-bottom: 16px;">
-          <button type="button" class="subview-toggle-btn active" id="btn-subview-quick-trans">
-            <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-translate"></use></svg>
-            <span>Hızlı Çeviri</span>
-          </button>
-          <button type="button" class="subview-toggle-btn" id="btn-subview-smart-reader">
-            <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-cards"></use></svg>
-            <span>Akıllı Okuyucu</span>
-          </button>
-        </div>
-
-        <!-- ================= GÖRÜNÜM 1: HIZLI ÇEVİRİ PANELİ ================= -->
         <div id="panel-quick-translate">
           <!-- Dil Seçim Segment Barı: [TR] [DE] [EN] <-> [TR] [DE] -->
           <div class="lang-toggle-bar">
@@ -564,65 +554,114 @@
             <div id="trans-grammar-hint" class="trans-grammar-pill hidden"></div>
           </div>
         </div>
+      </section>
 
-        <!-- ================= GÖRÜNÜM 2: AKILLI OKUYUCU PANELİ ================= -->
-        <div id="panel-smart-reader" class="hidden">
-          <div class="smart-reader-container">
-            <!-- Okuyucu Üst Araç Çubuğu -->
-            <div class="reader-toolbar">
-              <div class="reader-btn-group">
-                <button type="button" id="btn-reader-play-all" class="reader-btn-primary" title="Metni Baştan Oku">
-                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-volume"></use></svg>
-                  <span>▶ Metni Baştan Oku</span>
-                </button>
-                <button type="button" id="btn-reader-stop" class="reader-btn-danger" title="Sesli Okumayı Durdur">
-                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-close"></use></svg>
-                  <span>⏹ Durdur</span>
-                </button>
-              </div>
+      <!-- ====================================================================
+           TAB: AKILLI OKUYUCU (tab-reader) — Tam Ekran & Belge İçe Aktarımı
+           ==================================================================== -->
+      <section id="tab-reader" class="tab-view">
+        <div class="translator-header-row">
+          <div>
+            <h1 class="page-title">Akıllı Okuyucu</h1>
+            <p class="page-subtitle">Metin, PDF ve DOCX Ayrıştırıcı &amp; Odaklı Okuma Modu</p>
+          </div>
+        </div>
 
-              <div class="reader-btn-group">
-                <select id="reader-speed-select" class="reader-select" title="Okuma Hızı">
-                  <option value="0.75">Hız: 0.75x</option>
-                  <option value="0.90" selected>Hız: 0.90x</option>
-                  <option value="1.0">Hız: 1.0x</option>
-                  <option value="1.15">Hız: 1.15x</option>
-                </select>
-
-                <select id="reader-sample-select" class="reader-select" title="Hazır Örnek Metinler">
-                  <option value="">-- Örnek Metin Yükle --</option>
-                  <option value="sample_a1">Der Alltag in Berlin (A1)</option>
-                  <option value="sample_a2">Ein Wochenende in München (A2)</option>
-                  <option value="sample_b1">Klimawandel und Zukunft (B1)</option>
-                  <option value="sample_b2">Berufliches Bewerbungsgespräch (B2)</option>
-                </select>
-
-                <button type="button" id="btn-reader-clear" class="icon-btn-ghost" title="Metni Temizle">
-                  <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-trash"></use></svg>
-                </button>
-              </div>
+        <!-- GÖRÜNÜM 1: METİN GİRİŞİ & DOSYA YÜKLEME PANELİ -->
+        <div id="reader-setup-pane" class="reader-setup-pane">
+          <!-- Dosya İçe Aktarım Kartı (PDF, DOCX, TXT) -->
+          <div class="reader-upload-card" id="reader-drop-zone">
+            <input type="file" id="reader-file-input" accept=".pdf,.docx,.txt" class="hidden" />
+            <div class="upload-icon-circle">
+              <svg class="svg-icon"><use href="#icon-download"></use></svg>
             </div>
-
-            <!-- Metin Giriş Alanı -->
-            <div class="reader-text-input-wrap">
-              <textarea
-                id="reader-input-text"
-                class="reader-textarea"
-                placeholder="Almanca bir metin, haber veya hikaye yapıştırın. Kelimelere tıklayarak anında sözlük çözümlemesi yapabilir ve seçtiğiniz yerden itibaren sesli dinleyebilirsiniz..."
-              ></textarea>
-              <div class="reader-parse-btn-row">
-                <button type="button" id="btn-reader-parse" class="btn-primary-compact">
-                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-check"></use></svg>
-                  <span>Metni Ayrıştır ve Oku</span>
-                </button>
-              </div>
+            <div class="upload-text-group">
+              <div class="upload-main-text">Belge Yükle (PDF, DOCX, TXT)</div>
+              <div class="upload-sub-text">Dosyayı buraya sürükleyin veya cihazınızdan seçin</div>
             </div>
+            <button type="button" class="btn-select-file" id="btn-trigger-file-input">
+              <span>Dosya Seç</span>
+            </button>
+          </div>
+          <div id="reader-upload-status" class="reader-upload-status hidden"></div>
 
-            <!-- İnteraktif Okuma Alanı (Ayrıştırılmış Tıklanabilir Kelimeler) -->
-            <div id="reader-display-pane" class="reader-display-pane">
-              <span style="color:var(--text-muted); font-size:0.92rem; font-style:italic;">
-                Yukarıdaki alana Almanca bir metin yazıp "Metni Ayrıştır ve Oku" butonuna basın veya hazır örnek metinlerden birini seçin.
-              </span>
+          <!-- Metin Giriş Kartı -->
+          <div class="reader-text-input-wrap">
+            <textarea
+              id="reader-input-text"
+              class="reader-textarea"
+              placeholder="Almanca bir metin, haber veya makale yapıştırın veya yukarıdan PDF/DOCX belgesi yükleyin..."
+              rows="6"
+            ></textarea>
+            <div class="reader-parse-btn-row">
+              <select id="reader-sample-select" class="reader-select" title="Hazır Örnek Metinler">
+                <option value="">Örnek Metin Seçin...</option>
+                <option value="sample_a1">Der Alltag in Berlin (A1)</option>
+                <option value="sample_a2">Ein Wochenende in München (A2)</option>
+                <option value="sample_b1">Klimawandel und Zukunft (B1)</option>
+                <option value="sample_b2">Berufliches Bewerbungsgespräch (B2)</option>
+              </select>
+              <button type="button" id="btn-reader-clear" class="btn-secondary-compact" title="Temizle">
+                <span>Temizle</span>
+              </button>
+              <button type="button" id="btn-reader-parse" class="btn-primary-compact">
+                <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-check"></use></svg>
+                <span>Metni Ayrıştır ve Oku</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- GÖRÜNÜM 2: TAM EKRAN OKUMA SAYFASI (FULLSCREEN READING VIEW) -->
+        <div id="reader-fullscreen-view" class="reader-fullscreen-view hidden">
+          <div class="reader-fs-header">
+            <button type="button" id="btn-reader-back-setup" class="btn-fs-back" title="Metin Girişine Dön">
+              <svg class="svg-icon"><use href="#icon-arrow-right" style="transform: rotate(180deg);"></use></svg>
+              <span>Metin Girişi</span>
+            </button>
+
+            <div class="reader-fs-controls">
+              <div class="reader-font-controls">
+                <button type="button" id="btn-reader-font-dec" class="btn-font-size" title="Yazıyı Küçült">A-</button>
+                <button type="button" id="btn-reader-font-inc" class="btn-font-size" title="Yazıyı Büyüt">A+</button>
+              </div>
+
+              <select id="reader-fs-speed-select" class="reader-select-compact" title="Okuma Hızı">
+                <option value="0.75">0.75x</option>
+                <option value="0.90" selected>0.90x</option>
+                <option value="1.0">1.0x</option>
+                <option value="1.15">1.15x</option>
+              </select>
+
+              <button type="button" id="btn-reader-play-all" class="btn-fs-action btn-fs-play" title="Metni Baştan Dinle">
+                <svg class="svg-icon"><use href="#icon-volume"></use></svg>
+                <span>Dinle</span>
+              </button>
+              <button type="button" id="btn-reader-stop" class="btn-fs-action btn-fs-stop" title="Durdur">
+                <svg class="svg-icon"><use href="#icon-close"></use></svg>
+                <span>Durdur</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Okuma Tuvali -->
+          <div class="reader-fs-body">
+            <div id="reader-display-pane" class="reader-fs-canvas"></div>
+          </div>
+
+          <!-- Çoklu Kelime / Kalıp Seçim Barı (Floating Action Bar) -->
+          <div id="reader-selection-bar" class="reader-selection-bar hidden">
+            <div class="rsb-info">
+              <span class="rsb-badge">Seçilen Kalıp / Kelime:</span>
+              <span id="rsb-selected-text" class="rsb-text">...</span>
+            </div>
+            <div class="rsb-actions">
+              <button type="button" id="btn-rsb-lookup" class="btn-rsb-primary">
+                <span>Anlamını Gör</span>
+              </button>
+              <button type="button" id="btn-rsb-clear" class="btn-rsb-ghost" title="Seçimi Temizle">
+                <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-close"></use></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -747,10 +786,10 @@
 
                   <!-- Edat & Hal (Rektion) Rozeti & False Friend Notu -->
                   <div id="fc-front-rektion-box" class="fc-rektion-box hidden" style="margin-top:10px; display:flex; justify-content:center; gap:8px;">
-                    <span id="fc-front-rektion-badge" class="badge-rektion">🔗 -</span>
+                    <span id="fc-front-rektion-badge" class="badge-rektion">-</span>
                   </div>
                   <div id="fc-front-false-friend-box" class="false-friend-box hidden">
-                    <span class="ff-icon">💡</span>
+                    <span class="ff-icon"></span>
                     <span id="fc-front-false-friend-text" class="ff-text">-</span>
                   </div>
 
@@ -828,7 +867,7 @@
 
                 <!-- CLOZE ÇÖZÜMÜ -->
                 <div id="fc-back-cloze-container" class="fc-cloze-container hidden">
-                  <div class="fc-cloze-badge fc-cloze-badge-revealed">CÜMLE TAMAMLANDI ✓</div>
+                  <div class="fc-cloze-badge fc-cloze-badge-revealed">CÜMLE TAMAMLANDI </div>
                   <div id="fc-back-cloze-sentence" class="fc-cloze-sentence">---</div>
                 </div>
 
@@ -879,7 +918,7 @@
 
         <!-- TEKRAR EDİLECEK KART YOK (EMPTY STATE) -->
         <div id="study-empty-state" class="study-empty-state hidden" style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:var(--radius-xl); border:1px solid var(--border-subtle); margin-top:16px;">
-          <div style="font-size:3rem; margin-bottom:12px;">🎉</div>
+          <div style="font-size:3rem; margin-bottom:12px;"></div>
           <h3 style="font-size:1.25rem; font-weight:900; color:var(--text-primary); margin:0 0 8px;">Tebrikler! Tekrar Edilecek Kart Yok</h3>
           <p style="font-size:0.88rem; color:var(--text-secondary); max-width:320px; margin:0 auto 20px;">Bugün için planlanan tüm aralıklı tekrarları tamamladınız veya henüz destenizde kart bulunmuyor.</p>
           <div style="display:flex; flex-direction:column; gap:10px; max-width:260px; margin:0 auto;">
@@ -1029,7 +1068,7 @@
         <h1 class="page-title-blue">Kelime Desteleri</h1>
         <p class="page-subtitle">Kelimelerinizi tematik desteler halinde organize edin</p>
 
-        <!-- Eylem Butonları: [+ Yeni Deste] [✨ Hazır Desteler] [📥 İçe Aktar] -->
+        <!-- Eylem Butonları: [+ Yeni Deste] [ Hazır Desteler] [İçe Aktar] -->
         <div class="pill-action-row">
           <button class="pill-action-btn pill-action-btn-primary" id="btn-create-deck-top" style="background:var(--brand-blue); color:#fff; border-color:var(--brand-blue);">
             <svg class="svg-icon" style="color:#fff;"><use href="#icon-plus"></use></svg>
@@ -1123,12 +1162,12 @@
         <span class="nav-label">Çeviri</span>
       </button>
 
-      <!-- 3. Oyunlar (Gamepad İkonu) -->
-      <button class="nav-item" data-target="tab-games" aria-label="Oyunlar">
+      <!-- 3. Okuyucu (Okuma İkonu) -->
+      <button class="nav-item" data-target="tab-reader" aria-label="Okuyucu">
         <div class="nav-pill">
-          <svg class="svg-icon"><use href="#nav-icon-games"></use></svg>
+          <svg class="svg-icon"><use href="#icon-bookmark"></use></svg>
         </div>
-        <span class="nav-label">Oyunlar</span>
+        <span class="nav-label">Okuyucu</span>
       </button>
 
       <!-- 4. Desteler (Deste İkonu) -->
@@ -1145,6 +1184,14 @@
           <svg class="svg-icon"><use href="#nav-icon-cards"></use></svg>
         </div>
         <span class="nav-label">Kelimeler</span>
+      </button>
+
+      <!-- 6. Oyunlar (Gamepad İkonu) -->
+      <button class="nav-item" data-target="tab-games" aria-label="Oyunlar">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-games"></use></svg>
+        </div>
+        <span class="nav-label">Oyunlar</span>
       </button>
     </nav>
   </div>
@@ -1445,7 +1492,7 @@
             <span id="game-quiz-streak-count">0 Seri</span>
           </div>
           <div id="game-score-badge" class="game-score-badge">
-            <span>⭐</span>
+            <span></span>
             <span id="game-quiz-score-val">0</span>
           </div>
           <div id="game-timer-badge" class="game-timer-badge hidden">
@@ -1564,7 +1611,7 @@
           <button type="button" class="time-pill" data-time="180">3 dk</button>
         </div>
         <div style="font-size:0.74rem; color:var(--text-muted); margin-top:8px; display:flex; align-items:center; gap:4px;">
-          <span>🔥</span>
+          <span></span>
           <span>Doğru cevaplar +100P, seri kombolar x2.5 kata kadar katlar!</span>
         </div>
       </div>
@@ -1621,7 +1668,7 @@
           <span>Yeniden Karıştır</span>
         </button>
         <button type="button" id="btn-cable-next-round" class="btn-primary-compact hidden" style="border-radius:var(--radius-md); padding:10px 18px;">
-          <span>Sonraki Tur ➔</span>
+          <span>Sonraki Tur </span>
         </button>
       </div>
     </div>
@@ -1660,7 +1707,7 @@
         <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <label for="select-settings-phonetic-engine" style="font-size:0.86rem; font-weight:800; color:var(--text-primary);">Fonetik Motoru (Telaffuz Değerlendirme)</label>
-            <span id="azure-speech-status" style="font-size:0.72rem; color:#10B981; font-weight:700;">Aktif ✓</span>
+            <span id="azure-speech-status" style="font-size:0.72rem; color:#10B981; font-weight:700;">Aktif </span>
           </div>
           <div style="margin-bottom:10px;">
             <select id="select-settings-phonetic-engine" class="form-control" style="width:100%; font-size:0.83rem; font-weight:700;">
@@ -1722,15 +1769,15 @@
         <div class="pron-engine-selector-top">
           <label for="select-pron-phonetic-engine" class="pron-engine-label">FONETİK MOTORU:</label>
           <select id="select-pron-phonetic-engine" class="pron-engine-select">
-            <option value="HYBRID_ENSEMBLE">⚡ Hibrit Ensemble (MFA + Wav2Vec2 + DSP)</option>
-            <option value="WAV2VEC2_CTC">🧠 Wav2Vec2 Neural CTC (ONNX)</option>
-            <option value="MFA_FORCED_ALIGN">🎯 Montreal Forced Aligner (MFA Viterbi)</option>
-            <option value="AZURE_CLOUD">☁️ Microsoft Azure Cloud GOP</option>
+            <option value="HYBRID_ENSEMBLE">Hibrit Ensemble (MFA + Wav2Vec2 + DSP)</option>
+            <option value="WAV2VEC2_CTC">Wav2Vec2 Neural CTC (ONNX)</option>
+            <option value="MFA_FORCED_ALIGN">Montreal Forced Aligner (MFA Viterbi)</option>
+            <option value="AZURE_CLOUD">Microsoft Azure Cloud GOP</option>
           </select>
         </div>
         <div id="pron-engine-desc-row" class="pron-engine-desc-row">
           <span id="pron-engine-desc-text">Hece ve fonem bazlı akustik doğruluk analizi</span>
-          <button type="button" id="btn-pron-preload-wav2vec2" class="pron-neural-load-btn hidden">🧠 Modeli Yükle</button>
+          <button type="button" id="btn-pron-preload-wav2vec2" class="pron-neural-load-btn hidden">Modeli Yükle</button>
         </div>
       </div>
 
@@ -1875,11 +1922,11 @@
       <div class="reader-audio-actions">
         <button type="button" id="btn-read-from-selected-word" class="btn-read-from-word" title="Bu kelimeden itibaren sesli oku">
           <svg class="svg-icon" style="width:17px; height:17px;"><use href="#icon-volume"></use></svg>
-          <span>▶ Bu Kelimeden İtibaren Oku</span>
+          <span>Bu Kelimeden İtibaren Oku</span>
         </button>
         <button type="button" id="btn-stop-from-selected-word" class="btn-stop-reader" title="Sesli okumayı durdur">
           <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-close"></use></svg>
-          <span>⏹ Durdur</span>
+          <span>Durdur</span>
         </button>
         <button type="button" id="btn-reader-word-tts" class="icon-btn-ghost" title="Yalnızca Bu Kelimeyi Dinle">
           <svg class="svg-icon" style="color:var(--brand-blue); width:20px; height:20px;"><use href="#icon-volume"></use></svg>

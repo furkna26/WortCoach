@@ -4384,3 +4384,356 @@
   background: #EF4444;
   color: #FFFFFF;
 }
+
+/* ==========================================================================
+   Akıllı Okuyucu (Smart Reader) Tam Ekran ve Dosya Yükleme Stilleri
+   ========================================================================== */
+.reader-setup-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.reader-upload-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 18px;
+  background: #111827;
+  border: 1.5px dashed #2D3748;
+  border-radius: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reader-upload-card:hover,
+.reader-upload-card.dragover {
+  border-color: #3B82F6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.upload-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #60A5FA;
+}
+
+.upload-icon-circle .svg-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.upload-text-group .upload-main-text {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #F3F4F6;
+}
+
+.upload-text-group .upload-sub-text {
+  font-size: 0.8rem;
+  color: #9CA3AF;
+  margin-top: 3px;
+}
+
+.btn-select-file {
+  padding: 7px 18px;
+  background: rgba(59, 130, 246, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60A5FA;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-select-file:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.reader-upload-status {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #93C5FD;
+}
+
+/* Tam Ekran Okuma Sayfası */
+.reader-fullscreen-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: calc(100vh - 140px);
+}
+
+.reader-fs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  background: #111827;
+  border: 1px solid #242B3A;
+  border-radius: 14px;
+}
+
+.btn-fs-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #1B202C;
+  border: 1px solid #2D3748;
+  color: #9CA3AF;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-fs-back:hover {
+  color: #FFFFFF;
+  border-color: #4B5563;
+}
+
+.btn-fs-back .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.reader-fs-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reader-font-controls {
+  display: inline-flex;
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.btn-font-size {
+  padding: 5px 10px;
+  background: #1B202C;
+  border: none;
+  color: #E5E7EB;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-font-size:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.reader-select-compact {
+  padding: 5px 8px;
+  background: #1B202C;
+  border: 1px solid #2D3748;
+  border-radius: 8px;
+  color: #E5E7EB;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.btn-fs-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.btn-fs-play {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.btn-fs-play:hover {
+  background: #1D4ED8;
+}
+
+.btn-fs-stop {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #F87171;
+}
+
+.btn-fs-stop:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.reader-fs-body {
+  flex: 1;
+  background: #0E131F;
+  border: 1px solid #1E2536;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.reader-fs-canvas {
+  font-size: 1.15rem;
+  line-height: 2.1;
+  color: #F3F4F6;
+  max-width: 720px;
+  margin: 0 auto;
+  user-select: text;
+  transition: font-size 0.15s ease;
+}
+
+.reader-fs-canvas .reader-token {
+  display: inline-block;
+  padding: 2px 4px;
+  margin: 1px 1px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.reader-fs-canvas .reader-token:hover {
+  background: rgba(59, 130, 246, 0.18);
+  color: #93C5FD;
+}
+
+.reader-fs-canvas .reader-token.selected {
+  background: rgba(59, 130, 246, 0.3);
+  color: #FFFFFF;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1.5px #3B82F6;
+  font-weight: 700;
+}
+
+.reader-fs-canvas .reader-token.speaking {
+  background: rgba(251, 191, 36, 0.3);
+  color: #FBBF24;
+  border-bottom: 2px solid #F59E0B;
+}
+
+/* Yüzen Çoklu Kelime / Kalıp Barı */
+.reader-selection-bar {
+  position: fixed;
+  bottom: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 560px;
+  background: rgba(19, 24, 37, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid #3B82F6;
+  border-radius: 16px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 60;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(59, 130, 246, 0.2);
+  animation: slideUpSelection 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpSelection {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 15px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.rsb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rsb-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rsb-text {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #60A5FA;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rsb-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-rsb-primary {
+  padding: 7px 14px;
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.btn-rsb-primary:hover {
+  background: #1D4ED8;
+}
+
+.btn-rsb-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-rsb-ghost:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #F87171;
+}
