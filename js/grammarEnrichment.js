@@ -48,12 +48,72 @@ function getArticleStyle(article) {
 }
 
 // 2. Açık Kaynak Veriden Otomatik Tag / Resmiyet / Nüans Okuma
+const KNOWN_GERMAN_REGISTERS = {
+  // Colloquial / Umgangssprachlich (#FBBF24)
+  colloquial: new Set([
+    'kumpel', 'kohle', 'gucken', 'kucken', 'klamotten', 'quatschen', 'pennen', 'zocken', 
+    'kneipe', 'bulle', 'kater', 'karre', 'typ', 'tussi', 'macke', 'kriegen', 'klappen', 
+    'hauen', 'abhauen', 'schnappen', 'meckern', 'bock', 'kiste', 'schotter', 'klette', 
+    'mampfen', 'versemmeln', 'futtern', 'verpeilt', 'verpeilen', 'bechern', 'labern', 
+    'glotzen', 'verpissen', 'schnallen', 'schnacken', 'latschen', 'flöten', 'abkratzen',
+    'chillen', 'assi', 'penner', 'schiss', 'verdammt', 'mist', 'kohlen', 'knete', 'asozial',
+    'reinhauen', 'quasseln', 'verbaseln', 'pleite', 'kaputtmachen', 'zoff', 'krach', 'schlau',
+    'durchdrehen', 'blöd', 'dusselig', 'dusslig', 'beknackt', 'verrückt', 'stinkig', 'schick'
+  ]),
+  // Elevated / Gehoben / Akademisch (#A78BFA)
+  elevated: new Set([
+    'antlitz', 'speise', 'verweilen', 'gattin', 'gatte', 'odem', 'hain', 'währen', 
+    'schreiten', 'vernehmen', 'ergötzen', 'preisen', 'darreichen', 'zuteil', 'feilbieten', 
+    'genesen', 'ehedem', 'anheimgestellt', 'bedenken', 'erquicken', 'labsal', 'wonne', 
+    'trachten', 'wohlwollen', 'ersuchen', 'residieren', 'verheeren', 'bekunden', 'gebaren',
+    'obliegen', 'gemahlin', 'gemahl', 'dünken', 'frohlocken', 'kredenzen', 'verwehren',
+    'scheiden', 'weilen', 'erdenbürger', 'huldigen', 'gemach', 'forschend', 'erkiesen',
+    'erquicken', 'frohsinn', 'angestammt', 'zeitigen', 'beflissen', 'kühn', 'mannigfaltig'
+  ]),
+  // Slang / Jugendsprache (#F87171)
+  slang: new Set([
+    'cringe', 'lost', 'geil', 'krass', 'assig', 'vollpfosten', 'vallah', 'digga', 'digger',
+    'bro', 'sus', 'smash', 'dummkopf', 'dissen', 'abturn', 'abfuck', 'abfucken', 'cheaten',
+    'gönnen', 'ehrenmann', 'alman', 'sheesh', 'yolo', 'swag', 'noob', 'cringy', 'lit', 'hype'
+  ]),
+  // Dated / Archaic / Veraltet (#9CA3AF)
+  dated: new Set([
+    'sintemalen', 'weiland', 'muhme', 'oheim', 'fernerhin', 'vormals', 'ehedem', 'bazille', 
+    'gulden', 'base', 'jungfer', 'telemann', 'zeisig', 'anheimfallen', 'allenthalben', 
+    'derohalben', 'mithin', 'dergestalt', 'alldieweil', 'behende', 'brunst'
+  ])
+};
+
 function detectGermanTags(entry) {
   if (!entry) return [];
   const foundTags = [];
-  const tagsPool = [];
+  const addedKeys = new Set();
 
-  // Çeşitli doğrulanmış meta veri kaynaklarından etiketleri topla (asla ham wikitext ekleme!)
+  const addTag = (key, label, color, bg, border, className) => {
+    if (addedKeys.has(key)) return;
+    addedKeys.add(key);
+    foundTags.push({ key, label, color, bg, border, className });
+  };
+
+  // 1. Kelime kökünden / başlığından yerel sözlük tespiti (0ms anında tespit)
+  const rawWord = (typeof entry === 'string' ? entry : (entry.germanWord || entry.word || '')).trim().toLowerCase().replace(/^(der|die|das)\s+/i, '');
+  if (rawWord) {
+    if (KNOWN_GERMAN_REGISTERS.slang.has(rawWord)) {
+      addTag('slang', 'Slang / Sokak Dili', '#F87171', 'rgba(248, 113, 113, 0.12)', 'rgba(248, 113, 113, 0.3)', 'badge-nuance-slang');
+    }
+    if (KNOWN_GERMAN_REGISTERS.elevated.has(rawWord)) {
+      addTag('elevated', 'Resmi / Akademik (Gehoben)', '#A78BFA', 'rgba(167, 139, 250, 0.12)', 'rgba(167, 139, 250, 0.3)', 'badge-nuance-formal');
+    }
+    if (KNOWN_GERMAN_REGISTERS.colloquial.has(rawWord)) {
+      addTag('colloquial', 'Günlük Dil (Umgangssprachlich)', '#FBBF24', 'rgba(251, 191, 36, 0.12)', 'rgba(251, 191, 36, 0.3)', 'badge-nuance-colloquial');
+    }
+    if (KNOWN_GERMAN_REGISTERS.dated.has(rawWord)) {
+      addTag('dated', 'Eskimiş (Veraltet)', '#9CA3AF', 'rgba(156, 163, 175, 0.12)', 'rgba(156, 163, 175, 0.3)', 'badge-nuance-dated');
+    }
+  }
+
+  // 2. Çeşitli doğrulanmış meta veri kaynaklarından etiketleri topla
+  const tagsPool = [];
   if (Array.isArray(entry.tags)) tagsPool.push(...entry.tags);
   if (typeof entry.tags === 'string') tagsPool.push(...entry.tags.split(/[,;\s]+/));
   if (Array.isArray(entry.raw_tags)) {
@@ -67,58 +127,23 @@ function detectGermanTags(entry) {
   if (Array.isArray(entry.thesaurusLevels)) tagsPool.push(...entry.thesaurusLevels);
 
   const rawJoined = tagsPool.join(' ').toLowerCase();
-  if (!rawJoined.trim()) return [];
-
-  // Slang / Jugendsprache / Vulgar (Mercan #F87171)
-  const isSlang = /\b(slang|jugendsprache|vulgär|vulgar|schimpfwort|derb|abwertend)\b/.test(rawJoined);
-  if (isSlang) {
-    foundTags.push({
-      key: 'slang',
-      label: 'Slang / Sokak Dili',
-      color: '#F87171',
-      bg: 'rgba(248, 113, 113, 0.12)',
-      border: 'rgba(248, 113, 113, 0.3)',
-      className: 'badge-nuance-slang'
-    });
-  }
-
-  // Elevated / Gehoben / Formal (Mor/İndigo #A78BFA)
-  const isGehoben = /\b(elevated|gehoben|bildungssprachlich|dichterisch|literarisch|akademisch)\b/.test(rawJoined);
-  if (isGehoben && !isSlang) {
-    foundTags.push({
-      key: 'elevated',
-      label: 'Resmi / Akademik (Gehoben)',
-      color: '#A78BFA',
-      bg: 'rgba(167, 139, 250, 0.12)',
-      border: 'rgba(167, 139, 250, 0.3)',
-      className: 'badge-nuance-formal'
-    });
-  }
-
-  // Colloquial / Umgangssprachlich (Kehribar #FBBF24)
-  const isColloquial = /\b(colloquial|umgangssprachlich|ugs|familiär|alltagssprache)\b/.test(rawJoined);
-  if (isColloquial && !isSlang && !isGehoben) {
-    foundTags.push({
-      key: 'colloquial',
-      label: 'Günlük Dil (Umgangssprachlich)',
-      color: '#FBBF24',
-      bg: 'rgba(251, 191, 36, 0.12)',
-      border: 'rgba(251, 191, 36, 0.3)',
-      className: 'badge-nuance-colloquial'
-    });
-  }
-
-  // Dated / Archaic / Veraltet (Gri #9CA3AF)
-  const isDated = /\b(dated|archaic|veraltet|veraltend|altmodisch|historisch)\b/.test(rawJoined);
-  if (isDated) {
-    foundTags.push({
-      key: 'dated',
-      label: 'Eskimiş (Veraltet)',
-      color: '#9CA3AF',
-      bg: 'rgba(156, 163, 175, 0.12)',
-      border: 'rgba(156, 163, 175, 0.3)',
-      className: 'badge-nuance-dated'
-    });
+  if (rawJoined.trim()) {
+    // Slang / Jugendsprache / Vulgar (Mercan #F87171)
+    if (/\b(slang|jugendsprache|vulgär|vulgar|schimpfwort|derb|abwertend)\b/.test(rawJoined)) {
+      addTag('slang', 'Slang / Sokak Dili', '#F87171', 'rgba(248, 113, 113, 0.12)', 'rgba(248, 113, 113, 0.3)', 'badge-nuance-slang');
+    }
+    // Elevated / Gehoben / Formal (Mor/İndigo #A78BFA)
+    if (/\b(elevated|gehoben|bildungssprachlich|dichterisch|literarisch|akademisch)\b/.test(rawJoined)) {
+      addTag('elevated', 'Resmi / Akademik (Gehoben)', '#A78BFA', 'rgba(167, 139, 250, 0.12)', 'rgba(167, 139, 250, 0.3)', 'badge-nuance-formal');
+    }
+    // Colloquial / Umgangssprachlich (Kehribar #FBBF24)
+    if (/\b(colloquial|umgangssprachlich|ugs|familiär|alltagssprache)\b/.test(rawJoined)) {
+      addTag('colloquial', 'Günlük Dil (Umgangssprachlich)', '#FBBF24', 'rgba(251, 191, 36, 0.12)', 'rgba(251, 191, 36, 0.3)', 'badge-nuance-colloquial');
+    }
+    // Dated / Archaic / Veraltet (Gri #9CA3AF)
+    if (/\b(dated|archaic|veraltet|veraltend|altmodisch|historisch)\b/.test(rawJoined)) {
+      addTag('dated', 'Eskimiş (Veraltet)', '#9CA3AF', 'rgba(156, 163, 175, 0.12)', 'rgba(156, 163, 175, 0.3)', 'badge-nuance-dated');
+    }
   }
 
   return foundTags;
@@ -157,12 +182,19 @@ async function fetchOpenThesaurus(word, signal) {
 
     if (Array.isArray(data.synsets)) {
       for (const synset of data.synsets) {
+        if (Array.isArray(synset.categories)) {
+          for (const cat of synset.categories) {
+            if (cat && typeof cat.name === 'string') {
+              levelsSet.add(cat.name);
+            }
+          }
+        }
         if (Array.isArray(synset.terms)) {
           for (const t of synset.terms) {
             const rawTerm = (t.term || '').trim();
             const cleanTerm = rawTerm.replace(/^\(.*?\)\s*/, '').replace(/\s*\(.*?\)$/, '').trim();
-            // YALNIZCA aranan kelimenin kendisine ait seviye varsa ekle (eş anlamlılarınkini değil!)
-            if (t.level && cleanTerm.toLowerCase() === clean) {
+            // Yalnızca aranan kelimeyle ilgili seviye belirteçlerini topla
+            if (t.level && (cleanTerm.toLowerCase() === clean || rawTerm.toLowerCase().startsWith(clean))) {
               levelsSet.add(t.level);
             }
 

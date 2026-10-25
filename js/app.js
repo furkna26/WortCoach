@@ -80,7 +80,7 @@ class WortCoachApp {
       if (deepLInput && currentKey) deepLInput.value = currentKey;
       if (deepLStatus) {
         if (currentKey) {
-          deepLStatus.textContent = 'Aktif (Kullanılıyor)"';
+          deepLStatus.textContent = 'Aktif (Kullanılıyor)';
           deepLStatus.style.color = 'var(--palette-green)';
         } else {
           deepLStatus.textContent = 'Aktif Değil';
@@ -94,7 +94,7 @@ class WortCoachApp {
       const val = (deepLInput?.value || '').trim();
       if (val) {
         localStorage.setItem('deepl_api_key', val);
-        this.showToast('DeepL API anahtarı kaydedildi!"');
+        this.showToast('DeepL API anahtarı kaydedildi.');
       } else {
         localStorage.removeItem('deepl_api_key');
         this.showToast('DeepL API anahtarı kaldırıldı.');
@@ -118,7 +118,7 @@ class WortCoachApp {
       if (settingsEngineSelect) settingsEngineSelect.value = curEng;
       if (azureStatus) {
         const meta = window.wmPronunciation ? window.wmPronunciation.getSelectedEngineMeta() : null;
-        azureStatus.textContent = meta ? `${meta.shortLabel}"' : 'Aktif"';
+        azureStatus.textContent = meta ? meta.shortLabel : 'Aktif';
         azureStatus.style.color = '#10B981';
       }
     };
@@ -141,7 +141,7 @@ class WortCoachApp {
       if (keyVal) {
         localStorage.setItem('azure_speech_key', keyVal);
         if (window.wmPronunciation) window.wmPronunciation.setSelectedEngine('AZURE_CLOUD');
-        this.showToast('Azure Speech GOP anahtarı kaydedildi ve aktif edildi!"');
+        this.showToast('Azure Speech GOP anahtarı kaydedildi ve aktif edildi.');
       } else {
         localStorage.removeItem('azure_speech_key');
         this.showToast('Yerleşik ücretsiz Fonetik Motoru aktif.');
@@ -921,7 +921,7 @@ class WortCoachApp {
 
     const trChipsHtml = meaningChips.map((m, idx) => `
       <div class="meaning-chip ${m.selected ? 'selected' : ''}" data-idx="${idx}" data-val="${m.text.replace(/"/g, '&quot;')}">
-        <span class="meaning-chip-check">${m.selected ? '"' : ''}</span>
+        <span class="meaning-chip-check">${m.selected ? '✓' : ''}</span>
         <span class="meaning-chip-text">${m.text}</span>
       </div>
     `).join('');
@@ -1089,7 +1089,7 @@ class WortCoachApp {
       }
       chip.classList.toggle('selected');
       const checkSpan = chip.querySelector('.meaning-chip-check');
-      if (checkSpan) checkSpan.textContent = chip.classList.contains('selected') ? '"' : '';
+      if (checkSpan) checkSpan.textContent = chip.classList.contains('selected') ? '✓' : '';
     });
 
     // 5. Özel Anlam Ekleme (+ Anlam Ekle)
@@ -1193,7 +1193,7 @@ class WortCoachApp {
         });
       }
 
-      this.showToast(`"${cleanWord}" desteye ve yerel sözlüğe kaydedildi!"');
+      this.showToast(`"${cleanWord}" desteye ve yerel sözlüğe kaydedildi.`);
       await this.refreshHomeDashboard();
       this.executeSearch(cleanWord);
     });
@@ -1704,7 +1704,10 @@ class WortCoachApp {
           if (modalGrammarRow) {
             const posStr = ent.partOfSpeech || (cleanTarget.includes(' ') ? 'Kalıp' : 'Kelime');
             const stemNote = res.stem ? `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60A5FA;">Kök: ${res.stem}</span>` : '';
-            modalGrammarRow.innerHTML = `<span class="badge badge-pos-${ent.partOfSpeech || 'OTHER'}">${posStr}</span> ${stemNote}`;
+            const rNuance = window.detectGermanTags ? window.detectGermanTags(ent) : [];
+            const rNuanceHtml = rNuance.map((t) => `<span class="badge-nuance ${t.className}" style="color:${t.color}; background-color:${t.bg}; border:1px solid ${t.border}; font-size:0.75rem; padding:2px 6px;">${t.label}</span>`).join(' ');
+            const rCefrBadge = ent.cefr ? `<span class="badge badge-cefr" style="background:rgba(99,102,241,0.15); color:#A5B4FC; border:1px solid rgba(99,102,241,0.3); font-size:0.75rem; font-weight:700; padding:2px 6px;">${String(ent.cefr).toUpperCase()}</span>` : '';
+            modalGrammarRow.innerHTML = `<span class="badge badge-pos-${ent.partOfSpeech || 'OTHER'}">${posStr}</span> ${rCefrBadge} ${stemNote} ${rNuanceHtml}`;
           }
 
           const rawTr = ent.meaningsTr || ent.tr || '';
@@ -1721,15 +1724,15 @@ class WortCoachApp {
           if (modalTrChips) {
             modalTrChips.innerHTML = trParts.map((t, idx) => `
               <div class="meaning-chip ${idx === 0 ? 'selected' : ''}" data-val="${t.replace(/"/g, '&quot;')}">
-                <span class="meaning-chip-check">${idx === 0 ? '"' : ''}</span>
+                <span class="meaning-chip-check">${idx === 0 ? '✓' : ''}</span>
                 <span class="meaning-chip-text">${t}</span>
               </div>
             `).join('') + `
               <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
               <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
                 <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
-                <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning"></button>
-                <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning"></button>
+                <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
+                <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
               </div>
             `;
 
@@ -1772,15 +1775,15 @@ class WortCoachApp {
           if (modalTrChips) {
             modalTrChips.innerHTML = parts.map((t) => `
               <div class="meaning-chip selected" data-val="${t.replace(/"/g, '&quot;')}">
-                <span class="meaning-chip-check"></span>
+                <span class="meaning-chip-check">✓</span>
                 <span class="meaning-chip-text">${t}</span>
               </div>
             `).join('') + `
               <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
               <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
                 <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
-                <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning"></button>
-                <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning"></button>
+                <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
+                <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
               </div>
             `;
 
@@ -1883,7 +1886,7 @@ class WortCoachApp {
           }
           chip.classList.toggle('selected');
           const chk = chip.querySelector('.meaning-chip-check');
-          if (chk) chk.textContent = chip.classList.contains('selected') ? '"' : '';
+          if (chk) chk.textContent = chip.classList.contains('selected') ? '✓' : '';
         });
       });
 
@@ -1899,12 +1902,12 @@ class WortCoachApp {
         const newChip = document.createElement('div');
         newChip.className = 'meaning-chip selected';
         newChip.setAttribute('data-val', val);
-        newChip.innerHTML = `<span class="meaning-chip-check"></span><span class="meaning-chip-text">${val}</span>`;
+        newChip.innerHTML = `<span class="meaning-chip-check">✓</span><span class="meaning-chip-text">${val}</span>`;
         modalTrChips?.insertBefore(newChip, addBtn);
         newChip.addEventListener('click', () => {
           newChip.classList.toggle('selected');
           const chk = newChip.querySelector('.meaning-chip-check');
-          if (chk) chk.textContent = newChip.classList.contains('selected') ? '"' : '';
+          if (chk) chk.textContent = newChip.classList.contains('selected') ? '✓' : '';
         });
         await this.saveCustomMeaningForWord(word, val);
         if (inp) inp.value = '';
@@ -2146,6 +2149,11 @@ class WortCoachApp {
       ? `<span class="badge-regularity" style="font-size:0.78rem;">Çoğul: ${pluralVal}</span>`
       : '';
 
+    const cefrVal = entry.cefr ? String(entry.cefr).toUpperCase().trim() : '';
+    const cefrBadge = cefrVal
+      ? `<span class="badge badge-cefr" style="background:rgba(99, 102, 241, 0.14); color:#A5B4FC; border:1px solid rgba(99, 102, 241, 0.3); font-weight:700;">${cefrVal}</span>`
+      : '';
+
     // Açık Kaynak Veriden Otomatik Tag / Resmiyet / Nüans Okuma
     const nuanceTags = window.detectGermanTags ? window.detectGermanTags(entry) : [];
     const nuanceTagsHtml = nuanceTags.length > 0
@@ -2318,6 +2326,7 @@ class WortCoachApp {
 
         <div class="wdc-badges-subrow">
           ${posBadge}
+          ${cefrBadge}
           ${pluralBadge}
           ${reflexivBadge}
         </div>
@@ -2559,7 +2568,7 @@ class WortCoachApp {
       if (customInput) customInput.value = '';
       customBox?.classList.add('hidden');
       addCustomBtn?.classList.remove('hidden');
-      this.showToast(`"${val}" anlamı eklendi ve seçildi"');
+      this.showToast(`"${val}" anlamı eklendi ve seçildi.`);
     };
 
     addCustomBtn?.addEventListener('click', () => {
@@ -2615,7 +2624,7 @@ class WortCoachApp {
         deckSelectEl.value = String(newDeckId);
         decks.push({ id: newDeckId, name: newDeckName.trim(), cardCount: 0 });
         await this.renderDecksTab();
-        this.showToast(`"${newDeckName.trim()}" destesi oluşturuldu ve seçildi"');
+        this.showToast(`"${newDeckName.trim()}" destesi oluşturuldu ve seçildi.`);
       }
     });
 
@@ -2721,7 +2730,7 @@ class WortCoachApp {
         if (existingId) {
           cardPayload.id = existingId;
           await window.wmDB.updateCard(cardPayload);
-          this.showToast(`"${canonicalArticle ? canonicalArticle + ' ' : ''}${cleanWord}" güncellendi!"');
+          this.showToast(`"${canonicalArticle ? canonicalArticle + ' ' : ''}${cleanWord}" güncellendi.`);
         } else {
           const added = await window.wmDB.addCard(cardPayload);
           existingId = added ? added.id : existingId;
@@ -4158,7 +4167,7 @@ class WortCoachApp {
         };
         await window.wmDB.updateCard(updatedCard);
         modal.classList.add('hidden');
-        this.showToast(`"${updatedCard.germanWord}" güncellendi."');
+        this.showToast(`"${updatedCard.germanWord}" güncellendi.`);
         this.editingCardId = null;
         await this.renderCardsList();
         await this.refreshHomeDashboard();
@@ -4819,7 +4828,7 @@ ${jsonStr}`
       const nextBtn = document.getElementById('btn-pron-next-word');
       if (nextBtn) {
         nextBtn.querySelector('span').textContent =
-          this.pronState.trainerIndex + 1 >= this.pronState.trainerCards.length ? 'Antrenmanı Bitir"' : 'Sonraki Kelime';
+          this.pronState.trainerIndex + 1 >= this.pronState.trainerCards.length ? 'Antrenmanı Bitir' : 'Sonraki Kelime';
       }
     } else {
       if (titleEl) titleEl.textContent = 'Telaffuz Koçu';

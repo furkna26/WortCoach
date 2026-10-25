@@ -1005,6 +1005,12 @@ class DictionaryService {
           }
         }
 
+        const rawTags = [];
+        if (/\{\{(?:K\|)?(?:ugs\.|umgangssprachlich)\}\}/i.test(wt)) rawTags.push('umgangssprachlich');
+        if (/\{\{(?:K\|)?(?:geh\.|gehoben|bildungssprachlich|dichterisch)\}\}/i.test(wt)) rawTags.push('gehoben');
+        if (/\{\{(?:K\|)?(?:abw\.|vulg\.|derb|Schimpfwort|Jugendsprache|Slang)\}\}/i.test(wt)) rawTags.push('slang');
+        if (/\{\{(?:K\|)?(?:veraltend|veraltet|historisch)\}\}/i.test(wt)) rawTags.push('veraltet');
+
         const resultObj = {
           word: partOfSpeech === 'NOUN' ? (w.charAt(0).toUpperCase() + w.slice(1)) : w.toLowerCase(),
           partOfSpeech,
@@ -1014,7 +1020,8 @@ class DictionaryService {
           praeteritum,
           partizipZwei,
           hilfsverb,
-          rawExamples
+          rawExamples,
+          rawTags
         };
         if (!DictionaryService._wikiCache) DictionaryService._wikiCache = new Map();
         DictionaryService._wikiCache.set(cacheKey, resultObj);
@@ -1196,6 +1203,7 @@ class DictionaryService {
       if (wiki.praeteritum) entry.praeteritum = wiki.praeteritum;
       if (wiki.partizipZwei) entry.partizipZwei = wiki.partizipZwei;
       if (wiki.hilfsverb) entry.hilfsverb = wiki.hilfsverb;
+      if (wiki.rawTags && wiki.rawTags.length > 0) entry.raw_tags = wiki.rawTags;
     }
 
     if (isReflexive) {
@@ -1311,6 +1319,7 @@ class DictionaryService {
       if (wikiDirect.partizipZwei) entry.partizipZwei = wikiDirect.partizipZwei;
       if (wikiDirect.hilfsverb) entry.hilfsverb = wikiDirect.hilfsverb;
       if (wikiDirect.rawExamples) entry.rawExamples = wikiDirect.rawExamples;
+      if (wikiDirect.rawTags && wikiDirect.rawTags.length > 0) entry.raw_tags = wikiDirect.rawTags;
 
       if (entry.partOfSpeech === 'ADJECTIVE' || entry.partOfSpeech === 'VERB') {
         entry.article = '';

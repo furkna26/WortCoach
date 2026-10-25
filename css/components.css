@@ -4232,15 +4232,18 @@
 }
 
 .reader-select {
-  padding: 7px 12px;
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 12px;
   background: #1B202C;
   border: 1px solid #2D3748;
   border-radius: 8px;
   color: #E5E7EB;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   outline: none;
+  box-sizing: border-box;
 }
 
 .reader-text-input-wrap {
@@ -4249,10 +4252,13 @@
   border: 1px solid #242B3A;
   border-radius: 14px;
   padding: 12px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .reader-textarea {
   width: 100%;
+  box-sizing: border-box;
   min-height: 120px;
   background: transparent;
   border: none;
@@ -4266,9 +4272,48 @@
 
 .reader-parse-btn-row {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reader-parse-actions-subrow {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reader-parse-actions-subrow #btn-reader-clear {
+  flex: 0 0 auto;
+}
+
+.reader-parse-actions-subrow #btn-reader-parse {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .reader-parse-btn-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .reader-select {
+    width: auto;
+    max-width: 280px;
+    flex: 1 1 auto;
+  }
+  .reader-parse-actions-subrow {
+    width: auto;
+    flex: 0 0 auto;
+  }
+  .reader-parse-actions-subrow #btn-reader-parse {
+    flex: 0 0 auto;
+  }
 }
 
 .reader-display-pane {
