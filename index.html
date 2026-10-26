@@ -1170,17 +1170,7 @@
           </button>
         </div>
 
-        <!-- Çalışma Modu Seçici: Standart Kart | Cümle Boşluk (Cloze) -->
-        <div class="study-mode-toggle-bar">
-          <button type="button" class="study-mode-toggle-btn active" id="btn-mode-standard" data-mode="standard">
-            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-cards"></use></svg>
-            <span>Standart Kart</span>
-          </button>
-          <button type="button" class="study-mode-toggle-btn" id="btn-mode-cloze" data-mode="cloze">
-            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-sparkle"></use></svg>
-            <span>Cümle Boşluk (Cloze)</span>
-          </button>
-        </div>
+        
 
         <!-- Günlük Seri & Seviye Rozeti -->
         <div class="study-streak-bar">
@@ -1189,8 +1179,7 @@
             <svg class="svg-icon" style="color:var(--brand-blue);"><use href="#icon-chart"></use></svg>
           </div>
           <div class="study-streak-right">
-            <span>Çırak (Anfänger)</span>
-            <svg class="svg-icon" style="display:inline; width:13px; height:13px; vertical-align:middle;"><use href="#icon-arrow-right"></use></svg>
+            <span id="study-streak-tier" class="study-tier-pill">Bronz</span>
           </div>
         </div>
 
@@ -1302,17 +1291,7 @@
                   </div>
                 </div>
 
-                <!-- CLOZE (BOŞLUK DOLDURMA) MODU ÖN YÜZ -->
-                <div id="fc-front-cloze-container" class="fc-cloze-container hidden">
-                  <div class="fc-cloze-badge">CÜMLE BOŞLUK DOLDURMA</div>
-                  <div id="fc-front-cloze-sentence" class="fc-cloze-sentence">---</div>
-                  <div id="fc-front-cloze-hint" class="fc-cloze-hint">---</div>
-                  <div style="margin-top:14px;">
-                    <button type="button" id="btn-fc-cloze-tts-front" class="icon-btn-ghost" title="İpucu Cümleyi Dinle">
-                      <svg class="svg-icon" style="color:var(--brand-blue)"><use href="#icon-volume"></use></svg>
-                    </button>
-                  </div>
-                </div>
+                
 
                 <div class="sc-flip-hint">
                   <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-refresh"></use></svg>
@@ -1332,9 +1311,7 @@
 
                 <div id="fc-back-subtext" class="scb-subtext">Almanca: -</div>
 
-                <!-- CLOZE ÇÖZÜMÜ -->
-                <div id="fc-back-cloze-container" class="fc-cloze-container hidden">
-                  <div class="fc-cloze-badge fc-cloze-badge-revealed">CÜMLE TAMAMLANDI </div>
+                
                   <div id="fc-back-cloze-sentence" class="fc-cloze-sentence">---</div>
                 </div>
 

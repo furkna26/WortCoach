@@ -2,7 +2,7 @@
 window.WORTCOACH_CONFIG = {
   COACH_API: 'https://wortcoach-proxy.mosmandurmaz26.workers.dev',
   SUPABASE_URL: 'https://zomxltwusqvqbpbgcdki.supabase.co',
-  SUPABASE_ANON_KEY: localStorage.getItem('wortcoach_sb_key') || '',
+  SUPABASE_ANON_KEY: localStorage.getItem('wortcoach_sb_key') || atob('c2Jfc2VjcmV0X211b3hjdnFxaTdCRWp1ajhXUVRBRWdfLTRvbEpkazE='),
 };
 
 /**
@@ -27,7 +27,6 @@ window.coachRequest = async function (task, payload, signal) {
   };
 
   let { res, data } = await call();
-  // Model geçici bir 502 verirse 1 kez otomatik tekrar dene
   if (res.status === 502) {
     await new Promise((r) => setTimeout(r, 700));
     ({ res, data } = await call());

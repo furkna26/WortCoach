@@ -15,7 +15,7 @@ class WortMeisterStudy {
     this.queue = [];
     this.currentIndex = 0;
     this.isFlipped = false;
-    this.studyMode = localStorage.getItem('wortcoach_study_mode') || 'standard';
+    this.studyMode = 'standard';
   }
 
   init() {
@@ -33,16 +33,7 @@ class WortMeisterStudy {
     });
 
     // Çalışma Modu Seçici Butonları: Standart vs Cloze
-    const btnStandard = document.getElementById('btn-mode-standard');
-    const btnCloze = document.getElementById('btn-mode-cloze');
-
-    btnStandard?.addEventListener('click', () => {
-      this.setStudyMode('standard');
-    });
-
-    btnCloze?.addEventListener('click', () => {
-      this.setStudyMode('cloze');
-    });
+    
 
     // TTS Seslendirme Dinleyicileri
     document.getElementById('btn-fc-tts')?.addEventListener('click', (e) => {
@@ -303,34 +294,7 @@ class WortMeisterStudy {
 
     // 5. ÇALIŞMA MODU: CLOZE (BOŞLUK DOLDURMA) VS STANDART
     const standardContainer = document.getElementById('fc-front-standard-container');
-    const clozeFrontContainer = document.getElementById('fc-front-cloze-container');
-    const clozeBackContainer = document.getElementById('fc-back-cloze-container');
-
-    const hasExample = Boolean(card.exampleSentence && card.exampleSentence.trim().length > 3);
-    const isClozeActive = this.studyMode === 'cloze';
-
-    if (isClozeActive && hasExample) {
-      standardContainer?.classList.add('hidden');
-      clozeFrontContainer?.classList.remove('hidden');
-      clozeBackContainer?.classList.remove('hidden');
-
-      const clozeData = window.createClozeSentence
-        ? window.createClozeSentence(card.exampleSentence, card.germanWord, {
-            praesens: card.praesens,
-            praeteritum: card.praeteritum,
-            partizipZwei: card.partizipZwei
-          })
-        : { maskedHtml: '[ _______ ]', revealedHtml: card.germanWord, turkishHint: '' };
-
-      const clozeFrontSent = document.getElementById('fc-front-cloze-sentence');
-      const clozeFrontHint = document.getElementById('fc-front-cloze-hint');
-      const clozeBackSent = document.getElementById('fc-back-cloze-sentence');
-
-      if (clozeFrontSent) clozeFrontSent.innerHTML = clozeData.maskedHtml;
-      if (clozeFrontHint) clozeFrontHint.innerHTML = clozeData.turkishHint || `💡 İpucu: ${card.meaningsTr || ''}`;
-      if (clozeBackSent) clozeBackSent.innerHTML = clozeData.revealedHtml;
-    } else {
-      // Standart Mod
+    standardContainer?.classList.remove('hidden');
       standardContainer?.classList.remove('hidden');
       clozeFrontContainer?.classList.add('hidden');
       clozeBackContainer?.classList.add('hidden');
@@ -421,7 +385,6 @@ class WortMeisterStudy {
       } else if (falseFriendBox) {
         falseFriendBox.classList.add('hidden');
       }
-    }
 
     // 6. KART ARKA YÜZÜ
     const meaningTrEl = document.getElementById('fc-back-meaning-tr');

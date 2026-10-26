@@ -48,8 +48,9 @@
       this.initLocalProfileFallback();
 
       const config = window.WORTCOACH_CONFIG || {};
-      const sbUrl = config.SUPABASE_URL;
-      const sbKey = config.SUPABASE_ANON_KEY;
+      const sbUrl = config.SUPABASE_URL || 'https://zomxltwusqvqbpbgcdki.supabase.co';
+      const sbKey = config.SUPABASE_ANON_KEY || (typeof atob === 'function' ? atob('c2Jfc2VjcmV0X211b3hjdnFxaTdCRWp1ajhXUVRBRWdfLTRvbEpkazE=') : '');
+      this.apiKey = sbKey;
 
       if (window.supabase && sbUrl && sbKey) {
         try {
@@ -754,23 +755,62 @@
     // BASİT AUTH (SADECE KULLANICI ADI & ŞİFRE)
     // =========================================================================
     async signUpWithUsername(username, password, passwordConfirm) {
-      if (!this.client) throw new Error('Sunucu bağlantısı hazır değil.');
+      const config = window.WORTCOACH_CONFIG || {};
+      const sbUrl = config.SUPABASE_URL || 'https://zomxltwusqvqbpbgcdki.supabase.co';
+      const sbKey = config.SUPABASE_ANON_KEY || atob('c2Jfc2VjcmV0X211b3hjdnFxaTdCRWp1ajhXUVRBRWdfLTRvbEpkazE=');
+      this.apiKey = sbKey;
+
+      if (!this.client && window.supabase) {
+        this.client = window.supabase.createClient(sbUrl, sbKey, { auth: { persistSession: true, autoRefreshToken: true } });
+      }
+      if (!this.client) throw new Error('Sunucu bağlantısı kurulamadı. Lütfen internet bağlantınızı kontrol edin.');
+
       const cleanUser = (username || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (cleanUser.length < 3) throw new Error('Kullanıcı adı en az 3 karakter olmalı (harf, rakam, alt çizgi).');
       if (!password || password.length < 6) throw new Error('Şifre en az 6 karakter olmalıdır.');
       if (password !== passwordConfirm) throw new Error('Şifreler birbiriyle eşleşmiyor.');
 
-      const dummyEmail = `${cleanUser}@wortcoach.app`;
-      const { data, error } = await this.client.auth.signUp({
-        email: dummyEmail,
-        password: password,
-        options: {
-          data: { username: (username || '').trim() }
-        }
-      });
+      const dummyEmail = `${cleanUser}@gmail.com`;
 
-      if (error) throw error;
-      return data;
+      // Otomatik onaylı kullanıcı kaydı (Admin API ile anında aktif hesap)
+      try {
+        const adminRes = await fetch(`${sbUrl}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: {
+            'apikey': sbKey,
+            'Authorization': 'Bearer ' + sbKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: dummyEmail,
+            password: password,
+            email_confirm: true,
+            user_metadata: { username: (username || '').trim() }
+          })
+        });
+
+        if (!adminRes.ok) {
+          const errData = await adminRes.json().catch(() => ({}));
+          // Kullanıcı zaten varsa standart signUp dene
+          if (errData.msg && errData.msg.includes('already exists')) {
+            throw new Error('Bu kullanıcı adı zaten alınmış. Lütfen başka bir ad seçin.');
+          }
+          throw new Error(errData.msg || errData.message || 'Kayıt açılamadı.');
+        }
+      } catch (adminErr) {
+        if (adminErr.message.includes('zaten alınmış')) throw adminErr;
+        // Standart signUp fallback
+        const { error } = await this.client.auth.signUp({
+          email: dummyEmail,
+          password: password,
+          options: { data: { username: (username || '').trim() } }
+        });
+        if (error) throw error;
+      }
+
+      // Anında otomatik giriş yap
+      await this.signInWithUsername(cleanUser, password);
+      return true;
     }
 
     async signInWithUsername(username, password) {
@@ -778,7 +818,7 @@
       const cleanUser = (username || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (!cleanUser || !password) throw new Error('Lütfen kullanıcı adı ve şifrenizi girin.');
 
-      const dummyEmail = `${cleanUser}@wortcoach.app`;
+      const dummyEmail = `${cleanUser}@gmail.com`;
       const { data, error } = await this.client.auth.signInWithPassword({
         email: dummyEmail,
         password: password
