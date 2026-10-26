@@ -255,7 +255,7 @@ body.reader-active-mode #tab-reader {
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border-subtle);
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   align-items: center;
   z-index: 50;
   padding-top: 6px;

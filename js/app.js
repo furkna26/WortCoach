@@ -126,7 +126,7 @@ class WortCoachApp {
           regs.forEach((r) => r.update());
         });
       }
-      navigator.serviceWorker.register('./sw.js?v=3.0.0').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=3.6.0').then((reg) => reg.update()).catch(() => {});
     }
   }
 
@@ -237,6 +237,7 @@ class WortCoachApp {
       'tab-coach': '/coach',
       'tab-reader': '/okuyucu',
       'tab-profile': '/profil',
+      'tab-social': '/sosyal',
       'tab-games': '/oyunlar',
       'tab-decks': '/desteler',
       'tab-cards': '/kelimeler',
@@ -253,6 +254,7 @@ class WortCoachApp {
       '/okuyucu': 'tab-reader',
       '/reader': 'tab-reader',
       '/profil': 'tab-profile',
+      '/sosyal': 'tab-social',
       '/oyunlar': 'tab-games',
       '/desteler': 'tab-decks',
       '/kelimeler': 'tab-cards',
@@ -472,6 +474,8 @@ class WortCoachApp {
       await this.renderCardsList();
     } else if (tabId === 'tab-profile') {
       if (window.wmSocial) await window.wmSocial.refreshProfileView();
+    } else if (tabId === 'tab-social') {
+      if (window.wmSocial) await window.wmSocial.refreshSocialView();
     }
   }
 
@@ -3699,9 +3703,25 @@ class WortCoachApp {
                 <svg class="svg-icon" style="color:var(--brand-blue);"><use href="#icon-edit"></use></svg>
                 <span>Düzenle</span>
               </button>
+              <button type="button" class="deck-dropdown-item btn-action-social-publish" data-deck-id="${d.id}">
+                <svg class="svg-icon" style="color:#10B981;"><use href="#nav-icon-social"></use></svg>
+                <span>Sosyalde Paylaş</span>
+              </button>
+              <button type="button" class="deck-dropdown-item btn-action-1v1-deck" data-deck-id="${d.id}">
+                <svg class="svg-icon" style="color:#EF4444;"><use href="#icon-cable"></use></svg>
+                <span>1v1 Kapışma Başlat</span>
+              </button>
+              <button type="button" class="deck-dropdown-item btn-action-kahoot-deck" data-deck-id="${d.id}">
+                <svg class="svg-icon" style="color:#8B5CF6;"><use href="#nav-icon-games"></use></svg>
+                <span>Kahoot Canlı Oyun</span>
+              </button>
+              <button type="button" class="deck-dropdown-item btn-action-collab-deck" data-deck-id="${d.id}">
+                <svg class="svg-icon" style="color:var(--brand-blue-hover);"><use href="#icon-sparkle"></use></svg>
+                <span>Ortak Çalışmaya Aç</span>
+              </button>
               <button type="button" class="deck-dropdown-item btn-action-share-deck btn-share-deck" data-deck-id="${d.id}">
                 <svg class="svg-icon" style="color:var(--brand-blue);"><use href="#icon-share"></use></svg>
-                <span>Paylaş</span>
+                <span>Dosya Olarak Dışa Aktar</span>
               </button>
               <button type="button" class="deck-dropdown-item item-delete btn-action-delete-deck" data-deck-id="${d.id}" data-deck-name="${d.name.replace(/"/g, '&quot;')}">
                 <svg class="svg-icon"><use href="#icon-trash"></use></svg>
@@ -3749,7 +3769,71 @@ class WortCoachApp {
       });
     });
 
-    // Menü: Paylaş
+    // Menü: Sosyalde Paylaş
+    container.querySelectorAll('.btn-action-social-publish').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const dId = Number(btn.getAttribute('data-deck-id'));
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        if (window.wmSocial) {
+          await window.wmSocial.openPublishDeckModal();
+          const sel = document.getElementById('select-publish-target-deck');
+          if (sel) sel.value = String(dId);
+        }
+      });
+    });
+
+    // Menü: 1v1 Kapışma Başlat
+    container.querySelectorAll('.btn-action-1v1-deck').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const dId = Number(btn.getAttribute('data-deck-id'));
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        if (window.wmSocial) {
+          try {
+            await window.wmSocial.start1v1MatchAsHost(dId);
+          } catch (err) {
+            alert(err.message);
+          }
+        }
+      });
+    });
+
+    // Menü: Kahoot Grup Oyunu Başlat
+    container.querySelectorAll('.btn-action-kahoot-deck').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const dId = Number(btn.getAttribute('data-deck-id'));
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        if (window.wmSocial) {
+          try {
+            await window.wmSocial.createKahootRoom(dId);
+          } catch (err) {
+            alert(err.message);
+          }
+        }
+      });
+    });
+
+    // Menü: Ortak Çalışmaya Aç
+    container.querySelectorAll('.btn-action-collab-deck').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const dId = Number(btn.getAttribute('data-deck-id'));
+        container.querySelectorAll('.deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
+        if (window.wmSocial) {
+          try {
+            await this.switchTab('tab-social');
+            document.querySelector('.social-subtab-btn[data-target-pane="pane-social-collab"]')?.click();
+            await window.wmSocial.initCollabSession(dId);
+          } catch (err) {
+            alert(err.message);
+          }
+        }
+      });
+    });
+
+    // Menü: Paylaş (Dosya Olarak)
     container.querySelectorAll('.btn-action-share-deck').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();

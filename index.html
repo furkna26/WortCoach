@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.5.3" />
-  <link rel="stylesheet" href="css/components.css?v=3.5.3" />
+  <link rel="stylesheet" href="css/app.css?v=3.6.0" />
+  <link rel="stylesheet" href="css/components.css?v=3.6.0" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -587,6 +587,14 @@
     <symbol id="nav-icon-profile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
       <circle cx="12" cy="7" r="4"></circle>
+    </symbol>
+
+    <!-- Sosyal & Topluluk İkonu -->
+    <symbol id="nav-icon-social" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
     </symbol>
 
     <symbol id="nav-icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1730,7 +1738,7 @@
 
     
       <!-- ====================================================================
-           TAB 6: PROFİL & SOSYAL & İSTATİSTİKLER (tab-profile)
+           TAB 6: PROFİL & KİŞİSEL İSTATİSTİKLER (tab-profile)
            ==================================================================== -->
       <section id="tab-profile" class="tab-view">
         <!-- Kullanıcı Hero Kartı -->
@@ -1758,97 +1766,286 @@
           </div>
         </div>
 
-        <!-- İki Sekme: [İstatistiklerim] | [Sosyal & Arkadaşlar] -->
-        <div class="profile-subtab-bar" style="margin: 16px 0 14px;">
-          <button type="button" class="profile-subtab-btn active" data-target-pane="pane-prof-stats">İstatistiklerim</button>
-          <button type="button" class="profile-subtab-btn" data-target-pane="pane-prof-friends">Sosyal &amp; Arkadaşlar</button>
-        </div>
-
-        <!-- PANE 1: İSTATİSTİKLERİM (Zamana göre filtrelenebilir 4 Ana Metrik) -->
-        <div id="pane-prof-stats" class="profile-pane">
-          <div class="prof-filter-row">
-            <span class="prof-filter-title">Zaman Aralığı:</span>
-            <div class="prof-filter-segments">
-              <button type="button" class="prof-stat-filter-btn" data-range="1d">1 Gün</button>
-              <button type="button" class="prof-stat-filter-btn active" data-range="7d">1 Hafta</button>
-              <button type="button" class="prof-stat-filter-btn" data-range="30d">1 Ay</button>
-              <button type="button" class="prof-stat-filter-btn" data-range="365d">1 Yıl</button>
-              <button type="button" class="prof-stat-filter-btn" data-range="all">Tümü</button>
-            </div>
-          </div>
-
-          <div class="prof-stats-grid">
-            <!-- 1. Artikel Keskinliği (Genus) -->
-            <div class="prof-stat-card">
-              <div class="prof-stat-head">
-                <span class="prof-stat-label">Artikel Keskinliği (Genus)</span>
-                <span class="prof-stat-code">der / die / das</span>
-              </div>
-              <div class="prof-stat-value" id="stat-val-genus">%0</div>
-              <div class="prof-stat-footer" id="stat-sub-genus">0 soru cevaplandı</div>
-            </div>
-
-            <!-- 2. Bağlam Ustası (Kontext) -->
-            <div class="prof-stat-card">
-              <div class="prof-stat-head">
-                <span class="prof-stat-label">Bağlam Ustası (Kontext)</span>
-                <span class="prof-stat-code">Cloze Test</span>
-              </div>
-              <div class="prof-stat-value" id="stat-val-kontext">%0</div>
-              <div class="prof-stat-footer" id="stat-sub-kontext">0 boşluk tamamlandı</div>
-            </div>
-
-            <!-- 3. Çeviklik (Tempo) -->
-            <div class="prof-stat-card">
-              <div class="prof-stat-head">
-                <span class="prof-stat-label">Çeviklik (Tempo)</span>
-                <span class="prof-stat-code">Ortalama Süre</span>
-              </div>
-              <div class="prof-stat-value" id="stat-val-tempo">0.00 sn</div>
-              <div class="prof-stat-footer" id="stat-sub-tempo">0 yanıtın ortalaması</div>
-            </div>
-
-            <!-- 4. Hafıza Direnci (Ausdauer) -->
-            <div class="prof-stat-card">
-              <div class="prof-stat-head">
-                <span class="prof-stat-label">Hafıza Direnci (Ausdauer)</span>
-                <span class="prof-stat-code">SRS Hatırlama</span>
-              </div>
-              <div class="prof-stat-value" id="stat-val-ausdauer">%0</div>
-              <div class="prof-stat-footer" id="stat-sub-ausdauer">0 tekrar kartı</div>
-            </div>
+        <!-- Profil İstatistikleri Başlığı ve Zaman Filtresi -->
+        <div class="section-subheading" style="margin-top:18px; margin-bottom:10px;">Bireysel Performans Analizi</div>
+        <div class="prof-filter-row" style="margin-bottom:14px;">
+          <span class="prof-filter-title">Zaman Aralığı:</span>
+          <div class="prof-filter-segments">
+            <button type="button" class="prof-stat-filter-btn" data-range="1d">1 Gün</button>
+            <button type="button" class="prof-stat-filter-btn active" data-range="7d">1 Hafta</button>
+            <button type="button" class="prof-stat-filter-btn" data-range="30d">1 Ay</button>
+            <button type="button" class="prof-stat-filter-btn" data-range="365d">1 Yıl</button>
+            <button type="button" class="prof-stat-filter-btn" data-range="all">Tümü</button>
           </div>
         </div>
 
-        <!-- PANE 2: SOSYAL & ARKADAŞLAR -->
-        <div id="pane-prof-friends" class="profile-pane hidden">
-          <!-- Arkadaş Ekleme Arama Kutusu -->
-          <div class="prof-search-box">
-            <input type="text" id="user-search-input" class="form-control" placeholder="Kullanıcı adı veya WC#0000 kodu..." />
-            <button type="button" id="btn-search-user" class="btn-primary-compact">Arkadaş Ara</button>
-          </div>
-          <div id="user-search-results" class="search-results-list"></div>
-
-          <!-- Bekleyen İstekler -->
-          <div id="pending-requests-box" class="pending-requests-card hidden"></div>
-
-          <!-- Deste Gizliliği Ayarı -->
-          <div class="prof-privacy-bar" style="margin-bottom:14px; padding:10px 14px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-size:0.82rem; font-weight:800; color:var(--text-primary);">Deste Gizliliği</div>
-              <div style="font-size:0.72rem; color:var(--text-muted);">Destelerinizin görünürlük izni</div>
+        <!-- 4 Ana Pedagojik Metrik Kartı -->
+        <div class="prof-stats-grid">
+          <!-- 1. Artikel Keskinliği (Genus) -->
+          <div class="prof-stat-card">
+            <div class="prof-stat-head">
+              <span class="prof-stat-label">Artikel Keskinliği (Genus)</span>
+              <span class="prof-stat-code">der / die / das</span>
             </div>
-            <select id="profile-deck-privacy-select" class="dock-select" style="font-size:0.8rem; padding:4px 8px;">
-              <option value="private">Paylaşma</option>
-              <option value="friends" selected>Sadece Arkadaşlar</option>
-              <option value="public">Herkese Açık</option>
-            </select>
+            <div class="prof-stat-value" id="stat-val-genus">%0</div>
+            <div class="prof-stat-footer" id="stat-sub-genus">0 soru cevaplandı</div>
           </div>
 
-          <!-- Arkadaşlarım & Liderlik Tablosu -->
+          <!-- 2. Bağlam Ustası (Kontext) -->
+          <div class="prof-stat-card">
+            <div class="prof-stat-head">
+              <span class="prof-stat-label">Bağlam Ustası (Kontext)</span>
+              <span class="prof-stat-code">Cloze Test</span>
+            </div>
+            <div class="prof-stat-value" id="stat-val-kontext">%0</div>
+            <div class="prof-stat-footer" id="stat-sub-kontext">0 boşluk tamamlandı</div>
+          </div>
+
+          <!-- 3. Çeviklik (Tempo) -->
+          <div class="prof-stat-card">
+            <div class="prof-stat-head">
+              <span class="prof-stat-label">Çeviklik (Tempo)</span>
+              <span class="prof-stat-code">Ortalama Süre</span>
+            </div>
+            <div class="prof-stat-value" id="stat-val-tempo">0.00 sn</div>
+            <div class="prof-stat-footer" id="stat-sub-tempo">0 yanıtın ortalaması</div>
+          </div>
+
+          <!-- 4. Hafıza Direnci (Ausdauer) -->
+          <div class="prof-stat-card">
+            <div class="prof-stat-head">
+              <span class="prof-stat-label">Hafıza Direnci (Ausdauer)</span>
+              <span class="prof-stat-code">SRS Hatırlama</span>
+            </div>
+            <div class="prof-stat-value" id="stat-val-ausdauer">%0</div>
+            <div class="prof-stat-footer" id="stat-sub-ausdauer">0 tekrar kartı</div>
+          </div>
+        </div>
+
+        <!-- Hesap ve Gizlilik Ayarları -->
+        <div class="section-subheading" style="margin-top:22px; margin-bottom:10px;">Hesap &amp; Bulut Ayarları</div>
+        <div class="prof-privacy-bar" style="margin-bottom:10px; padding:12px 14px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.85rem; font-weight:800; color:var(--text-primary);">Deste Gizlilik Tercihi</div>
+            <div style="font-size:0.74rem; color:var(--text-muted);">Varsayılan görünürlük ayarınız</div>
+          </div>
+          <select id="profile-deck-privacy-select" class="dock-select" style="font-size:0.8rem; padding:5px 8px;">
+            <option value="private">Gizli (Sadece Ben)</option>
+            <option value="friends" selected>Sadece Arkadaşlar</option>
+            <option value="public">Herkese Açık</option>
+          </select>
+        </div>
+
+        <div style="margin-top:12px; display:flex; gap:8px;">
+          <button type="button" id="btn-sync-all-decks-cloud" class="btn-primary-compact" style="flex:1; padding:10px; font-weight:700;">Destelerimi Buluta Senkronize Et</button>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB 7: SOSYAL & TOPLULUK MERKEZİ (tab-social)
+           ==================================================================== -->
+      <section id="tab-social" class="tab-view">
+        <!-- Sosyal Sekme Başlığı -->
+        <div class="tab-header" style="margin-bottom:12px;">
+          <h2 class="page-title">Sosyal &amp; Topluluk</h2>
+          <div style="display:flex; gap:8px;">
+            <button type="button" id="btn-social-sync-trigger" class="icon-btn-ghost" title="Bulut Verilerini Yenile">
+              <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-sync"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sosyal Alt Sekme Çubuğu (5 Sekme: Arkadaşlar, Açık Desteler, Kulüpler, Arena, Ortak Çalışma) -->
+        <div class="social-subtab-bar">
+          <button type="button" class="social-subtab-btn active" data-target-pane="pane-social-friends">Arkadaşlar</button>
+          <button type="button" class="social-subtab-btn" data-target-pane="pane-social-public-decks">Herkese Açık Desteler</button>
+          <button type="button" class="social-subtab-btn" data-target-pane="pane-social-clubs">Kulüpler &amp; Sınıflar</button>
+          <button type="button" class="social-subtab-btn" data-target-pane="pane-social-arena">Çok Oyunculu Arena</button>
+          <button type="button" class="social-subtab-btn" data-target-pane="pane-social-collab">Ortak Çalışma</button>
+        </div>
+
+        <!-- ==================================================================
+             PANE 1: ARKADAŞLAR & LİDERLİK TABLOSU
+             ================================================================== -->
+        <div id="pane-social-friends" class="social-pane">
+          <!-- Arkadaş Arama & Kendi Kodu Kutusu -->
+          <div class="social-card-box" style="margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">Sizin Arkadaş Kodunuz:</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span id="social-my-friend-code" class="prof-code-badge">WC#0000</span>
+                <button type="button" id="btn-social-copy-code" class="prof-mini-btn">Kopyala</button>
+              </div>
+            </div>
+            <div class="prof-search-box">
+              <input type="text" id="social-user-search-input" class="form-control" placeholder="Arkadaş adı veya WC#0000 kodu..." />
+              <button type="button" id="btn-social-search-user" class="btn-primary-compact">Arkadaş Ara</button>
+            </div>
+            <div id="social-user-search-results" class="search-results-list"></div>
+          </div>
+
+          <!-- Gelen Arkadaşlık İstekleri -->
+          <div id="social-pending-requests-box" class="pending-requests-card hidden" style="margin-bottom:14px;"></div>
+
+          <!-- Arkadaşlarım Liderlik Tablosu (ELO & Lig) -->
           <div class="leaderboard-section">
-            <div class="section-subheading">Arkadaşlarım &amp; Liderlik Sıralaması (ELO)</div>
-            <div id="friends-leaderboard-list" class="leaderboard-list"></div>
+            <div class="section-subheading" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>Arkadaşlarım &amp; Liderlik Sıralaması (ELO)</span>
+              <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">Desteleri görmek için arkadaşa dokunun</span>
+            </div>
+            <div id="social-friends-leaderboard-list" class="leaderboard-list"></div>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             PANE 2: HERKESE AÇIK DESTELER (TOPLULUK KÜTÜPHANESİ)
+             ================================================================== -->
+        <div id="pane-social-public-decks" class="social-pane hidden">
+          <div class="social-card-box" style="margin-bottom:14px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="text" id="input-search-public-decks" class="form-control" placeholder="Deste adı veya yazar ara..." style="flex:1;" />
+              <button type="button" id="btn-refresh-public-decks" class="btn-primary-compact">Filtrele</button>
+              <button type="button" id="btn-publish-my-deck-modal" class="btn-primary-compact" style="background:#10B981; border-color:#10B981; white-space:nowrap;">Deste Paylaş</button>
+            </div>
+          </div>
+
+          <!-- Açık Desteler Listesi -->
+          <div class="section-subheading">Topluluk Desteleri</div>
+          <div id="public-decks-container" class="public-decks-grid">
+            <div style="text-align:center; padding:16px; font-size:0.85rem; color:var(--text-muted);">Herkese açık desteler yükleniyor...</div>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             PANE 3: KULÜPLER, SINIFLAR VE KLANLAR
+             ================================================================== -->
+        <div id="pane-social-clubs" class="social-pane hidden">
+          <!-- Kulüp Eylemleri: Oluştur & Kodla Katıl -->
+          <div class="social-card-box" style="margin-bottom:14px; display:flex; gap:8px;">
+            <button type="button" id="btn-open-create-club" class="btn-primary-compact" style="flex:1; padding:10px; font-weight:700;">+ Yeni Kulüp / Sınıf Kur</button>
+            <button type="button" id="btn-open-join-club" class="btn-primary-compact" style="flex:1; padding:10px; font-weight:700; background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border-subtle);">Kod ile Katıl</button>
+          </div>
+
+          <!-- Üye Olunan ve Popüler Kulüpler -->
+          <div class="section-subheading">Kulüpler &amp; Çalışma Grupları</div>
+          <div id="clubs-list-container" class="clubs-list-grid">
+            <div style="text-align:center; padding:16px; font-size:0.85rem; color:var(--text-muted);">Kulüpler yükleniyor...</div>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             PANE 4: ÇOK OYUNCULU ARENA (1v1 KAPIŞMA & KAHOOT GRUP OYUNU)
+             ================================================================== -->
+        <div id="pane-social-arena" class="social-pane hidden">
+          <!-- Mod Seçim Kartları -->
+          <div class="arena-mode-cards-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
+            <!-- 1v1 Zamana Karşı Kapışma Kartı -->
+            <div class="arena-mode-box" id="arena-card-1v1" style="background:var(--bg-surface); border:2px solid var(--brand-blue); border-radius:14px; padding:14px; cursor:pointer;">
+              <div style="font-size:0.75rem; font-weight:800; color:var(--brand-blue); text-transform:uppercase;">1v1 Düello</div>
+              <div style="font-size:1.05rem; font-weight:800; color:var(--text-primary); margin:4px 0;">Zamana Karşı</div>
+              <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.3;">Host desteyi belirler, davet koduyla arkadaşınızla zamana karşı yarışırsınız.</div>
+            </div>
+
+            <!-- Kahoot Tarzı Grup Oyunu Kartı -->
+            <div class="arena-mode-box" id="arena-card-kahoot" style="background:var(--bg-surface); border:2px solid #8B5CF6; border-radius:14px; padding:14px; cursor:pointer;">
+              <div style="font-size:0.75rem; font-weight:800; color:#8B5CF6; text-transform:uppercase;">Grup Oyunu</div>
+              <div style="font-size:1.05rem; font-weight:800; color:var(--text-primary); margin:4px 0;">Kahoot Canlı Quiz</div>
+              <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.3;">PIN ile lobiye toplanın, aynı anda yarışıp podyuma çıkın!</div>
+            </div>
+          </div>
+
+          <!-- 1v1 Kontrol Paneli -->
+          <div id="arena-panel-1v1" class="arena-panel-content">
+            <div class="social-card-box" style="margin-bottom:12px;">
+              <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">1v1 Kapışma Başlat (Host)</div>
+              <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:4px;">Yarışılacak Desteyi Seçin:</label>
+              <select id="arena-1v1-deck-select" class="form-control" style="margin-bottom:10px;"></select>
+              <button type="button" id="btn-create-1v1-room" class="btn-primary-compact" style="width:100%; padding:10px; font-weight:700;">1v1 Maç Davet Kodu Oluştur</button>
+            </div>
+
+            <div class="social-card-box">
+              <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">Davet Koduyla Katıl (Misafir)</div>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="input-arena-1v1-pin" class="form-control" placeholder="VS-1234..." style="flex:1; text-transform:uppercase;" />
+                <button type="button" id="btn-join-1v1-room" class="btn-primary-compact" style="padding:0 18px; font-weight:700;">Kapışmaya Gir</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kahoot Grup Oyunu Kontrol Paneli -->
+          <div id="arena-panel-kahoot" class="arena-panel-content hidden">
+            <div class="social-card-box" style="margin-bottom:12px;">
+              <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">Grup Kahoot Odası Aç (Oda Sahibi)</div>
+              <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:4px;">Yarışılacak Desteyi Seçin:</label>
+              <select id="arena-kahoot-deck-select" class="form-control" style="margin-bottom:8px;"></select>
+              
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div>
+                  <label style="font-size:0.72rem; color:var(--text-muted); display:block; margin-bottom:2px;">Soru Başı Süre:</label>
+                  <select id="arena-kahoot-duration-select" class="dock-select" style="width:100%; padding:6px;">
+                    <option value="10">10 Saniye</option>
+                    <option value="15" selected>15 Saniye</option>
+                    <option value="20">20 Saniye</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:0.72rem; color:var(--text-muted); display:block; margin-bottom:2px;">Soru Sayısı:</label>
+                  <select id="arena-kahoot-count-select" class="dock-select" style="width:100%; padding:6px;">
+                    <option value="5">5 Soru</option>
+                    <option value="10" selected>10 Soru</option>
+                    <option value="15">15 Soru</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="button" id="btn-create-kahoot-room" class="btn-primary-compact" style="width:100%; padding:10px; font-weight:700; background:#8B5CF6; border-color:#8B5CF6;">Kahoot Grup Odası Kur</button>
+            </div>
+
+            <div class="social-card-box">
+              <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">Oda PIN Koduyla Katıl (Yarışmacı)</div>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="input-arena-kahoot-pin" class="form-control" placeholder="6 Haneli PIN..." style="flex:1;" />
+                <button type="button" id="btn-join-kahoot-room" class="btn-primary-compact" style="padding:0 18px; font-weight:700; background:#8B5CF6; border-color:#8B5CF6;">Odaya Gir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             PANE 5: ORTAK DESTE DÜZENLEME (İŞBİRLİKÇİ ÇALIŞMA)
+             ================================================================== -->
+        <div id="pane-social-collab" class="social-pane hidden">
+          <div class="social-card-box" style="margin-bottom:14px;">
+            <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">Ortak Deste Çalışması Başlat</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Bir deste seçip işbirliği kodu oluşturarak arkadaşlarınızla beraber yeni kartlar ekleyin ve düzenleyin.</div>
+            <div style="display:flex; gap:8px;">
+              <select id="select-collab-deck" class="form-control" style="flex:1;"></select>
+              <button type="button" id="btn-init-collab-session" class="btn-primary-compact" style="font-weight:700;">İşbirliği Kodu Üret</button>
+            </div>
+          </div>
+
+          <div class="social-card-box" style="margin-bottom:14px;">
+            <div style="font-weight:700; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">Mevcut İşbirliği Koduna Bağlan</div>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="input-join-collab-code" class="form-control" placeholder="COL-1234..." style="flex:1; text-transform:uppercase;" />
+              <button type="button" id="btn-join-collab-session" class="btn-primary-compact" style="font-weight:700;">Desteye Bağlan</button>
+            </div>
+          </div>
+
+          <!-- Aktif Ortak Çalışma Alanı -->
+          <div id="collab-active-workspace" class="social-card-box hidden" style="border-color:var(--brand-blue);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <div>
+                <span id="collab-active-title" style="font-weight:800; font-size:1rem; color:var(--text-primary);">Ortak Deste</span>
+                <span id="collab-active-code-badge" class="prof-code-badge" style="margin-left:6px;">COL-0000</span>
+              </div>
+              <button type="button" id="btn-add-card-to-collab" class="btn-primary-compact" style="padding:5px 10px; font-size:0.78rem;">+ Birlikte Kart Ekle</button>
+            </div>
+            <div id="collab-contributors-row" style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">Katkıda Bulunanlar: Furkan</div>
+            <div id="collab-cards-list" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto;"></div>
+            <div style="margin-top:10px;">
+              <button type="button" id="btn-save-collab-to-local" class="btn-primary-compact" style="width:100%; background:#10B981; border-color:#10B981; font-weight:700;">Bu Desteyi Kendi Kütüphaneme Kaydet</button>
+            </div>
           </div>
         </div>
       </section>
@@ -1856,7 +2053,7 @@
     </main>
 
     <!-- ====================================================================
-         ALT NAVİGASYON ÇUBUĞU (6 SEKME — Android Screenshot Parity)
+         ALT NAVİGASYON ÇUBUĞU (7 SEKME — Profil ve Sosyal Ayrılmıştır)
          ==================================================================== -->
     <nav class="bottom-nav" aria-label="Ana Navigasyon">
       <!-- 1. Desteler (Deste İkonu) -->
@@ -1891,7 +2088,15 @@
         <span class="nav-label">Çalış</span>
       </button>
 
-      <!-- 5. Çeviri (Küre İkonu) -->
+      <!-- 5. Sosyal (Topluluk & Kulüpler İkonu) -->
+      <button class="nav-item" data-target="tab-social" aria-label="Sosyal">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-social"></use></svg>
+        </div>
+        <span class="nav-label">Sosyal</span>
+      </button>
+
+      <!-- 6. Çeviri (Küre İkonu) -->
       <button class="nav-item" data-target="tab-translate" aria-label="Çeviri">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-translate"></use></svg>
@@ -1899,7 +2104,7 @@
         <span class="nav-label">Çeviri</span>
       </button>
 
-      <!-- 6. Profil (Kullanıcı İkonu) -->
+      <!-- 7. Profil (Kullanıcı İkonu) -->
       <button class="nav-item" data-target="tab-profile" aria-label="Profil">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-profile"></use></svg>
@@ -3012,28 +3217,383 @@
       </div>
     </div>
   </div>
+  <!-- MODAL: DESTE PAYLAŞIM PENCERESİ (modal-publish-deck) -->
+  <div id="modal-publish-deck" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:440px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Desteyi Sosyalde Paylaş</div>
+        <button type="button" id="btn-close-publish-deck" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="select-publish-target-deck">Paylaşılacak Deste</label>
+        <select id="select-publish-target-deck" class="form-control"></select>
+      </div>
+      <div class="auth-input-group">
+        <label for="select-publish-visibility">Görünürlük Kapsamı</label>
+        <select id="select-publish-visibility" class="dock-select" style="width:100%; padding:8px;">
+          <option value="public" selected>Herkese Açık (Topluluk Kütüphanesinde Yayınla)</option>
+          <option value="friends">Sadece Arkadaşlarım Görebilsin</option>
+        </select>
+      </div>
+      <div class="auth-input-group">
+        <label for="input-publish-desc">Kısa Açıklama (İsteğe Bağlı)</label>
+        <input type="text" id="input-publish-desc" class="form-control" placeholder="Örn: B1 sınavı için en sık çıkan sıfatlar..." maxlength="120" />
+      </div>
+      <button type="button" id="btn-submit-publish-deck" class="btn-coach-build-full" style="margin-top:12px; background:#10B981;">
+        <span>Buluta Yükle &amp; Paylaş</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: DESTE ÖNİZLEME & KÜTÜPHANEYE EKLEME (modal-preview-public-deck) -->
+  <div id="modal-preview-public-deck" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-modal-sheet" style="max-height:85vh;">
+      <div class="prof-modal-header">
+        <div>
+          <div class="prof-modal-title" id="preview-deck-title">Deste Detayı</div>
+          <div class="prof-modal-subtitle" id="preview-deck-meta">Yazar: Topluluk · 0 Kelime</div>
+        </div>
+        <button type="button" id="btn-close-preview-deck" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div id="preview-deck-words-container" style="display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto; margin:14px 0;"></div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" id="btn-import-previewed-deck" class="btn-coach-build-full" style="flex:1; background:var(--brand-blue);">
+          <span>Bu Desteyi Kütüphaneme Ekle</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: YENİ KULÜP / SINIF OLUŞTURMA (modal-create-club) -->
+  <div id="modal-create-club" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:440px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Yeni Kulüp / Sınıf Kur</div>
+        <button type="button" id="btn-close-create-club" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="input-club-name">Kulüp / Sınıf Adı</label>
+        <input type="text" id="input-club-name" class="form-control" placeholder="Örn: Goethe B2 Çalışma Grubu" required maxlength="50" />
+      </div>
+      <div class="auth-input-group">
+        <label for="select-club-category">Seviye / Kategori</label>
+        <select id="select-club-category" class="dock-select" style="width:100%; padding:8px;">
+          <option value="A1-A2 Başlangıç">A1-A2 Başlangıç</option>
+          <option value="B1-B2 Orta Düzey" selected>B1-B2 Orta Düzey</option>
+          <option value="C1-C2 İleri Düzey">C1-C2 İleri Düzey</option>
+          <option value="Sınav Hazırlığı (Telc/Goethe)">Sınav Hazırlığı (Telc/Goethe)</option>
+          <option value="Tıp & Mesleki Almanca">Tıp &amp; Mesleki Almanca</option>
+        </select>
+      </div>
+      <div class="auth-input-group">
+        <label for="input-club-desc">Kulüp Açıklaması</label>
+        <textarea id="input-club-desc" class="form-control" rows="2" placeholder="Birlikte kelime desteleri paylaşacak ve yarışacağız..." maxlength="150"></textarea>
+      </div>
+      <button type="button" id="btn-submit-create-club" class="btn-coach-build-full" style="margin-top:10px;">
+        <span>Kulübü Kur &amp; Davet Kodu Al</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: KOD İLE KULÜBE KATILMA (modal-join-club) -->
+  <div id="modal-join-club" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:400px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Kulübe veya Sınıfa Katıl</div>
+        <button type="button" id="btn-close-join-club" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="input-join-club-code">6 Haneli Kulüp Kodu</label>
+        <input type="text" id="input-join-club-code" class="form-control" placeholder="Örn: KLB-8421" style="text-transform:uppercase; font-size:1.1rem; text-align:center; font-weight:800; letter-spacing:1px;" required />
+      </div>
+      <button type="button" id="btn-submit-join-club" class="btn-coach-build-full" style="margin-top:10px;">
+        <span>Kulübe Katıl</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: KULÜP DETAY & KULÜP DESTELERİ (modal-club-detail) -->
+  <div id="modal-club-detail" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-modal-sheet" style="max-height:88vh;">
+      <div class="prof-modal-header">
+        <div>
+          <div class="prof-modal-title" id="club-detail-name">Kulüp Adı</div>
+          <div class="prof-modal-subtitle">
+            <span id="club-detail-code-badge" class="prof-code-badge">KLB-0000</span>
+            <span id="club-detail-meta" style="margin-left:8px;">0 Üye</span>
+          </div>
+        </div>
+        <button type="button" id="btn-close-club-detail" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- Kulüp Üst Eylemler -->
+      <div style="display:flex; gap:8px; margin:12px 0;">
+        <button type="button" id="btn-add-deck-to-club" class="btn-primary-compact" style="flex:1; padding:8px; font-size:0.8rem; background:var(--brand-blue);">+ Kulüp Destesi Ekle</button>
+        <button type="button" id="btn-start-club-match" class="btn-primary-compact" style="flex:1; padding:8px; font-size:0.8rem; background:#8B5CF6; border-color:#8B5CF6;">Kulüp Kahoot Başlat</button>
+      </div>
+
+      <!-- Kulüp Desteleri Havuzu -->
+      <div class="section-subheading" style="margin-bottom:6px;">Kulüp Desteleri Havuzu</div>
+      <div id="club-decks-container" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+
+      <!-- Kulüp Üyeleri -->
+      <div class="section-subheading" style="margin-bottom:6px;">Kulüp Üyeleri</div>
+      <div id="club-members-container" style="display:flex; flex-direction:column; gap:6px;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: 1v1 ZAMANA KARŞI MAÇ OYUNU (modal-arena-1v1-game) -->
+  <div id="modal-arena-1v1-game" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:540px; height:92vh; display:flex; flex-direction:column; padding:18px;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <span class="badge" style="background:#EF4444; color:#fff; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">1v1 Düello</span>
+          <h3 style="font-size:1.15rem; font-weight:900; margin:2px 0 0;" id="arena-1v1-match-title">Zamana Karşı Kapışma</h3>
+        </div>
+        <button type="button" id="btn-close-1v1-game" class="icon-btn-ghost" aria-label="Ayrıl">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- Maç Bilgi / Sayaç / Skor Şeridi -->
+      <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:0.72rem; color:var(--text-muted);">SİZİN SKORUNUZ</div>
+          <div id="arena-1v1-my-score" style="font-size:1.3rem; font-weight:900; color:var(--brand-blue);">0</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.72rem; color:var(--text-muted);">KALAN SÜRE</div>
+          <div id="arena-1v1-timer" style="font-size:1.4rem; font-weight:900; color:#EF4444;">60s</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.72rem; color:var(--text-muted);">SORU</div>
+          <div id="arena-1v1-q-counter" style="font-size:1.2rem; font-weight:800; color:var(--text-primary);">1 / 10</div>
+        </div>
+      </div>
+
+      <!-- Soru Alanı -->
+      <div id="arena-1v1-question-box" style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px;">
+        <div id="arena-1v1-word-pos" style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Nomen</div>
+        <div id="arena-1v1-word-lemma" style="font-size:1.8rem; font-weight:900; color:var(--text-primary); margin:6px 0;">das Haus</div>
+        <div id="arena-1v1-word-sentence" style="font-size:0.85rem; color:var(--text-secondary); font-style:italic;">Hier ist mein Haus.</div>
+      </div>
+
+      <!-- 4 Seçenek Butonu -->
+      <div id="arena-1v1-options-grid" style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:14px;"></div>
+
+      <!-- Maç Bitiş & Podyum Kartı (Gizli başlar) -->
+      <div id="arena-1v1-results-box" class="hidden" style="text-align:center; padding:20px; background:var(--bg-surface); border-radius:18px; border:1px solid var(--border-medium);">
+        <div style="font-size:1.4rem; font-weight:900; color:var(--text-primary); margin-bottom:6px;" id="arena-1v1-winner-text">Maç Tamamlandı!</div>
+        <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:14px;" id="arena-1v1-elo-result">+25 ELO Kazandınız!</div>
+        <div style="display:flex; justify-content:center; gap:24px; margin-bottom:18px;">
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Doğru</div>
+            <div id="arena-1v1-final-correct" style="font-size:1.4rem; font-weight:900; color:#10B981;">0</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Yanlış</div>
+            <div id="arena-1v1-final-wrong" style="font-size:1.4rem; font-weight:900; color:#EF4444;">0</div>
+          </div>
+          <div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">Toplam Puan</div>
+            <div id="arena-1v1-final-pts" style="font-size:1.4rem; font-weight:900; color:var(--brand-blue);">0</div>
+          </div>
+        </div>
+        <button type="button" id="btn-finish-1v1-game" class="btn-coach-build-full">
+          <span>Arenaya Dön</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: KAHOOT TARZI CANLI GRUP OYUNU (modal-arena-kahoot-game) -->
+  <div id="modal-arena-kahoot-game" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet" style="max-width:600px; height:94vh; display:flex; flex-direction:column; padding:18px;">
+      <!-- Kahoot Başlık & Kapatma -->
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="background:#8B5CF6; color:#fff; font-weight:900; font-size:0.8rem; padding:4px 10px; border-radius:8px;">KAHOOT CANLI</span>
+          <span id="kahoot-room-pin-display" style="font-size:1rem; font-weight:900; color:var(--text-primary); letter-spacing:1px;">PIN: 000000</span>
+        </div>
+        <button type="button" id="btn-close-kahoot-game" class="icon-btn-ghost" aria-label="Ayrıl">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- FAZ 1: LOBİ EKRANI -->
+      <div id="kahoot-phase-lobby" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="text-align:center; padding:16px 0;">
+          <div style="font-size:1.3rem; font-weight:900; color:var(--text-primary); margin-bottom:4px;" id="kahoot-lobby-deck-title">Almanca Kelime Yarışması</div>
+          <div style="font-size:0.82rem; color:var(--text-muted);">Diğer yarışmacılar bu PIN ile odaya bekleniyor...</div>
+          <div style="margin-top:16px;">
+            <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); margin-bottom:8px;">Odadaki Oyuncular (<span id="kahoot-player-count">1</span>)</div>
+            <div id="kahoot-players-chip-list" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+          </div>
+        </div>
+
+        <div style="padding-top:16px;">
+          <button type="button" id="btn-start-kahoot-match" class="btn-coach-build-full" style="background:#8B5CF6; font-size:1.05rem; padding:14px;">
+            <span>Oyunu Başlat</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- FAZ 2: SORU EKRANI (4 RENKLİ KAHOOT BUTONU) -->
+      <div id="kahoot-phase-question" class="hidden" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+        <!-- Zaman Sayacı ve Soru Başlığı -->
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span id="kahoot-q-index" style="font-size:0.85rem; font-weight:800; color:var(--text-muted);">Soru 1 / 10</span>
+            <span id="kahoot-countdown-badge" style="font-size:1.3rem; font-weight:900; color:#EF4444; background:rgba(239,68,68,0.15); padding:2px 12px; border-radius:12px;">15s</span>
+          </div>
+          <div style="background:var(--bg-card); border:2px solid var(--border-medium); border-radius:16px; padding:20px; text-align:center; margin-bottom:14px;">
+            <div id="kahoot-q-lemma" style="font-size:1.9rem; font-weight:900; color:var(--text-primary);">der Apfel</div>
+            <div id="kahoot-q-sentence" style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; font-style:italic;">Ich esse einen Apfel.</div>
+          </div>
+        </div>
+
+        <!-- 4 Renkli Kahoot Şıkları -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <!-- Kırmızı Seçenek (Üçgen) -->
+          <button type="button" class="kahoot-btn btn-kahoot-red" data-opt-idx="0" style="background:#E11D48; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(225,29,72,0.35);">
+            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">▲ A</div>
+            <span class="kahoot-opt-text">Seçenek 1</span>
+          </button>
+
+          <!-- Mavi Seçenek (Eşkenar Dörtgen) -->
+          <button type="button" class="kahoot-btn btn-kahoot-blue" data-opt-idx="1" style="background:#2563EB; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(37,99,235,0.35);">
+            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">◆ B</div>
+            <span class="kahoot-opt-text">Seçenek 2</span>
+          </button>
+
+          <!-- Sarı Seçenek (Daire) -->
+          <button type="button" class="kahoot-btn btn-kahoot-yellow" data-opt-idx="2" style="background:#D97706; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(217,119,6,0.35);">
+            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">● C</div>
+            <span class="kahoot-opt-text">Seçenek 3</span>
+          </button>
+
+          <!-- Yeşil Seçenek (Kare) -->
+          <button type="button" class="kahoot-btn btn-kahoot-green" data-opt-idx="3" style="background:#059669; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(5,150,105,0.35);">
+            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">■ D</div>
+            <span class="kahoot-opt-text">Seçenek 4</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- FAZ 3: ARA LİDERLİK TABLOSU (Her Soru Sonrası) -->
+      <div id="kahoot-phase-intermediate" class="hidden" style="flex:1; display:flex; flex-direction:column; justify-content:space-between; text-align:center;">
+        <div>
+          <div id="kahoot-answer-feedback" style="font-size:1.4rem; font-weight:900; margin:16px 0;">Doğru Cevap!</div>
+          <div class="section-subheading" style="text-align:left; margin-bottom:8px;">Anlık Puan Sıralaması</div>
+          <div id="kahoot-intermediate-leaderboard" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+        <button type="button" id="btn-kahoot-next-question" class="btn-coach-build-full" style="background:#8B5CF6;">
+          <span>Sonraki Soru</span>
+        </button>
+      </div>
+
+      <!-- FAZ 4: FİNAL PODYUM EKRANI (1., 2., 3.) -->
+      <div id="kahoot-phase-podium" class="hidden" style="flex:1; display:flex; flex-direction:column; justify-content:space-between; text-align:center;">
+        <div>
+          <div style="font-size:1.5rem; font-weight:900; color:var(--text-primary); margin:10px 0;">Kahoot Podyumu</div>
+          <div style="display:flex; justify-content:center; align-items:flex-end; gap:12px; height:200px; margin:20px 0;">
+            <!-- 2. Sıra (Gümüş) -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+              <div id="podium-2nd-name" style="font-size:0.85rem; font-weight:800; margin-bottom:4px;">-</div>
+              <div id="podium-2nd-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">0 Puan</div>
+              <div style="width:75px; height:100px; background:#9CA3AF; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.4rem; color:#fff;">2</div>
+            </div>
+            <!-- 1. Sıra (Altın) -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+              <div id="podium-1st-name" style="font-size:0.95rem; font-weight:900; color:#F59E0B; margin-bottom:4px;">-</div>
+              <div id="podium-1st-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">0 Puan</div>
+              <div style="width:85px; height:140px; background:#F59E0B; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.8rem; color:#fff;">1</div>
+            </div>
+            <!-- 3. Sıra (Bronz) -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+              <div id="podium-3rd-name" style="font-size:0.85rem; font-weight:800; margin-bottom:4px;">-</div>
+              <div id="podium-3rd-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">0 Puan</div>
+              <div style="width:75px; height:75px; background:#CD7F32; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.3rem; color:#fff;">3</div>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="btn-finish-kahoot-game" class="btn-coach-build-full">
+          <span>Sosyal Merkeze Dön</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ORTAK DESTEYE KART EKLE (modal-add-collab-card) -->
+  <div id="modal-add-collab-card" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:440px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Ortak Desteye Kart Ekle</div>
+        <button type="button" id="btn-close-collab-card" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="input-collab-front">Almanca Kelime (Lemma)</label>
+        <input type="text" id="input-collab-front" class="form-control" placeholder="Örn: die Erfahrung" required />
+      </div>
+      <div class="auth-input-group">
+        <label for="input-collab-back">Türkçe Anlamı</label>
+        <input type="text" id="input-collab-back" class="form-control" placeholder="Örn: Deneyim, tecrübe" required />
+      </div>
+      <div class="auth-input-group">
+        <label for="select-collab-pos">Kelime Türü</label>
+        <select id="select-collab-pos" class="dock-select" style="width:100%; padding:8px;">
+          <option value="NOUN">İsim (Nomen)</option>
+          <option value="VERB">Fiil (Verb)</option>
+          <option value="ADJ">Sıfat (Adjektiv)</option>
+          <option value="ADV">Zarf (Adverb)</option>
+          <option value="PHRASE">Kalıp / İfade</option>
+        </select>
+      </div>
+      <div class="auth-input-group">
+        <label for="input-collab-example">Örnek Cümle (İsteğe Bağlı)</label>
+        <input type="text" id="input-collab-example" class="form-control" placeholder="Örn: Ich habe viel Erfahrung gesammelt." />
+      </div>
+      <button type="button" id="btn-submit-collab-card" class="btn-coach-build-full" style="margin-top:12px;">
+        <span>Ortak Desteye Ekle</span>
+      </button>
+    </div>
+  </div>
+
   <!-- TOAST BİLDİRİM ALANI -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.5.3"></script>
-  <script src="js/db.js?v=3.5.3"></script>
-  <script src="js/verbHelper.js?v=3.5.3"></script>
-  <script src="js/grammarEnrichment.js?v=3.5.3"></script>
-  <script src="js/offlineDictionary.js?v=3.5.3"></script>
-  <script src="js/dictionary.js?v=3.5.3"></script>
-  <script src="js/curatedPacks.js?v=3.5.3"></script>
-  <script src="js/seeder.js?v=3.5.3"></script>
-  <script src="js/tts.js?v=3.5.3"></script>
-  <script src="js/pronunciation.js?v=3.5.3"></script>
-  <script src="js/translator.js?v=3.5.3"></script>
-  <script src="js/game.js?v=3.5.3"></script>
-  <script src="js/study.js?v=3.5.3"></script>
-  <script src="js/stats.js?v=3.5.3"></script>
-  <script src="js/coach.js?v=3.5.3"></script>
-  <script src="js/deckBuilder.js?v=3.5.3"></script>
-  <script src="js/social.js?v=3.5.3"></script>
-  <script src="js/app.js?v=3.5.3"></script>
+  <script src="js/config.js?v=3.6.0"></script>
+  <script src="js/db.js?v=3.6.0"></script>
+  <script src="js/verbHelper.js?v=3.6.0"></script>
+  <script src="js/grammarEnrichment.js?v=3.6.0"></script>
+  <script src="js/offlineDictionary.js?v=3.6.0"></script>
+  <script src="js/dictionary.js?v=3.6.0"></script>
+  <script src="js/curatedPacks.js?v=3.6.0"></script>
+  <script src="js/seeder.js?v=3.6.0"></script>
+  <script src="js/tts.js?v=3.6.0"></script>
+  <script src="js/pronunciation.js?v=3.6.0"></script>
+  <script src="js/translator.js?v=3.6.0"></script>
+  <script src="js/game.js?v=3.6.0"></script>
+  <script src="js/study.js?v=3.6.0"></script>
+  <script src="js/stats.js?v=3.6.0"></script>
+  <script src="js/coach.js?v=3.6.0"></script>
+  <script src="js/deckBuilder.js?v=3.6.0"></script>
+  <script src="js/social.js?v=3.6.0"></script>
+  <script src="js/app.js?v=3.6.0"></script>
 </body>
 </html>
 

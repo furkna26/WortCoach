@@ -6244,3 +6244,169 @@
   cursor: pointer;
   padding: 4px 0;
 }
+
+/* ==========================================================================
+   SOSYAL & TOPLULUK MERKEZİ STİLLERİ (tab-social)
+   ========================================================================== */
+.social-subtab-bar {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.social-subtab-bar::-webkit-scrollbar {
+  display: none;
+}
+.social-subtab-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.social-subtab-btn:hover {
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+.social-subtab-btn.active {
+  background: var(--brand-blue);
+  color: #fff;
+  border-color: var(--brand-blue);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.social-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.social-card-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  transition: border-color 0.15s ease;
+}
+.social-card-box:focus-within {
+  border-color: var(--brand-blue);
+}
+
+/* Herkese Açık Desteler (Topluluk Kütüphanesi) */
+.public-decks-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.public-deck-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.public-deck-card:hover {
+  border-color: var(--brand-blue);
+  transform: translateY(-1px);
+}
+.public-deck-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.public-deck-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+.public-deck-author {
+  font-size: 0.75rem;
+  color: var(--brand-blue-hover);
+  font-weight: 700;
+}
+.public-deck-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.public-deck-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.btn-import-pub-deck {
+  flex: 1;
+  background: var(--brand-blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btn-preview-pub-deck {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Kulüpler & Sınıflar Stilleri */
+.clubs-list-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.club-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.club-card:hover {
+  border-color: var(--brand-blue);
+  background: var(--bg-card);
+}
+.club-info-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.club-info-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Kahoot Oyun Butonları */
+.kahoot-btn:active {
+  transform: scale(0.97);
+  filter: brightness(1.1);
+}
+.kahoot-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

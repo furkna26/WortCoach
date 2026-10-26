@@ -64,12 +64,55 @@ create table if not exists public.decks (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.profiles(id) on delete cascade,
   title text not null,
+  description text default '',
+  author_username text default '',
+  is_public boolean not null default false,
   words_json jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create index if not exists idx_decks_owner on public.decks(owner_id);
+create index if not exists idx_decks_public on public.decks(is_public);
+
+-- 5. CLUBS TABLOSU (KULÜP / SINIF / KLAN YAPISI)
+create table if not exists public.clubs (
+  id text primary key,
+  code text unique not null,
+  name text not null,
+  description text default '',
+  category text default 'Genel',
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  owner_username text not null default 'Kurucu',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_clubs_code on public.clubs(code);
+
+-- 6. CLUB MEMBERS TABLOSU
+create table if not exists public.club_members (
+  id uuid primary key default gen_random_uuid(),
+  club_id text not null references public.clubs(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  username text not null,
+  role text not null default 'Üye',
+  joined_at timestamptz not null default now(),
+  constraint unique_club_member unique (club_id, user_id)
+);
+
+create index if not exists idx_club_members_club on public.club_members(club_id);
+
+-- 7. CLUB DECKS TABLOSU (KULÜP DESTELERİ HAVUZU)
+create table if not exists public.club_decks (
+  id text primary key,
+  club_id text not null references public.clubs(id) on delete cascade,
+  title text not null,
+  words_json jsonb not null default '[]'::jsonb,
+  added_by text not null default 'Üye',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_club_decks_club on public.club_decks(club_id);
 
 -- ============================================================================
 -- YARDIMCI VE TETİKLEYİCİ FONKSİYONLAR (TRIGGERS & PROCEDURES)
