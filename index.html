@@ -25,6 +25,7 @@
   <!-- Critical Coach & Deck Builder UI Styles (Prevent Cache Mismatch) -->
   <style id="coach-critical-css">
 
+
     .coach-switch {
       display: flex;
       gap: 6px;
@@ -442,6 +443,99 @@
   cursor: not-allowed;
 }
 
+
+
+/* ===== Kağıt Uçak Gönder Butonu & Auto-Expanding Chatbox ===== */
+.coach-chat-send-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--brand-blue);
+  color: #FFFFFF;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+.coach-chat-send-icon-btn:hover:not(:disabled) {
+  background: var(--brand-blue-hover);
+  transform: scale(1.04);
+}
+.coach-chat-send-icon-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.coach-chat-send-icon-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.coach-chat-textarea {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  padding: 8px 4px;
+  resize: none;
+  outline: none;
+  min-height: 24px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+/* Auth Modal Stilleri */
+.prof-auth-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 45px rgba(0,0,0,0.5);
+  animation: scaleUp 0.16s ease-out;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.auth-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-input-group label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+.auth-error-msg {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  font-size: 0.8rem;
+}
+.prof-auth-link-btn {
+  background: none;
+  border: 0;
+  color: var(--brand-blue-hover);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
 </style>
 
 </head>
@@ -478,6 +572,24 @@
     <!-- Sistem İkonları -->
         <!-- Navigasyon İkonları (5 Yeni Ultra-Modern İkon) -->
     <!-- 1. Sözlük İkonu (Kullanıcının Tercih Ettiği Klasik Kitap İkonu) -->
+    
+    <!-- Ataş / Dosya Ekle İkonu -->
+    <symbol id="icon-paperclip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    </symbol>
+
+    <!-- Kağıt Uçak / Gönder İkonu -->
+    <symbol id="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </symbol>
+
+    <!-- Profil Navigasyon İkonu -->
+    <symbol id="nav-icon-profile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </symbol>
+
     <symbol id="nav-icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
@@ -984,53 +1096,16 @@
       </section>
 
       <!-- ====================================================================
-           TAB: ALMANCA KOÇU (tab-reader) — Tam Ekran İnteraktif Chat UI
+           TAB: COACH (tab-reader) — SADECE VE SADECE CHAT EKRANI
            ==================================================================== -->
       <section id="tab-reader" class="tab-view">
         <div class="coach-chat-app-container">
-          <!-- Üst Bilgi & Seviye Çubuğu -->
-          <div class="coach-top-bar">
-            <div class="coach-top-info">
-              <h1 class="coach-main-title">Almanca Koçu</h1>
-              <p class="coach-main-sub">Akademik Metin Analizi, Dilbilgisi &amp; İnteraktif Alıştırma</p>
-            </div>
-            <div class="coach-level-selector-box">
-              <label for="coach-user-level" class="coach-level-label">Seviye:</label>
-              <select id="coach-user-level" class="coach-select-pill">
-                <option value="A1">A1</option>
-                <option value="A2">A2</option>
-                <option value="B1" selected>B1</option>
-                <option value="B2">B2</option>
-                <option value="C1">C1</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Hızlı Eylem Çipleri (Tek Satır Yatay Kaydırılabilir) -->
-          <div class="coach-quick-actions-bar">
-            <button type="button" class="coach-quick-btn" data-action="cloze">Boşluk Doldurma (Cloze)</button>
-            <button type="button" class="coach-quick-btn" data-action="matching">Eşleştirme Oyunu</button>
-            <button type="button" class="coach-quick-btn" data-action="grammar">Dilbilgisi Çalışması</button>
-            <button type="button" class="coach-quick-btn" data-action="academic">Akademik Metin Analizi</button>
-            <button type="button" class="coach-quick-btn" data-action="deck">Kelime Destesine Çevir</button>
-          </div>
-
           <!-- Sohbet Mesaj Akışı -->
-          <div id="coach-chat-stream" class="coach-chat-stream">
-            <div class="coach-welcome-bubble">
-              <div class="coach-welcome-title">Almanca Dil Koçunuz Hazır</div>
-              <p class="coach-welcome-desc">
-                Almanca dilbilgisi kurallarını sorabilir, cümle çevirilerinizi kontrol ettirebilir veya aşağıdaki ataş butonuyla bir görsel, PDF ya da metin belgesi yükleyerek üzerinde akademik analiz ve interaktif alıştırmalar başlatabilirsiniz.
-              </p>
-              <div class="coach-policy-note">
-                Güvenlik Bildirimi: Koç yalnızca Almanca dil eğitimi ve metin analizi konularında rehberlik eder.
-              </div>
-            </div>
-          </div>
+          <div id="coach-chat-stream" class="coach-chat-stream"></div>
 
-          <!-- Ekli Dosya Rozeti (Varsa) -->
+          <!-- Ekli Çalışma Dosyası Çipi -->
           <div id="coach-chat-file-chip" class="coach-attached-chip hidden">
-            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-bookmark"></use></svg>
+            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-paperclip"></use></svg>
             <span id="coach-chat-file-name" class="coach-attached-name">dosya.pdf</span>
             <button type="button" id="btn-coach-chat-file-remove" class="coach-chip-remove" aria-label="Kaldır">Kaldır</button>
           </div>
@@ -1039,12 +1114,11 @@
           <div class="coach-chat-input-bar">
             <input type="file" id="coach-chat-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
             <button type="button" id="btn-coach-attach-file" class="coach-icon-attach-btn" title="Belge veya Görsel Yükle" aria-label="Belge veya Görsel Yükle">
-              <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-download"></use></svg>
+              <svg class="svg-icon" style="width:20px;height:20px;"><use href="#icon-paperclip"></use></svg>
             </button>
-            <textarea id="coach-chat-input" class="coach-chat-textarea" rows="1" maxlength="1500" placeholder="Almanca ile ilgili bir soru sorun veya dosyanızı inceletin..."></textarea>
-            <button type="button" id="btn-coach-chat-send" class="coach-chat-submit-btn" aria-label="Gönder">
-              <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-check"></use></svg>
-              <span>Gönder</span>
+            <textarea id="coach-chat-input" class="coach-chat-textarea" rows="1" maxlength="2500" placeholder="Almanca bir soru sorun veya dosyanızı inceletin..."></textarea>
+            <button type="button" id="btn-coach-chat-send" class="coach-chat-send-icon-btn" title="Gönder" aria-label="Gönder">
+              <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-send"></use></svg>
             </button>
           </div>
         </div>
@@ -1523,6 +1597,131 @@
         <div id="all-cards-list"></div>
       </section>
 
+    
+      <!-- ====================================================================
+           TAB 6: PROFİL & SOSYAL & İSTATİSTİKLER (tab-profile)
+           ==================================================================== -->
+      <section id="tab-profile" class="tab-view">
+        <!-- Kullanıcı Hero Kartı -->
+        <div class="prof-hero-card">
+          <div class="prof-hero-top">
+            <div>
+              <div class="prof-hero-name" id="prof-username-display">Misafir Kullanıcı</div>
+              <div class="prof-hero-code-wrap">
+                <span id="prof-friend-code-display" class="prof-code-badge">WC#0000</span>
+                <button type="button" id="btn-copy-friend-code" class="prof-mini-btn" title="Kodu Kopyala">Kopyala</button>
+              </div>
+            </div>
+            <div class="prof-hero-tier-group">
+              <span id="prof-tier-badge" class="prof-tier-pill">Bronz</span>
+              <div class="prof-elo-number"><span id="prof-elo-display">1000</span> <small>ELO</small></div>
+              <div class="prof-streak-val" id="prof-streak-display">0 Gün Seri</div>
+            </div>
+          </div>
+          <div class="prof-tier-progress-track">
+            <div id="prof-tier-progress-fill" class="prof-tier-progress-fill" style="width: 25%;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div id="prof-tier-progress-text" class="prof-tier-subtext">Gümüş ligine 200 ELO kaldı</div>
+            <button type="button" id="btn-profile-auth-trigger" class="prof-auth-link-btn">Giriş Yap / Kaydol</button>
+          </div>
+        </div>
+
+        <!-- İki Sekme: [İstatistiklerim] | [Sosyal & Arkadaşlar] -->
+        <div class="profile-subtab-bar" style="margin: 16px 0 14px;">
+          <button type="button" class="profile-subtab-btn active" data-target-pane="pane-prof-stats">İstatistiklerim</button>
+          <button type="button" class="profile-subtab-btn" data-target-pane="pane-prof-friends">Sosyal &amp; Arkadaşlar</button>
+        </div>
+
+        <!-- PANE 1: İSTATİSTİKLERİM (Zamana göre filtrelenebilir 4 Ana Metrik) -->
+        <div id="pane-prof-stats" class="profile-pane">
+          <div class="prof-filter-row">
+            <span class="prof-filter-title">Zaman Aralığı:</span>
+            <div class="prof-filter-segments">
+              <button type="button" class="prof-stat-filter-btn" data-range="1d">1 Gün</button>
+              <button type="button" class="prof-stat-filter-btn active" data-range="7d">1 Hafta</button>
+              <button type="button" class="prof-stat-filter-btn" data-range="30d">1 Ay</button>
+              <button type="button" class="prof-stat-filter-btn" data-range="365d">1 Yıl</button>
+              <button type="button" class="prof-stat-filter-btn" data-range="all">Tümü</button>
+            </div>
+          </div>
+
+          <div class="prof-stats-grid">
+            <!-- 1. Artikel Keskinliği (Genus) -->
+            <div class="prof-stat-card">
+              <div class="prof-stat-head">
+                <span class="prof-stat-label">Artikel Keskinliği (Genus)</span>
+                <span class="prof-stat-code">der / die / das</span>
+              </div>
+              <div class="prof-stat-value" id="stat-val-genus">%0</div>
+              <div class="prof-stat-footer" id="stat-sub-genus">0 soru cevaplandı</div>
+            </div>
+
+            <!-- 2. Bağlam Ustası (Kontext) -->
+            <div class="prof-stat-card">
+              <div class="prof-stat-head">
+                <span class="prof-stat-label">Bağlam Ustası (Kontext)</span>
+                <span class="prof-stat-code">Cloze Test</span>
+              </div>
+              <div class="prof-stat-value" id="stat-val-kontext">%0</div>
+              <div class="prof-stat-footer" id="stat-sub-kontext">0 boşluk tamamlandı</div>
+            </div>
+
+            <!-- 3. Çeviklik (Tempo) -->
+            <div class="prof-stat-card">
+              <div class="prof-stat-head">
+                <span class="prof-stat-label">Çeviklik (Tempo)</span>
+                <span class="prof-stat-code">Ortalama Süre</span>
+              </div>
+              <div class="prof-stat-value" id="stat-val-tempo">0.00 sn</div>
+              <div class="prof-stat-footer" id="stat-sub-tempo">0 yanıtın ortalaması</div>
+            </div>
+
+            <!-- 4. Hafıza Direnci (Ausdauer) -->
+            <div class="prof-stat-card">
+              <div class="prof-stat-head">
+                <span class="prof-stat-label">Hafıza Direnci (Ausdauer)</span>
+                <span class="prof-stat-code">SRS Hatırlama</span>
+              </div>
+              <div class="prof-stat-value" id="stat-val-ausdauer">%0</div>
+              <div class="prof-stat-footer" id="stat-sub-ausdauer">0 tekrar kartı</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: SOSYAL & ARKADAŞLAR -->
+        <div id="pane-prof-friends" class="profile-pane hidden">
+          <!-- Arkadaş Ekleme Arama Kutusu -->
+          <div class="prof-search-box">
+            <input type="text" id="user-search-input" class="form-control" placeholder="Kullanıcı adı veya WC#0000 kodu..." />
+            <button type="button" id="btn-search-user" class="btn-primary-compact">Arkadaş Ara</button>
+          </div>
+          <div id="user-search-results" class="search-results-list"></div>
+
+          <!-- Bekleyen İstekler -->
+          <div id="pending-requests-box" class="pending-requests-card hidden"></div>
+
+          <!-- Deste Gizliliği Ayarı -->
+          <div class="prof-privacy-bar" style="margin-bottom:14px; padding:10px 14px; background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:12px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:0.82rem; font-weight:800; color:var(--text-primary);">Deste Gizliliği</div>
+              <div style="font-size:0.72rem; color:var(--text-muted);">Destelerinizin görünürlük izni</div>
+            </div>
+            <select id="profile-deck-privacy-select" class="dock-select" style="font-size:0.8rem; padding:4px 8px;">
+              <option value="private">Paylaşma</option>
+              <option value="friends" selected>Sadece Arkadaşlar</option>
+              <option value="public">Herkese Açık</option>
+            </select>
+          </div>
+
+          <!-- Arkadaşlarım & Liderlik Tablosu -->
+          <div class="leaderboard-section">
+            <div class="section-subheading">Arkadaşlarım &amp; Liderlik Sıralaması (ELO)</div>
+            <div id="friends-leaderboard-list" class="leaderboard-list"></div>
+          </div>
+        </div>
+      </section>
+
     </main>
 
     <!-- ====================================================================
@@ -1575,6 +1774,14 @@
           <svg class="svg-icon"><use href="#nav-icon-games"></use></svg>
         </div>
         <span class="nav-label">Oyunlar</span>
+      </button>
+    
+      <!-- 7. Profil (Kullanıcı İkonu) -->
+      <button class="nav-item" data-target="tab-profile" aria-label="Profil">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-profile"></use></svg>
+        </div>
+        <span class="nav-label">Profil</span>
       </button>
     </nav>
   </div>
@@ -2452,25 +2659,6 @@
 
       <!-- PANE 3: AYARLAR & DESTE GİZLİLİĞİ & BULUT -->
       <div id="pane-prof-settings" class="profile-pane hidden">
-        <div class="prof-setting-group">
-          <label class="prof-setting-label" for="profile-deck-privacy-select">Deste Gizliliği:</label>
-          <p class="prof-setting-desc">Oluşturduğunuz kelime destelerinin kimler tarafından görüntülenebileceğini ve içe aktarılabileceğini belirler.</p>
-          <select id="profile-deck-privacy-select" class="form-control">
-            <option value="private">Paylaşma (Sadece Kendim)</option>
-            <option value="friends" selected>Sadece Arkadaşlar (Önerilen)</option>
-            <option value="public">Herkese Açık</option>
-          </select>
-        </div>
-
-        <div class="prof-setting-group">
-          <div class="prof-setting-label">Supabase Bulut Senkronizasyonu:</div>
-          <p class="prof-setting-desc">Arkadaş eklemek, ELO liderlik tablosuna katılmak ve bulut yedeklemesi için ücretsiz Supabase projenizi bağlayın.</p>
-          <input type="text" id="sb-config-url" class="form-control" placeholder="https://xyz.supabase.co" style="margin-bottom:8px;" />
-          <input type="password" id="sb-config-key" class="form-control" placeholder="Supabase anon public key..." style="margin-bottom:8px;" />
-          <div style="display:flex; gap:8px;">
-            <button type="button" id="btn-save-sb-keys" class="btn-primary-compact">Ayarları Kaydet</button>
-            <button type="button" id="btn-sb-auth-action" class="btn-secondary-compact">Oturum Aç / Kaydol</button>
-          </div>
         </div>
       </div>
     </div>
@@ -2552,6 +2740,63 @@
       <button type="button" id="btn-close-rank-promo" class="btn-coach-build-full">
         <span>Harika, Devam Et</span>
       </button>
+    </div>
+  </div>
+
+  
+  <!-- ====================================================================
+       MODAL: BASİT GİRİŞ YAP & KAYIT OL (SADECE KULLANICI ADI & ŞİFRE)
+       ==================================================================== -->
+  <div id="modal-auth" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+    <div class="prof-auth-box">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title" id="auth-modal-title">WortCoach Hesabı</div>
+        <button type="button" id="btn-close-auth-modal" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- Auth Switch: [Giriş Yap] [Kayıt Ol] -->
+      <div class="profile-subtab-bar" style="margin-bottom:16px;">
+        <button type="button" id="tab-btn-auth-login" class="profile-subtab-btn active">Giriş Yap</button>
+        <button type="button" id="tab-btn-auth-register" class="profile-subtab-btn">Kayıt Ol</button>
+      </div>
+
+      <!-- GİRİŞ FORMU -->
+      <form id="form-auth-login" class="auth-form" onsubmit="return false;">
+        <div class="auth-input-group">
+          <label for="auth-login-username">Kullanıcı Adı</label>
+          <input type="text" id="auth-login-username" class="form-control" placeholder="Kullanıcı adınız..." required autocomplete="username" />
+        </div>
+        <div class="auth-input-group">
+          <label for="auth-login-password">Şifre</label>
+          <input type="password" id="auth-login-password" class="form-control" placeholder="Şifreniz..." required autocomplete="current-password" />
+        </div>
+        <div id="auth-login-error" class="auth-error-msg hidden"></div>
+        <button type="button" id="btn-submit-login" class="btn-coach-build-full" style="margin-top:8px;">
+          <span>Giriş Yap</span>
+        </button>
+      </form>
+
+      <!-- KAYIT FORMU -->
+      <form id="form-auth-register" class="auth-form hidden" onsubmit="return false;">
+        <div class="auth-input-group">
+          <label for="auth-reg-username">Kullanıcı Adı</label>
+          <input type="text" id="auth-reg-username" class="form-control" placeholder="Benzersiz bir kullanıcı adı..." required autocomplete="username" />
+        </div>
+        <div class="auth-input-group">
+          <label for="auth-reg-password">Şifre</label>
+          <input type="password" id="auth-reg-password" class="form-control" placeholder="En az 6 karakterli şifre..." required autocomplete="new-password" />
+        </div>
+        <div class="auth-input-group">
+          <label for="auth-reg-password-confirm">Şifreyi Doğrula</label>
+          <input type="password" id="auth-reg-password-confirm" class="form-control" placeholder="Şifrenizi tekrar yazın..." required autocomplete="new-password" />
+        </div>
+        <div id="auth-reg-error" class="auth-error-msg hidden"></div>
+        <button type="button" id="btn-submit-register" class="btn-coach-build-full" style="margin-top:8px;">
+          <span>Kayıt Ol</span>
+        </button>
+      </form>
     </div>
   </div>
 

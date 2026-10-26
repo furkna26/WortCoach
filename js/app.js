@@ -472,6 +472,8 @@ class WortCoachApp {
       await this.renderDecksTab();
     } else if (tabId === 'tab-cards') {
       await this.renderCardsList();
+    } else if (tabId === 'tab-profile') {
+      if (window.wmSocial) await window.wmSocial.refreshProfileView();
     }
   }
 

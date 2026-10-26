@@ -631,7 +631,7 @@
 
     const payload = {
       message: msg || (action === 'cloze' ? 'Boşluk doldurma alıştırması hazırla' : action),
-      userLevel: $('coach-user-level')?.value || 'B1',
+      userLevel: 'B1',
       action: action || '',
       history: chatState.history.slice(-6),
     };
@@ -731,11 +731,23 @@
       toast('Çalışma dosyası kaldırıldı.');
     });
 
-    $('btn-coach-chat-send')?.addEventListener('click', () => sendCoachMessage());
+    const chatTextarea = $('coach-chat-input');
+    if (chatTextarea) {
+      chatTextarea.addEventListener('input', () => {
+        chatTextarea.style.height = 'auto';
+        chatTextarea.style.height = Math.min(160, chatTextarea.scrollHeight) + 'px';
+      });
+    }
+
+    $('btn-coach-chat-send')?.addEventListener('click', () => {
+      sendCoachMessage();
+      if (chatTextarea) chatTextarea.style.height = '';
+    });
     $('coach-chat-input')?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendCoachMessage();
+        if (chatTextarea) chatTextarea.style.height = '';
       }
     });
 

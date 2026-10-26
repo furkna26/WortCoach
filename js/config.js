@@ -1,7 +1,8 @@
-// WortCoach istemci yapılandırması ve Coach API istemcisi.
-// Gemini anahtarı ve promptlar istemcide YOKTUR; sunucu (Cloudflare Worker) sabit görevleri çalıştırır.
+// WortCoach istemci yapılandırması
 window.WORTCOACH_CONFIG = {
   COACH_API: 'https://wortcoach-proxy.mosmandurmaz26.workers.dev',
+  SUPABASE_URL: 'https://zomxltwusqvqbpbgcdki.supabase.co',
+  SUPABASE_ANON_KEY: localStorage.getItem('wortcoach_sb_key') || '',
 };
 
 /**

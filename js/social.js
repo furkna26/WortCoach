@@ -1,10 +1,10 @@
 /**
-/**
- * WortCoach - Supabase Sosyal, ELO/Lig, İstatistik ve Arkadaşlık Motoru
+ * WortCoach - Supabase Sosyal, ELO/Lig, İstatistik, Arkadaşlık ve Basit Kimlik Motoru
  * - Dinamik ELO & 8 Kademeli Lig Sistemi (Tahta -> Grossmeister)
- * - Zaman Filtreli 4 Ana İstatistik (Artikel, Kontext, Tempo, Ausdauer)
+ * - Zaman Filtreli 4 Ana İstatistik (Artikel Keskinliği, Bağlam Ustası, Çeviklik, Hafıza Direnci)
  * - Arkadaş Ekleme, Arama, Kabul ve Liderlik Sıralaması
  * - Deste Gizliliği (private, friends, public) ve Desteleri İçe Aktarma
+ * - Basit Auth: Sadece Kullanıcı Adı ve Şifre (Geliştirici anahtarı kullanıcının gözünden gizlenmiştir)
  * - Sıfır emoji, analitik, pedagojik ve güvenli tasarım.
  */
 
@@ -31,13 +31,13 @@
     return RANK_TIERS[RANK_TIERS.length - 1];
   }
 
-  // 2. SUPABASE BAĞLANTISI
+  // 2. SOSYAL & İSTATİSTİK YÖNETİCİSİ
   class WortCoachSocial {
     constructor() {
       this.client = null;
       this.user = null;
       this.profile = null;
-      this.currentFilterRange = '7d'; // '1d', '7d', '30d', '365d', 'all'
+      this.currentFilterRange = '7d';
       this.viewingFriendProfile = null;
       this.friendFilterRange = '7d';
       this.localProfileKey = 'wortcoach_local_profile';
@@ -48,12 +48,12 @@
       this.initLocalProfileFallback();
 
       const config = window.WORTCOACH_CONFIG || {};
-      const storedUrl = localStorage.getItem('wortcoach_sb_url') || config.SUPABASE_URL;
-      const storedKey = localStorage.getItem('wortcoach_sb_key') || config.SUPABASE_ANON_KEY;
+      const sbUrl = config.SUPABASE_URL;
+      const sbKey = config.SUPABASE_ANON_KEY;
 
-      if (window.supabase && storedUrl && storedKey) {
+      if (window.supabase && sbUrl && sbKey) {
         try {
-          this.client = window.supabase.createClient(storedUrl, storedKey, {
+          this.client = window.supabase.createClient(sbUrl, sbKey, {
             auth: {
               persistSession: true,
               autoRefreshToken: true
@@ -73,18 +73,17 @@
             } else {
               this.profile = null;
             }
-            this.updateHeaderBadge();
+            this.updateUI();
           });
         } catch (e) {
-          console.warn('Supabase başlatılamadı, yerel modda devam ediliyor:', e.message);
+          console.warn('Supabase otomatik başlatılamadı:', e.message);
         }
       }
 
-      this.updateHeaderBadge();
+      this.updateUI();
       this.attachEventListeners();
     }
 
-    // Yerel Profil & İstatistik Desteği (Kullanıcı henüz Supabase bağlamadıysa bile tüm hesaplamalar çalışır)
     initLocalProfileFallback() {
       let lp = null;
       try {
@@ -127,70 +126,72 @@
 
         if (!error && data) {
           this.profile = data;
-          this.updateHeaderBadge();
+          this.updateUI();
         }
       } catch (e) {
         console.error('Profil yükleme hatası:', e);
       }
     }
 
-    updateHeaderBadge() {
-      const btn = $('btn-open-profile');
-      if (!btn) return;
+    updateUI() {
       const prof = this.getActiveProfile();
       const tier = getTierForElo(prof.elo);
 
-      btn.innerHTML = `
-        <span class="user-tier-dot" style="background:${tier.color}"></span>
-        <span class="user-elo-text">${tier.name} · ${prof.elo}</span>
-      `;
+      // Üst Header Rozeti
+      const headerBtn = $('btn-open-profile');
+      if (headerBtn) {
+        headerBtn.innerHTML = `
+          <span class="user-tier-dot" style="background:${tier.color}"></span>
+          <span class="user-elo-text">${tier.name} · ${prof.elo}</span>
+        `;
+      }
+
+      // Tab-Profile Görünümü Güncelleme
+      if ($('prof-username-display')) $('prof-username-display').textContent = prof.username;
+      if ($('prof-friend-code-display')) $('prof-friend-code-display').textContent = prof.friend_code;
+      if ($('prof-elo-display')) $('prof-elo-display').textContent = prof.elo;
+      if ($('prof-tier-badge')) {
+        $('prof-tier-badge').textContent = tier.name;
+        $('prof-tier-badge').style.borderColor = tier.color;
+        $('prof-tier-badge').style.color = tier.color;
+      }
+      if ($('prof-streak-display')) $('prof-streak-display').textContent = `${prof.streak_days || 0} Gün Seri`;
+
+      // İlerleme Barı
+      const nextTier = RANK_TIERS.find((t) => t.min > prof.elo);
+      if (nextTier && $('prof-tier-progress-fill')) {
+        const span = nextTier.min - tier.min;
+        const prog = Math.min(100, Math.max(0, Math.round(((prof.elo - tier.min) / span) * 100)));
+        $('prof-tier-progress-fill').style.width = `${prog}%`;
+        if ($('prof-tier-progress-text')) {
+          $('prof-tier-progress-text').textContent = `${nextTier.name} ligine ${nextTier.min - prof.elo} ELO kaldı`;
+        }
+      }
+
+      // Giriş / Çıkış Butonu
+      const authBtn = $('btn-profile-auth-trigger');
+      if (authBtn) {
+        authBtn.textContent = this.user ? 'Çıkış Yap' : 'Giriş Yap / Kaydol';
+      }
+
+      // Gizlilik seçimi
+      if ($('profile-deck-privacy-select')) {
+        $('profile-deck-privacy-select').value = prof.deck_privacy || 'friends';
+      }
     }
 
     // =========================================================================
     // MODÜL 3: DİNAMİK ELO, LİG VE STREAK SİSTEMİ
     // =========================================================================
-    /**
-     * Dinamik ELO Değişimi Hesaplar
-     * @param {Object} params
-     * @param {boolean} params.isCorrect - Doğru mu?
-     * @param {number} params.responseTimeMs - Yanıt süresi (ms)
-     * @param {number} params.comboCount - Ardışık doğru sayısı
-     * @param {boolean} [params.isHardWord] - Zorlu kelime mi?
-     * @returns {number} ELO Delta (+/-)
-     */
     calculateEloChange({ isCorrect, responseTimeMs = 0, comboCount = 0, isHardWord = false }) {
-      if (!isCorrect) {
-        return -10;
-      }
-
+      if (!isCorrect) return -10;
       let gain = 12; // Baz puan
-
-      // Hız Bonusu: 3 saniyenin altında doğru cevap -> +5 ELO
-      if (responseTimeMs > 0 && responseTimeMs < 3000) {
-        gain += 5;
-      }
-
-      // Seri (Combo) Çarpanı: 5 ve üzeri doğru cevapta kazanılan ELO 1.25 ile çarpılır
-      if (comboCount >= 5) {
-        gain = Math.round(gain * 1.25);
-      }
-
-      // Zorlu Kelime Bonusu: Daha önce sık hata yapılan kelime doğru bilinirse -> +8 ELO
-      if (isHardWord) {
-        gain += 8;
-      }
-
+      if (responseTimeMs > 0 && responseTimeMs < 3000) gain += 5; // Hız Bonusu
+      if (comboCount >= 5) gain = Math.round(gain * 1.25); // Combo Çarpanı
+      if (isHardWord) gain += 8; // Zorlu Kelime Bonusu
       return gain;
     }
 
-    /**
-     * Aktivite İstatistiğini ve ELO'yu Kaydeder
-     * @param {'artikel'|'cloze'|'review'} type
-     * @param {boolean} isCorrect
-     * @param {number} responseTimeMs
-     * @param {number} comboCount
-     * @param {boolean} isHardWord
-     */
     async recordActivity({ type, isCorrect, responseTimeMs = 0, comboCount = 0, isHardWord = false }) {
       const eloDelta = this.calculateEloChange({ isCorrect, responseTimeMs, comboCount, isHardWord });
       const todayStr = new Date().toISOString().split('T')[0];
@@ -214,7 +215,7 @@
             this.profile.streak_days = data.streak_days;
             this.profile.last_active_date = todayStr;
 
-            this.updateHeaderBadge();
+            this.updateUI();
 
             if (data.tier_promoted) {
               this.showRankPromotionModal(oldTier, newTier);
@@ -222,7 +223,7 @@
             return data;
           }
         } catch (e) {
-          console.warn('Cloud istatistik RPC hatası, yerel işleniyor:', e);
+          console.warn('Cloud RPC hatası, yerel kaydediliyor:', e);
         }
       }
 
@@ -235,7 +236,6 @@
       const newTierObj = getTierForElo(lp.elo);
       lp.rank_tier = newTierObj.name;
 
-      // Streak
       if (!lp.last_active_date) {
         lp.streak_days = 1;
       } else if (lp.last_active_date === todayStr) {
@@ -249,20 +249,14 @@
       lp.last_active_date = todayStr;
       localStorage.setItem(this.localProfileKey, JSON.stringify(lp));
 
-      // Yerel daily stats
       this.saveLocalDailyStat(todayStr, type, isCorrect, responseTimeMs);
-
-      this.updateHeaderBadge();
+      this.updateUI();
 
       if (lp.elo > oldElo && newTierObj.name !== oldTier) {
         this.showRankPromotionModal(oldTier, newTierObj.name);
       }
 
-      return {
-        new_elo: lp.elo,
-        elo_delta: eloDelta,
-        tier_promoted: newTierObj.name !== oldTier
-      };
+      return { new_elo: lp.elo, elo_delta: eloDelta, tier_promoted: newTierObj.name !== oldTier };
     }
 
     saveLocalDailyStat(dateStr, type, isCorrect, responseTimeMs) {
@@ -273,14 +267,10 @@
 
       if (!stats[dateStr]) {
         stats[dateStr] = {
-          artikel_correct: 0,
-          artikel_total: 0,
-          cloze_correct: 0,
-          cloze_total: 0,
-          review_correct: 0,
-          review_total: 0,
-          total_response_time_ms: 0,
-          total_questions_answered: 0
+          artikel_correct: 0, artikel_total: 0,
+          cloze_correct: 0, cloze_total: 0,
+          review_correct: 0, review_total: 0,
+          total_response_time_ms: 0, total_questions_answered: 0
         };
       }
 
@@ -312,11 +302,6 @@
     // =========================================================================
     // MODÜL 2: ZAMANA GÖRE FİLTRELENEBİLİR 4 ANA İSTATİSTİK
     // =========================================================================
-    /**
-     * Belirtilen aralığa göre 4 ana istatistiği hesaplar
-     * @param {string} userId - 'local' veya supabase user uuid
-     * @param {'1d'|'7d'|'30d'|'365d'|'all'} range
-     */
     async getAggregatedStats(userId, range = '7d') {
       let cutoffDate = null;
       const now = new Date();
@@ -342,22 +327,17 @@
       if (this.isCloudConnected() && userId !== 'local_user') {
         try {
           let q = this.client.from('daily_stats').select('*').eq('user_id', userId);
-          if (cutoffDate) {
-            q = q.gte('stat_date', cutoffDate);
-          }
+          if (cutoffDate) q = q.gte('stat_date', cutoffDate);
           const { data, error } = await q;
           if (!error && Array.isArray(data)) rows = data;
         } catch (e) {
-          console.warn('İstatistik çekilemedi:', e);
+          console.warn('İstatistik çekme hatası:', e);
         }
       } else {
-        // Yerel istatistikleri topla
         try {
           const stats = JSON.parse(localStorage.getItem(this.localStatsKey)) || {};
           for (const [dateStr, row] of Object.entries(stats)) {
-            if (!cutoffDate || dateStr >= cutoffDate) {
-              rows.push(row);
-            }
+            if (!cutoffDate || dateStr >= cutoffDate) rows.push(row);
           }
         } catch (_) {}
       }
@@ -378,37 +358,42 @@
         totalAnswers += Number(r.total_questions_answered) || 0;
       });
 
-      const artikelAccuracy = artikelTotal > 0 ? Math.round((artikelCorrect / artikelTotal) * 100) : 0;
-      const clozeAccuracy = clozeTotal > 0 ? Math.round((clozeCorrect / clozeTotal) * 100) : 0;
-      const avgTempoSec = totalAnswers > 0 ? ((totalTimeMs / totalAnswers) / 1000).toFixed(2) : '0.00';
-      const reviewAccuracy = reviewTotal > 0 ? Math.round((reviewCorrect / reviewTotal) * 100) : 0;
-
       return {
-        artikelAccuracy,
+        artikelAccuracy: artikelTotal > 0 ? Math.round((artikelCorrect / artikelTotal) * 100) : 0,
         artikelTotal,
-        clozeAccuracy,
+        clozeAccuracy: clozeTotal > 0 ? Math.round((clozeCorrect / clozeTotal) * 100) : 0,
         clozeTotal,
-        avgTempoSec,
+        avgTempoSec: totalAnswers > 0 ? ((totalTimeMs / totalAnswers) / 1000).toFixed(2) : '0.00',
         totalAnswers,
-        reviewAccuracy,
+        reviewAccuracy: reviewTotal > 0 ? Math.round((reviewCorrect / reviewTotal) * 100) : 0,
         reviewTotal
       };
     }
 
+    async renderStatsCards(userId, range) {
+      const stats = await this.getAggregatedStats(userId, range);
+      if ($('stat-val-genus')) $('stat-val-genus').textContent = `%${stats.artikelAccuracy}`;
+      if ($('stat-sub-genus')) $('stat-sub-genus').textContent = `${stats.artikelTotal} soru cevaplandı`;
+      if ($('stat-val-kontext')) $('stat-val-kontext').textContent = `%${stats.clozeAccuracy}`;
+      if ($('stat-sub-kontext')) $('stat-sub-kontext').textContent = `${stats.clozeTotal} boşluk tamamlandı`;
+      if ($('stat-val-tempo')) $('stat-val-tempo').textContent = `${stats.avgTempoSec} sn`;
+      if ($('stat-sub-tempo')) $('stat-sub-tempo').textContent = `${stats.totalAnswers} yanıtın ortalaması`;
+      if ($('stat-val-ausdauer')) $('stat-val-ausdauer').textContent = `%${stats.reviewAccuracy}`;
+      if ($('stat-sub-ausdauer')) $('stat-sub-ausdauer').textContent = `${stats.reviewTotal} tekrar kartı`;
+    }
+
     // =========================================================================
-    // MODÜL 4 & 5: ARKADAŞLAR, LİDERLİK TABLOSU VE PROFİL
+    // MODÜL 4: ARKADAŞLAR, ARAMA, LİDERLİK TABLOSU
     // =========================================================================
     async searchUser(query) {
-      if (!this.isCloudConnected()) throw new Error('Arkadaş aramak için lütfen Supabase hesabınıza giriş yapın.');
+      if (!this.isCloudConnected()) throw new Error('Arkadaş aramak için lütfen giriş yapın.');
       const clean = (query || '').trim();
       if (!clean) return [];
 
       let q = this.client.from('profiles').select('id, username, friend_code, elo, rank_tier, streak_days');
-      if (clean.startsWith('WC#')) {
-        q = q.eq('friend_code', clean);
-      } else {
-        q = q.ilike('username', `%${clean}%`);
-      }
+      if (clean.startsWith('WC#')) q = q.eq('friend_code', clean);
+      else q = q.ilike('username', `%${clean}%`);
+
       const { data, error } = await q.limit(10);
       if (error) throw error;
       return (data || []).filter((u) => u.id !== this.user.id);
@@ -446,7 +431,6 @@
         return [{ ...p, isMe: true, rank: 1 }];
       }
 
-      // Kabul edilmiş arkadaşlıkları çek
       const { data: friendships, error: fErr } = await this.client
         .from('friendships')
         .select('*')
@@ -477,17 +461,13 @@
 
     async getPendingFriendships() {
       if (!this.isCloudConnected()) return { incoming: [], outgoing: [] };
-
       const { data, error } = await this.client
         .from('friendships')
         .select('id, requester_id, addressee_id, status, created_at, profiles!requester_id(username, friend_code, elo)')
         .eq('status', 'pending');
-
       if (error) throw error;
-
       const incoming = (data || []).filter((f) => f.addressee_id === this.user.id);
       const outgoing = (data || []).filter((f) => f.requester_id === this.user.id);
-
       return { incoming, outgoing };
     }
 
@@ -513,36 +493,8 @@
         .select('id, title, words_json, created_at')
         .eq('owner_id', ownerId)
         .order('created_at', { ascending: false });
-
-      if (error) {
-        console.warn('Deste gizliliği veya erişim kısıtı:', error.message);
-        return [];
-      }
+      if (error) return [];
       return data || [];
-    }
-
-    async publishDeckToCloud(deckId) {
-      if (!this.isCloudConnected()) throw new Error('Deste paylaşmak için Supabase hesabına giriş yapın.');
-      const localDeck = await window.wmDB.getDeckById(deckId);
-      if (!localDeck) throw new Error('Yerel deste bulunamadı.');
-
-      const cards = await window.wmDB.getCardsByDeck(deckId);
-      const words = cards.map((c) => ({
-        word: c.word,
-        article: c.article || '',
-        meaning: c.meaning,
-        partOfSpeech: c.partOfSpeech || 'NOUN',
-        exampleSentence: c.exampleSentence || ''
-      }));
-
-      const { data, error } = await this.client.from('decks').insert({
-        owner_id: this.user.id,
-        title: localDeck.name || 'Paylaşılan Deste',
-        words_json: words
-      }).select().single();
-
-      if (error) throw error;
-      return data;
     }
 
     async importDeckToLocal(cloudDeck) {
@@ -558,11 +510,10 @@
 
       const words = Array.isArray(cloudDeck.words_json) ? cloudDeck.words_json : [];
       let importedCount = 0;
-
       for (const w of words) {
         if (!w.word) continue;
         await window.wmDB.addCard({
-          deckId: deckId,
+          deckId,
           word: w.word,
           article: w.article || '',
           meaning: w.meaning || '',
@@ -577,134 +528,6 @@
         window.wmApp.refreshDecksView();
       }
       return importedCount;
-    }
-
-    // =========================================================================
-    // UI RENDER VE OLAY DİNLEYİCİLERİ
-    // =========================================================================
-    attachEventListeners() {
-      // Profil Açma / Kapatma
-      $('btn-open-profile')?.addEventListener('click', () => this.openProfileModal());
-      $('btn-close-profile-modal')?.addEventListener('click', () => this.closeProfileModal());
-      $('btn-close-rank-promo')?.addEventListener('click', () => $('modal-rank-promotion').classList.add('hidden'));
-
-      // Tablar (İstatistik / Liderlik / Ayarlar)
-      document.querySelectorAll('.profile-subtab-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.profile-subtab-btn').forEach((b) => b.classList.remove('active'));
-          document.querySelectorAll('.profile-pane').forEach((p) => p.classList.add('hidden'));
-          btn.classList.add('active');
-          const targetPane = $(btn.getAttribute('data-target-pane'));
-          if (targetPane) targetPane.classList.remove('hidden');
-        });
-      });
-
-      // Zaman Filtre Butonları (1G, 1H, 1A, 1Y, Tümü)
-      document.querySelectorAll('.prof-stat-filter-btn').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          document.querySelectorAll('.prof-stat-filter-btn').forEach((b) => b.classList.remove('active'));
-          btn.classList.add('active');
-          this.currentFilterRange = btn.getAttribute('data-range');
-          await this.renderStatsCards(this.getActiveProfile().id, this.currentFilterRange);
-        });
-      });
-
-      // Arkadaş Arama & İstek Gönderme
-      $('btn-search-user')?.addEventListener('click', () => this.handleUserSearch());
-      $('user-search-input')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') this.handleUserSearch();
-      });
-
-      // Deste Gizliliği Değişimi
-      $('profile-deck-privacy-select')?.addEventListener('change', async (e) => {
-        const val = e.target.value;
-        await this.updateDeckPrivacy(val);
-        if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste gizliliği güncellendi.');
-      });
-
-      // Arkadaş Kodu Kopyalama
-      $('btn-copy-friend-code')?.addEventListener('click', () => {
-        const code = $('prof-friend-code-display')?.textContent || '';
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(code).then(() => {
-            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Arkadaş kodu panoya kopyalandı.');
-          });
-        }
-      });
-
-      // Supabase Bağlantı Butonu
-      $('btn-save-sb-keys')?.addEventListener('click', () => this.handleSaveSupabaseKeys());
-      $('btn-sb-auth-action')?.addEventListener('click', () => this.handleAuthAction());
-    }
-
-    async openProfileModal() {
-      const modal = $('modal-profile-sheet');
-      if (!modal) return;
-      modal.classList.remove('hidden');
-      await this.refreshProfileView();
-    }
-
-    closeProfileModal() {
-      $('modal-profile-sheet')?.classList.add('hidden');
-      $('friend-detail-submodal')?.classList.add('hidden');
-    }
-
-    async refreshProfileView() {
-      const prof = this.getActiveProfile();
-      const tier = getTierForElo(prof.elo);
-
-      // Üst Profil Kartı
-      $('prof-username-display').textContent = prof.username;
-      $('prof-friend-code-display').textContent = prof.friend_code;
-      $('prof-elo-display').textContent = prof.elo;
-      $('prof-tier-badge').textContent = tier.name;
-      $('prof-tier-badge').style.borderColor = tier.color;
-      $('prof-tier-badge').style.color = tier.color;
-      $('prof-streak-display').textContent = `${prof.streak_days || 0} Gün`;
-
-      // İlerleme Barı
-      const nextTier = RANK_TIERS.find((t) => t.min > prof.elo);
-      if (nextTier) {
-        const span = nextTier.min - tier.min;
-        const prog = Math.min(100, Math.max(0, Math.round(((prof.elo - tier.min) / span) * 100)));
-        $('prof-tier-progress-fill').style.width = `${prog}%`;
-        $('prof-tier-progress-text').textContent = `${nextTier.name} ligine ${nextTier.min - prof.elo} ELO kaldı`;
-      } else {
-        $('prof-tier-progress-fill').style.width = '100%';
-        $('prof-tier-progress-text').textContent = 'En Üst Lig (Grossmeister)';
-      }
-
-      // Gizlilik Seçimi
-      if ($('profile-deck-privacy-select')) {
-        $('profile-deck-privacy-select').value = prof.deck_privacy || 'friends';
-      }
-
-      // 4 Ana İstatistik
-      await this.renderStatsCards(prof.id, this.currentFilterRange);
-
-      // Liderlik Tablosu & Arkadaşlar
-      await this.renderFriendsLeaderboard();
-      await this.renderPendingRequests();
-    }
-
-    async renderStatsCards(userId, range) {
-      const stats = await this.getAggregatedStats(userId, range);
-
-      // 1. Artikel Keskinliği (Genus)
-      $('stat-val-genus').textContent = `%${stats.artikelAccuracy}`;
-      $('stat-sub-genus').textContent = `${stats.artikelTotal} soru cevaplandı`;
-
-      // 2. Bağlam Ustası (Kontext)
-      $('stat-val-kontext').textContent = `%${stats.clozeAccuracy}`;
-      $('stat-sub-kontext').textContent = `${stats.clozeTotal} boşluk tamamlandı`;
-
-      // 3. Çeviklik (Tempo)
-      $('stat-val-tempo').textContent = `${stats.avgTempoSec} sn`;
-      $('stat-sub-tempo').textContent = `${stats.totalAnswers} yanıtın ortalaması`;
-
-      // 4. Hafıza Direnci (Ausdauer)
-      $('stat-val-ausdauer').textContent = `%${stats.reviewAccuracy}`;
-      $('stat-sub-ausdauer').textContent = `${stats.reviewTotal} tekrar kartı`;
     }
 
     async renderFriendsLeaderboard() {
@@ -736,7 +559,6 @@
           `;
         }).join('');
 
-        // Arkadaş profili tıklama
         listEl.querySelectorAll('.leaderboard-item').forEach((row) => {
           row.addEventListener('click', () => {
             const uId = row.getAttribute('data-user-id');
@@ -745,7 +567,7 @@
           });
         });
       } catch (e) {
-        listEl.innerHTML = `<div class="prof-error">Liderlik listesi alınamadı: ${e.message}</div>`;
+        listEl.innerHTML = `<div class="prof-error">Liste alınamadı: ${e.message}</div>`;
       }
     }
 
@@ -765,7 +587,7 @@
         }
         incBox.classList.remove('hidden');
         incBox.innerHTML = `
-          <div class="pending-head">Bekleyen Arkadaşlık İstekleri (${incoming.length})</div>
+          <div class="pending-head">Bekleyen İstekler (${incoming.length})</div>
           <div class="pending-list">
             ${incoming.map((f) => `
               <div class="pending-item">
@@ -795,7 +617,7 @@
           });
         });
       } catch (e) {
-        console.warn('Bekleyen istekler hatası:', e);
+        console.warn('Bekleyen istek hatası:', e);
       }
     }
 
@@ -857,20 +679,13 @@
       $('friend-detail-tier').style.borderColor = tier.color;
       $('friend-detail-tier').style.color = tier.color;
       $('friend-detail-elo').textContent = friend.elo;
-      $('friend-detail-streak').textContent = `${friend.streak_days || 0} Gün`;
+      $('friend-detail-streak').textContent = `${friend.streak_days || 0} Gün Seri`;
 
-      // Arkadaşın 4'lü İstatistikleri
       await this.renderFriendStats(friend.id, this.friendFilterRange);
-
-      // Arkadaşın Paylaşılan Desteleri
       await this.renderFriendDecks(friend.id);
 
-      // Kapat Butonu
-      $('btn-close-friend-detail')?.addEventListener('click', () => {
-        sub.classList.add('hidden');
-      });
+      $('btn-close-friend-detail')?.addEventListener('click', () => sub.classList.add('hidden'));
 
-      // Arkadaş İstatistik Filtre Butonları
       document.querySelectorAll('.friend-stat-filter-btn').forEach((btn) => {
         btn.onclick = async () => {
           document.querySelectorAll('.friend-stat-filter-btn').forEach((b) => b.classList.remove('active'));
@@ -935,55 +750,198 @@
       });
     }
 
-    async handleSaveSupabaseKeys() {
-      const url = $('sb-config-url')?.value.trim();
-      const key = $('sb-config-key')?.value.trim();
-      if (!url || !key) {
-        alert('Lütfen hem Supabase Project URL hem de Anon Key değerini girin.');
-        return;
-      }
-      localStorage.setItem('wortcoach_sb_url', url);
-      localStorage.setItem('wortcoach_sb_key', key);
-      if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Supabase ayarları kaydedildi. Sayfa yenileniyor...');
-      setTimeout(() => window.location.reload(), 800);
+    // =========================================================================
+    // BASİT AUTH (SADECE KULLANICI ADI & ŞİFRE)
+    // =========================================================================
+    async signUpWithUsername(username, password, passwordConfirm) {
+      if (!this.client) throw new Error('Sunucu bağlantısı hazır değil.');
+      const cleanUser = (username || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (cleanUser.length < 3) throw new Error('Kullanıcı adı en az 3 karakter olmalı (harf, rakam, alt çizgi).');
+      if (!password || password.length < 6) throw new Error('Şifre en az 6 karakter olmalıdır.');
+      if (password !== passwordConfirm) throw new Error('Şifreler birbiriyle eşleşmiyor.');
+
+      const dummyEmail = `${cleanUser}@wortcoach.app`;
+      const { data, error } = await this.client.auth.signUp({
+        email: dummyEmail,
+        password: password,
+        options: {
+          data: { username: (username || '').trim() }
+        }
+      });
+
+      if (error) throw error;
+      return data;
     }
 
-    async handleAuthAction() {
-      if (!this.client) {
-        alert('Lütfen önce Supabase URL ve Anon Key girip kaydedin.');
-        return;
+    async signInWithUsername(username, password) {
+      if (!this.client) throw new Error('Sunucu bağlantısı hazır değil.');
+      const cleanUser = (username || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (!cleanUser || !password) throw new Error('Lütfen kullanıcı adı ve şifrenizi girin.');
+
+      const dummyEmail = `${cleanUser}@wortcoach.app`;
+      const { data, error } = await this.client.auth.signInWithPassword({
+        email: dummyEmail,
+        password: password
+      });
+
+      if (error) {
+        if (error.message && error.message.includes('Invalid login credentials')) {
+          throw new Error('Kullanıcı adı veya şifre hatalı.');
+        }
+        throw error;
       }
-      if (this.user) {
+      return data;
+    }
+
+    async signOut() {
+      if (this.client) {
         await this.client.auth.signOut();
         window.location.reload();
-        return;
       }
+    }
 
-      const email = prompt('E-posta adresiniz:');
-      if (!email) return;
-      const password = prompt('Şifreniz:');
-      if (!password) return;
+    async refreshProfileView() {
+      this.updateUI();
+      const prof = this.getActiveProfile();
+      await this.renderStatsCards(prof.id, this.currentFilterRange);
+      await this.renderFriendsLeaderboard();
+      await this.renderPendingRequests();
+    }
 
-      const isRegister = confirm('Yeni hesap açmak istiyor musunuz? (Tamam: Kaydol, İptal: Giriş Yap)');
-
-      try {
-        if (isRegister) {
-          const username = prompt('Kullanıcı adınız:', email.split('@')[0]);
-          const { error } = await this.client.auth.signUp({
-            email,
-            password,
-            options: { data: { username } }
-          });
-          if (error) throw error;
-          alert('Hesap oluşturuldu! E-posta onayını kontrol edin veya giriş yapın.');
-        } else {
-          const { error } = await this.client.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          window.location.reload();
+    attachEventListeners() {
+      // Header ve Profil Butonları
+      $('btn-open-profile')?.addEventListener('click', () => {
+        // Doğrudan tab-profile sekmesine yönlendir
+        if (window.wmApp && window.wmApp.switchTab) {
+          window.wmApp.switchTab('tab-profile');
         }
-      } catch (err) {
-        alert('Kimlik doğrulama hatası: ' + (err.message || err));
-      }
+        this.refreshProfileView();
+      });
+
+      $('btn-close-rank-promo')?.addEventListener('click', () => $('modal-rank-promotion')?.classList.add('hidden'));
+
+      // Profil Alt Sekmeleri: [İstatistiklerim] | [Sosyal & Arkadaşlar]
+      document.querySelectorAll('.profile-subtab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.profile-subtab-btn').forEach((b) => b.classList.remove('active'));
+          document.querySelectorAll('.profile-pane').forEach((p) => p.classList.add('hidden'));
+          btn.classList.add('active');
+          const targetPane = $(btn.getAttribute('data-target-pane'));
+          if (targetPane) targetPane.classList.remove('hidden');
+        });
+      });
+
+      // Zaman Filtre Butonları (1G, 1H, 1A, 1Y, Tümü)
+      document.querySelectorAll('.prof-stat-filter-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          document.querySelectorAll('.prof-stat-filter-btn').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          this.currentFilterRange = btn.getAttribute('data-range');
+          await this.renderStatsCards(this.getActiveProfile().id, this.currentFilterRange);
+        });
+      });
+
+      // Arkadaş Arama
+      $('btn-search-user')?.addEventListener('click', () => this.handleUserSearch());
+      $('user-search-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') this.handleUserSearch();
+      });
+
+      // Deste Gizliliği
+      $('profile-deck-privacy-select')?.addEventListener('change', async (e) => {
+        await this.updateDeckPrivacy(e.target.value);
+        if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste gizliliği güncellendi.');
+      });
+
+      // Arkadaş Kodu Kopyalama
+      $('btn-copy-friend-code')?.addEventListener('click', () => {
+        const code = $('prof-friend-code-display')?.textContent || '';
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(code).then(() => {
+            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Arkadaş kodu panoya kopyalandı.');
+          });
+        }
+      });
+
+      // AUTH MODAL & FORM TETİKLEYİCİLERİ
+      $('btn-profile-auth-trigger')?.addEventListener('click', () => {
+        if (this.user) {
+          if (confirm('Oturumunuz kapatılsın mı?')) {
+            this.signOut();
+          }
+        } else {
+          $('modal-auth')?.classList.remove('hidden');
+        }
+      });
+
+      $('btn-close-auth-modal')?.addEventListener('click', () => $('modal-auth')?.classList.add('hidden'));
+
+      // Auth Tabs: [Giriş Yap] [Kayıt Ol]
+      $('tab-btn-auth-login')?.addEventListener('click', () => {
+        $('tab-btn-auth-login').classList.add('active');
+        $('tab-btn-auth-register').classList.remove('active');
+        $('form-auth-login').classList.remove('hidden');
+        $('form-auth-register').classList.add('hidden');
+      });
+
+      $('tab-btn-auth-register')?.addEventListener('click', () => {
+        $('tab-btn-auth-register').classList.add('active');
+        $('tab-btn-auth-login').classList.remove('active');
+        $('form-auth-register').classList.remove('hidden');
+        $('form-auth-login').classList.add('hidden');
+      });
+
+      // Giriş Yap Butonu
+      $('btn-submit-login')?.addEventListener('click', async () => {
+        const user = $('auth-login-username')?.value;
+        const pass = $('auth-login-password')?.value;
+        const errEl = $('auth-login-error');
+        errEl.classList.add('hidden');
+
+        const btn = $('btn-submit-login');
+        btn.disabled = true;
+        btn.innerHTML = '<span>Giriş yapılıyor...</span>';
+
+        try {
+          await this.signInWithUsername(user, pass);
+          $('modal-auth')?.classList.add('hidden');
+          window.location.reload();
+        } catch (e) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>Giriş Yap</span>';
+          errEl.textContent = e.message || 'Giriş yapılamadı.';
+          errEl.classList.remove('hidden');
+        }
+      });
+
+      // Kayıt Ol Butonu
+      $('btn-submit-register')?.addEventListener('click', async () => {
+        const user = $('auth-reg-username')?.value;
+        const pass = $('auth-reg-password')?.value;
+        const passConf = $('auth-reg-password-confirm')?.value;
+        const errEl = $('auth-reg-error');
+        errEl.classList.add('hidden');
+
+        const btn = $('btn-submit-register');
+        btn.disabled = true;
+        btn.innerHTML = '<span>Hesap açılıyor...</span>';
+
+        try {
+          await this.signUpWithUsername(user, pass, passConf);
+          btn.disabled = false;
+          btn.innerHTML = '<span>Kayıt Ol</span>';
+          $('modal-auth')?.classList.add('hidden');
+          if (window.wmApp && window.wmApp.showToast) {
+            window.wmApp.showToast('Hesabınız başarıyla oluşturuldu!');
+          }
+          window.location.reload();
+        } catch (e) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>Kayıt Ol</span>';
+          errEl.textContent = e.message || 'Kayıt başarısız.';
+          errEl.classList.remove('hidden');
+        }
+      });
     }
   }
 
