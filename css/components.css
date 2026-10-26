@@ -5443,6 +5443,24 @@
   padding: 16px;
   animation: fadeIn 0.15s ease-out;
 }
+
+/* Alt / Diyalog Modalları - Ana modalların (örn. Kulüp Detayı, Arkadaş Profili) üstünde açılan pencereler */
+.prof-modal-backdrop.prof-submodal,
+#modal-add-club-deck,
+#modal-send-deck-friend,
+#modal-invite-friend-match,
+#modal-add-collab-card {
+  z-index: 10500 !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+}
+
+#modal-auth {
+  z-index: 10600 !important;
+}
+
+#modal-rank-promotion {
+  z-index: 10700 !important;
+}
 .prof-modal-sheet {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);

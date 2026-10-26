@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.6.3" />
-  <link rel="stylesheet" href="css/components.css?v=3.6.3" />
+  <link rel="stylesheet" href="css/app.css?v=3.6.4" />
+  <link rel="stylesheet" href="css/components.css?v=3.6.4" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -24,7 +24,21 @@
 
   <!-- Critical Coach & Deck Builder UI Styles (Prevent Cache Mismatch) -->
   <style id="coach-critical-css">
-
+    /* Alt / Diyalog Modalları - Ana modalların üstünde açılan pencereler */
+    .prof-modal-backdrop.prof-submodal,
+    #modal-add-club-deck,
+    #modal-send-deck-friend,
+    #modal-invite-friend-match,
+    #modal-add-collab-card {
+      z-index: 10500 !important;
+      background: rgba(0, 0, 0, 0.65) !important;
+    }
+    #modal-auth {
+      z-index: 10600 !important;
+    }
+    #modal-rank-promotion {
+      z-index: 10700 !important;
+    }
 
     .coach-switch {
       display: flex;
@@ -3204,47 +3218,6 @@
     </div>
   </div>
 
-  <!-- MODAL: KULÜP HAVUZUNA DESTE EKLEME (modal-add-club-deck) -->
-  <div id="modal-add-club-deck" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="prof-auth-box" style="max-width:420px;">
-      <div class="prof-modal-header" style="margin-bottom:12px;">
-        <div class="prof-modal-title">Kulübe Deste Ekle</div>
-        <button type="button" id="btn-close-add-club-deck" class="prof-close-btn" aria-label="Kapat">
-          <svg class="svg-icon"><use href="#icon-close"></use></svg>
-        </button>
-      </div>
-      <div class="auth-input-group">
-        <label for="select-club-target-deck">Eklenecek Desteyi Seçin</label>
-        <select id="select-club-target-deck" class="form-control"></select>
-      </div>
-      <button type="button" id="btn-confirm-add-club-deck" class="btn-coach-build-full" style="margin-top:12px;">
-        <span>Kulüp Havuzuna Ekle</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- MODAL: ARKADAŞA DESTE GÖNDERME (modal-send-deck-friend) -->
-  <div id="modal-send-deck-friend" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
-    <div class="prof-auth-box" style="max-width:420px;">
-      <div class="prof-modal-header" style="margin-bottom:12px;">
-        <div>
-          <div class="prof-modal-title">Arkadaşa Deste Gönder</div>
-          <div class="prof-modal-subtitle" id="send-deck-friend-target-name">Alıcı: Arkadaş</div>
-        </div>
-        <button type="button" id="btn-close-send-deck-friend" class="prof-close-btn" aria-label="Kapat">
-          <svg class="svg-icon"><use href="#icon-close"></use></svg>
-        </button>
-      </div>
-      <div class="auth-input-group">
-        <label for="select-send-friend-deck">Gönderilecek Desteyi Seçin</label>
-        <select id="select-send-friend-deck" class="form-control"></select>
-      </div>
-      <button type="button" id="btn-confirm-send-friend-deck" class="btn-coach-build-full" style="margin-top:12px; background:#10B981;">
-        <span>Desteyi Gönder</span>
-      </button>
-    </div>
-  </div>
-
   <!-- MODAL: KOD İLE KULÜBE KATILMA (modal-join-club) -->
   <div id="modal-join-club" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="prof-auth-box" style="max-width:400px;">
@@ -3298,6 +3271,47 @@
       <div id="club-owner-danger-zone" class="hidden" style="margin-top:16px; padding-top:12px; border-top:1px dashed var(--border-medium); text-align:right;">
         <button type="button" id="btn-delete-club" class="btn-primary-compact" style="background:#EF4444; border-color:#EF4444; font-size:0.75rem; padding:6px 12px;">Kulübü Kapat / Sil</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: KULÜP HAVUZUNA DESTE EKLEME (modal-add-club-deck) - Submodal -->
+  <div id="modal-add-club-deck" class="prof-modal-backdrop prof-submodal hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:420px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Kulübe Deste Ekle</div>
+        <button type="button" id="btn-close-add-club-deck" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="select-club-target-deck">Eklenecek Desteyi Seçin</label>
+        <select id="select-club-target-deck" class="form-control"></select>
+      </div>
+      <button type="button" id="btn-confirm-add-club-deck" class="btn-coach-build-full" style="margin-top:12px;">
+        <span>Kulüp Havuzuna Ekle</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: ARKADAŞA DESTE GÖNDERME (modal-send-deck-friend) - Submodal -->
+  <div id="modal-send-deck-friend" class="prof-modal-backdrop prof-submodal hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:420px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div>
+          <div class="prof-modal-title">Arkadaşa Deste Gönder</div>
+          <div class="prof-modal-subtitle" id="send-deck-friend-target-name">Alıcı: Arkadaş</div>
+        </div>
+        <button type="button" id="btn-close-send-deck-friend" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="select-send-friend-deck">Gönderilecek Desteyi Seçin</label>
+        <select id="select-send-friend-deck" class="form-control"></select>
+      </div>
+      <button type="button" id="btn-confirm-send-friend-deck" class="btn-coach-build-full" style="margin-top:12px; background:#10B981;">
+        <span>Desteyi Gönder</span>
+      </button>
     </div>
   </div>
 
@@ -3401,8 +3415,8 @@
     </div>
   </div>
 
-  <!-- MODAL: MAÇA ARKADAŞ DAVET ET (modal-invite-friend-match) -->
-  <div id="modal-invite-friend-match" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+  <!-- MODAL: MAÇA ARKADAŞ DAVET ET (modal-invite-friend-match) - Submodal -->
+  <div id="modal-invite-friend-match" class="prof-modal-backdrop prof-submodal hidden" role="dialog" aria-modal="true">
     <div class="prof-auth-box" style="max-width:420px;">
       <div class="prof-modal-header" style="margin-bottom:12px;">
         <div class="prof-modal-title">Arkadaşını Kapışmaya Davet Et</div>
@@ -3544,8 +3558,8 @@
     </div>
   </div>
 
-  <!-- MODAL: ORTAK DESTEYE KART EKLE (modal-add-collab-card) -->
-  <div id="modal-add-collab-card" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+  <!-- MODAL: ORTAK DESTEYE KART EKLE (modal-add-collab-card) - Submodal -->
+  <div id="modal-add-collab-card" class="prof-modal-backdrop prof-submodal hidden" role="dialog" aria-modal="true">
     <div class="prof-auth-box" style="max-width:440px;">
       <div class="prof-modal-header" style="margin-bottom:12px;">
         <div class="prof-modal-title">Ortak Desteye Kart Ekle</div>
