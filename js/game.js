@@ -588,6 +588,18 @@ class WordGameService {
 
     this.saveHighScore(this.currentGameType, this.score.points);
 
+    // Supabase ELO & Daily Stats Hook
+    if (window.wmSocial && window.wmSocial.recordActivity) {
+      const isHardWord = !!(currentQ.card && (currentQ.card.srsStage === 0 || (currentQ.card.failCount || 0) > 0));
+      window.wmSocial.recordActivity({
+        type: this.currentGameType === 'article' ? 'artikel' : 'cloze',
+        isCorrect,
+        responseTimeMs: Math.round(elapsedSec * 1000),
+        comboCount: this.score.streak,
+        isHardWord
+      });
+    }
+
     return {
       isCorrect,
       correctIndex: currentQ.correctIndex,

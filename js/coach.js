@@ -436,6 +436,17 @@
             else if (bIdx === idx && !isCorrect) b.classList.add('wrong');
           });
 
+          // Supabase Cloze / Kontext Stat Hook
+          if (window.wmSocial && window.wmSocial.recordActivity) {
+            window.wmSocial.recordActivity({
+              type: 'cloze',
+              isCorrect,
+              responseTimeMs: 2800,
+              comboCount: 0,
+              isHardWord: false
+            });
+          }
+
           if (exercise.explanation) {
             const expEl = document.createElement('div');
             expEl.className = `coach-explanation-box ${isCorrect ? 'correct' : 'wrong'}`;

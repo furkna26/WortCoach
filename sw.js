@@ -27,6 +27,7 @@ const CORE_ASSETS = [
   './js/study.js?v=3.5.0',
   './js/stats.js?v=3.5.0',
   './js/coach.js?v=3.5.0',
+  './js/social.js?v=3.5.0',
   './js/app.js?v=3.5.0',
   './icons/icon-192.svg',
   './icons/icon-512.svg'

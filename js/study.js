@@ -479,6 +479,17 @@ class WortMeisterStudy {
 
     // 4'lü SM-2 Değerlendirmesini Uygula
     await window.wmDB.applySM2Review(card.id, rating);
+    // Supabase ELO & Review Stat Hook
+    if (window.wmSocial && window.wmSocial.recordActivity) {
+      const isCorrectReview = Number(rating) >= 2;
+      window.wmSocial.recordActivity({
+        type: 'review',
+        isCorrect: isCorrectReview,
+        responseTimeMs: 2000,
+        comboCount: 0,
+        isHardWord: Number(card.srsStage || 0) === 0
+      });
+    }
 
     this.currentIndex += 1;
     await this.updateProgress();
