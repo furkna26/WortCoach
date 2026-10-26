@@ -467,6 +467,7 @@ class WortCoachApp {
 
     if (tabId === 'tab-home') {
       await this.refreshHomeDashboard();
+      if (window.wmSocial) window.wmSocial.updateUI();
     } else if (tabId === 'tab-study') {
       if (window.wmStudy) {
         await window.wmStudy.loadSession(window.wmStudy.deckSelect ? window.wmStudy.deckSelect.value : 'all', false);
@@ -478,7 +479,12 @@ class WortCoachApp {
     } else if (tabId === 'tab-cards') {
       await this.renderCardsList();
     } else if (tabId === 'tab-profile') {
-      if (window.wmSocial) await window.wmSocial.refreshProfileView();
+      if (window.wmSocial) {
+        if (!window.wmSocial.isCloudConnected()) {
+          window.wmSocial.openAuthModal('register');
+        }
+        await window.wmSocial.refreshProfileView();
+      }
     } else if (tabId === 'tab-social') {
       if (window.wmSocial) await window.wmSocial.refreshSocialView();
     }

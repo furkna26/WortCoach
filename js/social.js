@@ -233,6 +233,27 @@
           authBtn.className = 'prof-auth-link-btn';
         }
       }
+
+      // Hesapsız kullanıcı Hoş Geldiniz Bannerı görünürlüğü
+      const welcomeCard = $('welcome-guest-card');
+      if (welcomeCard) {
+        if (this.isCloudConnected()) {
+          welcomeCard.classList.add('hidden');
+        } else {
+          welcomeCard.classList.remove('hidden');
+        }
+      }
+    }
+
+    openAuthModal(mode = 'register') {
+      const modal = $('modal-auth');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      if (mode === 'login') {
+        $('tab-btn-auth-login')?.click();
+      } else {
+        $('tab-btn-auth-register')?.click();
+      }
     }
 
     // Dinamik ELO Hesaplama
@@ -3150,13 +3171,21 @@
       });
 
       // 16. Auth Modal Aç / Kapat & Formlar
+      $('btn-welcome-register')?.addEventListener('click', () => {
+        this.openAuthModal('register');
+      });
+
+      $('btn-welcome-login')?.addEventListener('click', () => {
+        this.openAuthModal('login');
+      });
+
       $('btn-profile-auth-trigger')?.addEventListener('click', () => {
         if (this.user) {
           if (confirm('Oturumu kapatmak istediğinize emin misiniz?')) {
             this.signOut();
           }
         } else {
-          $('modal-auth')?.classList.remove('hidden');
+          this.openAuthModal('register');
         }
       });
 
