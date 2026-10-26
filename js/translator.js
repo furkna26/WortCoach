@@ -137,18 +137,7 @@ class WortMeisterTranslator {
   async translateTextHybrid(text, src, tgt, signal) {
     const cleanText = text.trim();
 
-    // 1. WortCoach Cloud Proxy (CORS Korumali, Hizli & Sinirsiz)
-    try {
-      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: cleanText, sl: src, tl: tgt }),
-        signal
-      }).then(r => r.json()).catch(() => null);
-      if (pRes && pRes.translation) return pRes.translation;
-    } catch (_) {}
-
-    // 2. Google Translate Web Client Fallback - parcali ceviri
+    // 1. Google Translate Web Client (Hızlı, Ücretsiz, API Key Gerektirmez) - parçalı çeviri
     try {
       const out = [];
       for (const chunk of this.splitIntoChunks(cleanText)) {
@@ -166,16 +155,31 @@ class WortMeisterTranslator {
       if (e.name === 'AbortError') throw e;
     }
 
-    // 2. MyMemory Fallback (kisa metinler)
+    // 2. MyMemory Fallback (kısa metinler)
     try {
       const mUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText.slice(0, 450))}&langpair=${src}|${tgt}`;
       const res = await fetch(mUrl, { signal });
       const data = await res.json();
-      return data?.responseData?.translatedText || cleanText;
+      const txt = data?.responseData?.translatedText;
+      if (txt && !txt.includes('MYMEMORY WARNING')) {
+        return txt.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+      }
     } catch (e) {
       if (e.name === 'AbortError') throw e;
-      return 'Çeviri yapılamadı (Çevrimdışı)';
     }
+
+    // 3. WortCoach Cloud Proxy Fallback
+    try {
+      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: cleanText, sl: src, tl: tgt }),
+        signal
+      }).then(r => r.json()).catch(() => null);
+      if (pRes && pRes.translation) return pRes.translation;
+    } catch (_) {}
+
+    return 'Çeviri yapılamadı (Çevrimdışı)';
   }
 
   async translateNow() {

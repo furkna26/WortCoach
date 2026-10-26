@@ -13,12 +13,15 @@
 // Çift Dilli Ters Eşleme Haritası (0ms Yüksek Doğruluklu Çözümleme)
 const REVERSE_TR_EN_TO_DE_MAP = {
   // Türkçe -> Almanca İsimler
-  'ev': { de: 'Haus', pos: 'NOUN', tr: 'ev, konut', en: 'house, home' },
-  'konut': { de: 'Haus', pos: 'NOUN', tr: 'konut, ev', en: 'house' },
-  'araba': { de: 'Auto', pos: 'NOUN', tr: 'araba, otomobil', en: 'car, automobile' },
-  'otomobil': { de: 'Auto', pos: 'NOUN', tr: 'otomobil, araba', en: 'car' },
-  'kitap': { de: 'Buch', pos: 'NOUN', tr: 'kitap', en: 'book' },
-  'su': { de: 'Wasser', pos: 'NOUN', tr: 'su', en: 'water' },
+  'ev': { de: 'Haus', pos: 'NOUN', article: 'das', pluralForm: 'die Häuser', tr: 'ev, konut', en: 'house, home' },
+  'konut': { de: 'Haus', pos: 'NOUN', article: 'das', pluralForm: 'die Häuser', tr: 'konut, ev', en: 'house' },
+  'araba': { de: 'Auto', pos: 'NOUN', article: 'das', pluralForm: 'die Autos', tr: 'araba, otomobil', en: 'car, automobile' },
+  'otomobil': { de: 'Auto', pos: 'NOUN', article: 'das', pluralForm: 'die Autos', tr: 'otomobil, araba', en: 'car' },
+  'vergi': { de: 'Steuer', pos: 'NOUN', article: 'die', pluralForm: 'die Steuern', tr: 'vergi', en: 'tax' },
+  'ayna': { de: 'Spiegel', pos: 'NOUN', article: 'der', pluralForm: 'die Spiegel', tr: 'ayna', en: 'mirror' },
+  'pencere': { de: 'Fenster', pos: 'NOUN', article: 'das', pluralForm: 'die Fenster', tr: 'pencere', en: 'window' },
+  'kitap': { de: 'Buch', pos: 'NOUN', article: 'das', pluralForm: 'die Bücher', tr: 'kitap', en: 'book' },
+  'su': { de: 'Wasser', pos: 'NOUN', article: 'das', pluralForm: 'die Wässer', tr: 'su', en: 'water' },
   'ekmek': { de: 'Brot', pos: 'NOUN', tr: 'ekmek', en: 'bread' },
   'masa': { de: 'Tisch', pos: 'NOUN', tr: 'masa', en: 'table' },
   'sandalye': { de: 'Stuhl', pos: 'NOUN', tr: 'sandalye', en: 'chair' },
@@ -88,10 +91,13 @@ const REVERSE_TR_EN_TO_DE_MAP = {
   'anlamak': { de: 'verstehen', pos: 'VERB', tr: 'anlamak, kavramak', en: 'to understand' },
 
   // English -> German
-  'house': { de: 'Haus', pos: 'NOUN', tr: 'ev', en: 'house, home' },
-  'home': { de: 'Haus', pos: 'NOUN', tr: 'ev, yuva', en: 'home, house' },
-  'car': { de: 'Auto', pos: 'NOUN', tr: 'araba', en: 'car, automobile' },
-  'book': { de: 'Buch', pos: 'NOUN', tr: 'kitap', en: 'book' },
+  'house': { de: 'Haus', pos: 'NOUN', article: 'das', pluralForm: 'die Häuser', tr: 'ev', en: 'house, home' },
+  'home': { de: 'Haus', pos: 'NOUN', article: 'das', pluralForm: 'die Häuser', tr: 'ev, yuva', en: 'home, house' },
+  'car': { de: 'Auto', pos: 'NOUN', article: 'das', pluralForm: 'die Autos', tr: 'araba', en: 'car, automobile' },
+  'tax': { de: 'Steuer', pos: 'NOUN', article: 'die', pluralForm: 'die Steuern', tr: 'vergi', en: 'tax' },
+  'mirror': { de: 'Spiegel', pos: 'NOUN', article: 'der', pluralForm: 'die Spiegel', tr: 'ayna', en: 'mirror' },
+  'window': { de: 'Fenster', pos: 'NOUN', article: 'das', pluralForm: 'die Fenster', tr: 'pencere', en: 'window' },
+  'book': { de: 'Buch', pos: 'NOUN', article: 'das', pluralForm: 'die Bücher', tr: 'kitap', en: 'book' },
   'water': { de: 'Wasser', pos: 'NOUN', tr: 'su', en: 'water' },
   'bread': { de: 'Brot', pos: 'NOUN', tr: 'ekmek', en: 'bread' },
   'table': { de: 'Tisch', pos: 'NOUN', tr: 'masa', en: 'table' },
@@ -1055,126 +1061,147 @@ class DictionaryService {
 
   static async translateGermanToTr(text, signal) {
     if (!text) return null;
-    // 1. Worker Proxy
+    const clean = text.trim();
+    // 1. Google Translate Web API (sl=de&tl=tr) - 0 maliyet, 0 token
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=tr&dt=t&q=${encodeURIComponent(clean)}`;
+      const res = await fetch(url, { signal }).then((r) => r.json()).catch(() => null);
+      if (res && res[0]) {
+        const trans = res[0].map((x) => x[0]).join('').trim();
+        if (trans && trans.toLowerCase() !== clean.toLowerCase()) return trans;
+      }
+    } catch (_) {}
+    // 2. MyMemory Fallback (de|tr)
+    try {
+      const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=de|tr`;
+      const mmRes = await fetch(mmUrl, { signal }).then((r) => r.json()).catch(() => null);
+      if (mmRes && mmRes.responseData && mmRes.responseData.translatedText) {
+        const trans = mmRes.responseData.translatedText.trim();
+        if (trans && !trans.includes('MYMEMORY WARNING') && trans.toLowerCase() !== clean.toLowerCase()) return trans;
+      }
+    } catch (_) {}
+    // 3. Worker Fallback (ücretsiz proxy)
     try {
       const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: text, sl: 'de', tl: 'tr' }),
+        body: JSON.stringify({ q: clean, sl: 'de', tl: 'tr' }),
         signal
       }).then(r => r.json()).catch(() => null);
       if (pRes && pRes.translation) return pRes.translation;
-    } catch (_) {}
-    // 2. MyMemory Fallback
-    try {
-      const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=de|tr`;
-      const mmRes = await fetch(mmUrl, { signal }).then((r) => r.json()).catch(() => null);
-      if (mmRes && mmRes.responseData && mmRes.responseData.translatedText) {
-        const trans = mmRes.responseData.translatedText.trim();
-        if (trans && trans.toLowerCase() !== text.toLowerCase()) return trans;
-      }
-    } catch (_) {}
-    // 3. Google Client Fallback
-    try {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
-      const res = await fetch(url, { signal }).then((r) => r.json()).catch(() => null);
-      if (res && res[0]) return res[0].map((x) => x[0]).join('').trim();
     } catch (_) {}
     return null;
   }
 
   static async translateGermanToEn(text, signal) {
+    if (!text) return null;
+    const clean = text.trim();
+    // 1. Google Translate Web API (sl=de&tl=en) - 0 maliyet, 0 token
     try {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=en&dt=t&q=${encodeURIComponent(clean)}`;
       const res = await fetch(url, { signal }).then((r) => r.json()).catch(() => null);
       if (res && res[0]) {
-        return res[0].map((x) => x[0]).join('').trim();
+        const trans = res[0].map((x) => x[0]).join('').trim();
+        if (trans && trans.toLowerCase() !== clean.toLowerCase()) return trans;
       }
+    } catch (_) {}
+    // 2. MyMemory Fallback (de|en)
+    try {
+      const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=de|en`;
+      const mmRes = await fetch(mmUrl, { signal }).then((r) => r.json()).catch(() => null);
+      if (mmRes && mmRes.responseData && mmRes.responseData.translatedText) {
+        const trans = mmRes.responseData.translatedText.trim();
+        if (trans && !trans.includes('MYMEMORY WARNING') && trans.toLowerCase() !== clean.toLowerCase()) return trans;
+      }
+    } catch (_) {}
+    // 3. Worker Fallback (ücretsiz proxy)
+    try {
+      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: clean, sl: 'de', tl: 'en' }),
+        signal
+      }).then(r => r.json()).catch(() => null);
+      if (pRes && pRes.translation) return pRes.translation;
     } catch (_) {}
     return null;
   }
 
   static async translateWordToGerman(cleanText, signal) {
     if (!cleanText) return null;
-    // 1. WortCoach Akıllı Çok Dilli Sözlük Motoru (Otomatik Dil Tespiti)
+    const trimmed = cleanText.trim();
+
+    // 1. Google Translate Web API: Otomatik Dil Tespiti (sl=auto&tl=de) - 0 Token, 0 Maliyet
+    try {
+      const gUrlAuto = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=${encodeURIComponent(trimmed)}`;
+      const resAuto = await fetch(gUrlAuto, { signal }).then((r) => r.json()).catch(() => null);
+      if (resAuto && resAuto[0] && Array.isArray(resAuto[0])) {
+        const transAuto = resAuto[0].map((x) => x[0]).join('').trim();
+        const detectedLang = resAuto[2] || 'auto';
+        if (transAuto && transAuto.toLowerCase() !== trimmed.toLowerCase()) {
+          const normLang = (detectedLang === 'tr' || detectedLang === 'az') ? 'tr' : (detectedLang === 'en' ? 'en' : detectedLang);
+          return { translation: transAuto, detectedLang: normLang };
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    // 2. Google Translate Web API: sl=tr&tl=de (Türkçe klavyeden özel durumlar)
+    try {
+      const gUrlTr = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=tr&tl=de&dt=t&q=${encodeURIComponent(trimmed)}`;
+      const resTr = await fetch(gUrlTr, { signal }).then((r) => r.json()).catch(() => null);
+      if (resTr && resTr[0] && Array.isArray(resTr[0])) {
+        const transTr = resTr[0].map((x) => x[0]).join('').trim();
+        if (transTr && transTr.toLowerCase() !== trimmed.toLowerCase()) {
+          return { translation: transTr, detectedLang: 'tr' };
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    // 3. MyMemory Corpus (tr|de)
+    try {
+      const mmUrlTr = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=tr|de`;
+      const mmResTr = await fetch(mmUrlTr, { signal }).then((r) => r.json()).catch(() => null);
+      if (mmResTr && mmResTr.responseData && mmResTr.responseData.translatedText) {
+        const mmTransTr = mmResTr.responseData.translatedText.trim();
+        if (mmTransTr && !mmTransTr.includes('MYMEMORY WARNING') && mmTransTr.toLowerCase() !== trimmed.toLowerCase()) {
+          return { translation: mmTransTr, detectedLang: 'tr' };
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    // 4. MyMemory Corpus (en|de)
+    try {
+      const mmUrlEn = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(trimmed)}&langpair=en|de`;
+      const mmResEn = await fetch(mmUrlEn, { signal }).then((r) => r.json()).catch(() => null);
+      if (mmResEn && mmResEn.responseData && mmResEn.responseData.translatedText) {
+        const mmTransEn = mmResEn.responseData.translatedText.trim();
+        if (mmTransEn && !mmTransEn.includes('MYMEMORY WARNING') && mmTransEn.toLowerCase() !== trimmed.toLowerCase()) {
+          return { translation: mmTransEn, detectedLang: 'en' };
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+
+    // 5. Worker Proxy Fallback (Ücretsiz)
     try {
       const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: cleanText, sl: 'auto', tl: 'de' }),
+        body: JSON.stringify({ q: trimmed, sl: 'auto', tl: 'de' }),
         signal
       }).then(r => r.json()).catch(() => null);
-      if (pRes && pRes.ok && pRes.germanWord) {
-        return pRes;
-      }
-      if (pRes && pRes.translation && pRes.translation.toLowerCase() !== cleanText.toLowerCase()) {
-        return pRes.translation;
+      if (pRes && pRes.translation && pRes.translation.toLowerCase() !== trimmed.toLowerCase()) {
+        const normLang = (pRes.detectedLang === 'tr' || pRes.detectedLang === 'az') ? 'tr' : (pRes.detectedLang === 'en' ? 'en' : 'auto');
+        return { translation: pRes.translation, detectedLang: normLang };
       }
     } catch (_) {}
-    // 2. MyMemory Corpus (Trke -> Almanca)
-    try {
-      const mmUrlTr = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=tr|de`;
-      const mmResTr = await fetch(mmUrlTr, { signal }).then((r) => r.json()).catch(() => null);
-      if (mmResTr && mmResTr.responseData && mmResTr.responseData.translatedText) {
-        const mmTransTr = mmResTr.responseData.translatedText.trim();
-        if (mmTransTr && mmTransTr.toLowerCase() !== cleanText.toLowerCase()) {
-          return mmTransTr;
-        }
-      }
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-    }
-    // 3. Google Translate Web API Fallback
-    try {
-      const gUrlTr = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=tr&tl=de&dt=t&q=${encodeURIComponent(cleanText)}`;
-      const resTr = await fetch(gUrlTr, { signal }).then((r) => r.json()).catch(() => null);
-      const transTr = resTr && resTr[0] ? resTr[0].map((x) => x[0]).join('').trim() : '';
-      if (transTr && transTr.toLowerCase() !== cleanText.toLowerCase()) {
-        return transTr;
-      }
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-    }
-
-    // 3. Google Translate Web API: Otomatik Dil Alglama (sl=auto&tl=de) (ngilizce veya dier diller iin)
-    try {
-      const gUrlAuto = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=de&dt=t&q=${encodeURIComponent(cleanText)}`;
-      const resAuto = await fetch(gUrlAuto, { signal }).then((r) => r.json()).catch(() => null);
-      const transAuto = resAuto && resAuto[0] ? resAuto[0].map((x) => x[0]).join('').trim() : '';
-      if (transAuto && transAuto.toLowerCase() !== cleanText.toLowerCase()) {
-        return transAuto;
-      }
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-    }
-
-    // 4. MyMemory Corpus & Szlk API (Langenscheidt, Redhouse, Pons kaynakl Trke -> Almanca)
-    try {
-      const mmUrlTr = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=tr|de`;
-      const mmResTr = await fetch(mmUrlTr, { signal }).then((r) => r.json()).catch(() => null);
-      if (mmResTr && mmResTr.responseData && mmResTr.responseData.translatedText) {
-        const mmTransTr = mmResTr.responseData.translatedText.trim();
-        if (mmTransTr && mmTransTr.toLowerCase() !== cleanText.toLowerCase()) {
-          return mmTransTr;
-        }
-      }
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-    }
-
-    // 5. MyMemory Corpus & Szlk API (ngilizce -> Almanca)
-    try {
-      const mmUrlEn = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=en|de`;
-      const mmResEn = await fetch(mmUrlEn, { signal }).then((r) => r.json()).catch(() => null);
-      if (mmResEn && mmResEn.responseData && mmResEn.responseData.translatedText) {
-        const mmTransEn = mmResEn.responseData.translatedText.trim();
-        if (mmTransEn && mmTransEn.toLowerCase() !== cleanText.toLowerCase()) {
-          return mmTransEn;
-        }
-      }
-    } catch (e) {
-      if (e.name === 'AbortError') throw e;
-    }
 
     return null;
   }
@@ -1183,7 +1210,16 @@ class DictionaryService {
    * Çevrilen sonucu Almanca kart formatına dönüştürür
    */
   static async buildEntryFromTranslation(cleanWord, originalQuery, sourceLang = 'auto', signal = null) {
-    let norm = (cleanWord || '')
+    let rawStr = '';
+    let detectedLang = sourceLang || 'auto';
+    if (typeof cleanWord === 'object' && cleanWord !== null) {
+      rawStr = cleanWord.translation || cleanWord.germanWord || '';
+      if (cleanWord.detectedLang) detectedLang = cleanWord.detectedLang;
+    } else {
+      rawStr = String(cleanWord || '');
+    }
+
+    let norm = rawStr
       .replace(/^(zu|to)\s+/i, '')
       .replace(/[\\.,:;!—"']/g, '')
       .trim();
@@ -1200,11 +1236,11 @@ class DictionaryService {
       norm = artMatch[2].trim();
     }
 
-    // Canl Wiktionary taramas: ekilmi/oul ise Grundformu (kk szc) alr
+    // Canlı Wiktionary taraması: çekilmiş/çoğul ise Grundformu (kök sözcüğü) alır (0 token, tamamen ücretsiz)
     const wiki = await this.fetchWiktionaryDetails(norm, signal);
     const resolvedWord = (wiki && wiki.word) ? wiki.word : norm;
 
-    // ekirdek szlkte varsa oradan referans al, yoksa sentezle
+    // Çekirdek sözlükte varsa oradan referans al, yoksa sentezle
     const coreHit = this.findOfflineEntry(resolvedWord.toLowerCase());
     const entry = this.synthesizeInstantEntry(coreHit ? coreHit.germanWord : resolvedWord);
 
@@ -1228,7 +1264,7 @@ class DictionaryService {
       entry.article = explicitArt;
     }
 
-    // Byk/kk harf dzeni: simler Byk Harf, sfat ve fiiller kk
+    // Büyük/küçük harf düzeni: İsimler Büyük Harf, sıfat ve fiiller küçük
     if (entry.partOfSpeech === 'NOUN') {
       entry.germanWord = entry.germanWord.charAt(0).toUpperCase() + entry.germanWord.slice(1);
       if (!entry.article && typeof window !== 'undefined' && window.GermanNounHelper) {
@@ -1244,23 +1280,25 @@ class DictionaryService {
       entry.rawExamples = wiki.rawExamples;
     }
 
-    // Kesin canlı çeviri: Almanca kelimenin Türkçe ve İngilizce karşılıklarını canlı çek
+    // Kesin canlı çeviri: Almanca kelimenin Türkçe ve İngilizce karşılıklarını çek
     const [liveTr, liveEn] = await Promise.all([
       this.translateGermanToTr(entry.germanWord, signal).catch(() => null),
       this.translateGermanToEn(entry.germanWord, signal).catch(() => null)
     ]);
 
-    if (liveTr) entry.meaningsTr = liveTr;
-    if (liveEn) entry.meaningsEn = liveEn;
+    const isTrInput = (detectedLang === 'tr' || detectedLang === 'az') || /[çğışöüÇĞİŞÖÜ]/i.test(originalQuery);
+    const isEnInput = detectedLang === 'en';
+    const capOriginal = originalQuery ? (originalQuery.charAt(0).toUpperCase() + originalQuery.slice(1)) : '';
 
-    // Asla typo veya arama hatasını anlama kopyalama!
-    // Yalnızca sorgu doğrulanmış bir Türkçe sözcükse (cami, araba, ev vb.) anlam olarak koru
-    if (!entry.meaningsTr && originalQuery) {
-      entry.meaningsTr = originalQuery.charAt(0).toUpperCase() + originalQuery.slice(1);
-    }
-    if (!entry.meaningsEn) {
-      const fallbackEn = await this.translateGermanToEn(entry.germanWord, signal).catch(() => null);
-      if (fallbackEn) entry.meaningsEn = fallbackEn;
+    if (isTrInput) {
+      entry.meaningsTr = capOriginal;
+      entry.meaningsEn = liveEn || '';
+    } else if (isEnInput) {
+      entry.meaningsEn = capOriginal;
+      entry.meaningsTr = liveTr || '';
+    } else {
+      entry.meaningsTr = liveTr || capOriginal;
+      entry.meaningsEn = liveEn || '';
     }
 
     entry.resolvedFromQuery = originalQuery;
@@ -1307,6 +1345,8 @@ class DictionaryService {
     const mapHit = REVERSE_TR_EN_TO_DE_MAP[lower];
     if (mapHit) {
       const entry = this.synthesizeInstantEntry(mapHit.de);
+      if (mapHit.article) entry.article = mapHit.article;
+      if (mapHit.pluralForm) entry.pluralForm = mapHit.pluralForm;
       entry.meaningsTr = mapHit.tr;
       entry.meaningsEn = mapHit.en;
       entry.resolvedFromQuery = trimmed;
@@ -1367,61 +1407,13 @@ class DictionaryService {
     }
 
     // 6. DİĞER DİLLERDEN VEYA YERELDE BULUNAMAYAN GİRİŞ:
-    // Akıllı Çok Dilli Sözlük Motoru (Otomatik Dil Tespiti: Türkçe, İngilizce, Almanca)
+    // Akıllı Çok Dilli Sözlük Motoru (Google Translate & Wiktionary - 0 Token, 0 Maliyet)
     const cloudEntry = await this.translateWordToGerman(trimmed, signal);
     if (cloudEntry) {
-      if (typeof cloudEntry === 'object' && cloudEntry.germanWord) {
-        let finalWord = cloudEntry.germanWord;
-        let finalArt = cloudEntry.article || '';
-        let finalPos = cloudEntry.partOfSpeech || 'NOUN';
-        if (finalPos === 'NOUN') {
-          finalWord = finalWord.charAt(0).toUpperCase() + finalWord.slice(1);
-          if (!finalArt && typeof window !== 'undefined' && window.GermanNounHelper) {
-            const nh = window.GermanNounHelper.analyze(finalWord);
-            if (nh && nh.article) finalArt = nh.article;
-          }
-        }
-        const isTrInput = cloudEntry.detectedLang === 'tr';
-        const isEnInput = cloudEntry.detectedLang === 'en';
-        const capTrimmed = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-
-        let finalTr = cloudEntry.meaningTr || '';
-        if (isTrInput || !finalTr || finalTr.toLowerCase() === finalWord.toLowerCase()) {
-          finalTr = isTrInput ? capTrimmed : (finalTr || capTrimmed);
-        }
-
-        let finalEn = cloudEntry.meaningEn || '';
-        if (isEnInput || !finalEn) {
-          finalEn = isEnInput ? capTrimmed : (finalEn || 'Translation');
-        }
-
-        return {
-          germanWord: finalWord,
-          targetLanguage: 'de',
-          partOfSpeech: finalPos,
-          article: finalArt,
-          pluralForm: cloudEntry.pluralForm || '',
-          meaningsTr: finalTr,
-          meaningsEn: finalEn,
-          exampleSentence: '',
-          examples: [],
-          praesens: '',
-          praeteritum: '',
-          partizipZwei: '',
-          hilfsverb: 'hat',
-          isSeparable: false,
-          separablePrefix: '',
-          regularity: '',
-          imperativ: '',
-          isReflexive: false,
-          reflexiveType: null,
-          cefr: 'B1',
-          isSynthesized: true,
-          resolvedFromQuery: trimmed
-        };
-      }
-      if (typeof cloudEntry === 'string' && cloudEntry.toLowerCase() !== lower) {
-        return this.buildEntryFromTranslation(cloudEntry, trimmed, 'auto', signal);
+      const transStr = typeof cloudEntry === 'object' ? (cloudEntry.translation || cloudEntry.germanWord) : cloudEntry;
+      const detLang = typeof cloudEntry === 'object' ? (cloudEntry.detectedLang || 'auto') : 'auto';
+      if (transStr && transStr.toLowerCase() !== lower) {
+        return this.buildEntryFromTranslation(cloudEntry, trimmed, detLang, signal);
       }
     }
 
