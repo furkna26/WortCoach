@@ -1082,33 +1082,6 @@ class DictionaryService {
 
   static async translateWordToGerman(cleanText, signal) {
     if (!cleanText) return null;
-    let deepLKey = null;
-    try {
-      deepLKey = localStorage.getItem('deepl_api_key');
-    } catch (_) {}
-
-    // 1. DeepL API (Eer Key girilmise)
-    if (deepLKey) {
-      try {
-        const isFree = deepLKey.endsWith(':fx');
-        const endpoint = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
-        const params = new URLSearchParams({
-          auth_key: deepLKey,
-          text: cleanText,
-          target_lang: 'DE'
-        });
-        const res = await fetch(endpoint, { method: 'POST', body: params, signal }).then((r) => r.json());
-        if (res?.translations && res.translations[0]?.text) {
-          const trans = res.translations[0].text.trim();
-          if (trans && trans.toLowerCase() !== cleanText.toLowerCase()) {
-            return trans;
-          }
-        }
-      } catch (e) {
-        if (e.name === 'AbortError') throw e;
-      }
-    }
-
     // 2. Google Translate Web API: ncelikle Trke -> Almanca (sl=tr&tl=de)
     // (WortCoach kullanclar Trke klavyeyle veya Trke szck aradnda annda en doru karl bulur)
     try {

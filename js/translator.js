@@ -26,7 +26,7 @@ class WortMeisterTranslator {
     // Karakter Sayacı
     this.inputEl.addEventListener('input', () => {
       const len = this.inputEl.value.length;
-      this.counterEl.textContent = `${len} / 150`;
+      this.counterEl.textContent = `${len}`;
     });
 
     // Kaynak Dil Segment Butonları [TR] [DE] [EN]
@@ -119,50 +119,45 @@ class WortMeisterTranslator {
     `;
   }
 
-  async translateTextHybrid(text, src, tgt, signal) {
-    const cleanText = text.trim().slice(0, 150);
-    const deepLKey = localStorage.getItem('deepl_api_key');
-
-    // 1. DeepL API (Eğer Key girilmişse)
-    if (deepLKey) {
-      try {
-        const isFree = deepLKey.endsWith(':fx');
-        const endpoint = isFree ? 'https://api-free.deepl.com/v2/translate' : 'https://api.deepl.com/v2/translate';
-        const params = new URLSearchParams({
-          auth_key: deepLKey,
-          text: cleanText,
-          source_lang: src.toUpperCase(),
-          target_lang: tgt.toUpperCase()
-        });
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          body: params,
-          signal
-        });
-        const data = await res.json();
-        if (data?.translations && data.translations[0]?.text) {
-          return data.translations[0].text;
-        }
-      } catch (e) {
-        if (e.name === 'AbortError') throw e;
-      }
+  // Uzun metinleri URL limitini asmamak icin cumle/satir sinirlarinda parcalara boler
+  splitIntoChunks(text, maxLen = 1200) {
+    const parts = text.match(/[^.!?\n]+[.!?]*\s*|\n+/g) || [text];
+    const chunks = [];
+    let cur = '';
+    for (const p of parts) {
+      if ((cur + p).length > maxLen && cur) { chunks.push(cur); cur = ''; }
+      let piece = p;
+      while (piece.length > maxLen) { chunks.push(piece.slice(0, maxLen)); piece = piece.slice(maxLen); }
+      cur += piece;
     }
+    if (cur) chunks.push(cur);
+    return chunks;
+  }
 
-    // 2. Google Translate Web Client (Yüksek Hız, API Key İstemez)
+  async translateTextHybrid(text, src, tgt, signal) {
+    const cleanText = text.trim();
+
+    // 1. Google Translate Web Client (Yuksek Hiz, API Key istemez) - parcali ceviri
     try {
-      const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(cleanText)}`;
-      const res = await fetch(gUrl, { signal });
-      const raw = await res.json();
-      if (raw && Array.isArray(raw[0])) {
-        return raw[0].map((item) => item[0]).join('').trim();
+      const out = [];
+      for (const chunk of this.splitIntoChunks(cleanText)) {
+        if (!chunk.trim()) { out.push(chunk); continue; }
+        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(chunk)}`;
+        const res = await fetch(gUrl, { signal });
+        const raw = await res.json();
+        if (!(raw && Array.isArray(raw[0]))) throw new Error('bad response');
+        const lead = chunk.match(/^\s*/)[0], trail = chunk.match(/\s*$/)[0];
+        out.push(lead + raw[0].map((item) => item[0]).join('').trim() + trail);
       }
+      const joined = out.join('').trim();
+      if (joined) return joined;
     } catch (e) {
       if (e.name === 'AbortError') throw e;
     }
 
-    // 3. MyMemory Fallback
+    // 2. MyMemory Fallback (kisa metinler)
     try {
-      const mUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=${src}|${tgt}`;
+      const mUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText.slice(0, 450))}&langpair=${src}|${tgt}`;
       const res = await fetch(mUrl, { signal });
       const data = await res.json();
       return data?.responseData?.translatedText || cleanText;

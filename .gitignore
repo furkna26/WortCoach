@@ -22,3 +22,7 @@ generate_*.py
 assemble_*.py
 patch_*.py
 
+
+# Cloudflare Wrangler
+.wrangler/
+worker/.wrangler/

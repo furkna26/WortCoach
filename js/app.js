@@ -70,38 +70,6 @@ class WortCoachApp {
       await this.renderDecksTab();
     });
 
-    // DeepL API Key Ayarı
-    const deepLInput = document.getElementById('input-deepl-key');
-    const deepLStatus = document.getElementById('deepl-key-status');
-    const deepLSaveBtn = document.getElementById('btn-save-deepl-key');
-
-    const updateDeepLUI = () => {
-      const currentKey = localStorage.getItem('deepl_api_key');
-      if (deepLInput && currentKey) deepLInput.value = currentKey;
-      if (deepLStatus) {
-        if (currentKey) {
-          deepLStatus.textContent = 'Aktif (Kullanılıyor)';
-          deepLStatus.style.color = 'var(--palette-green)';
-        } else {
-          deepLStatus.textContent = 'Aktif Değil';
-          deepLStatus.style.color = 'var(--text-muted)';
-        }
-      }
-    };
-    updateDeepLUI();
-
-    deepLSaveBtn?.addEventListener('click', () => {
-      const val = (deepLInput?.value || '').trim();
-      if (val) {
-        localStorage.setItem('deepl_api_key', val);
-        this.showToast('DeepL API anahtarı kaydedildi.');
-      } else {
-        localStorage.removeItem('deepl_api_key');
-        this.showToast('DeepL API anahtarı kaldırıldı.');
-      }
-      updateDeepLUI();
-    });
-
     // Opsiyonel Azure Speech Pronunciation Assessment Ayarı
     const azureKeyInput = document.getElementById('input-azure-speech-key');
     const azureRegionInput = document.getElementById('input-azure-speech-region');
@@ -933,7 +901,7 @@ class WortCoachApp {
         <!-- 1. Bilgi ve Durum Rozeti (Header Badge) -->
         <div class="deepl-fallback-banner">
           <span class="dfb-icon"></span>
-          <span>No matches found in local dictionary · Translated by DeepL</span>
+          <span>No matches found in local dictionary · Translated by Google</span>
         </div>
 
         <!-- 3. Kelime Başlığı + TTS + Fonetik Koç -->
