@@ -1,4 +1,4 @@
-﻿// WortCoach istemci yapilandirmasi ve Coach API istemcisi.
+// WortCoach istemci yapilandirmasi ve Coach API istemcisi.
 // Gemini anahtari ve promptlar istemcide YOKTUR; sunucu (Cloudflare Worker) sabit gorevleri calistirir.
 window.WORTCOACH_CONFIG = {
   COACH_API: 'https://wortcoach-proxy.mosmandurmaz26.workers.dev',
@@ -11,14 +11,20 @@ window.WORTCOACH_CONFIG = {
  * @param {AbortSignal} [signal]
  */
 window.coachRequest = async function (task, payload, signal) {
-  const res = await fetch(`${window.WORTCOACH_CONFIG.COACH_API}/coach/${task}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    signal,
-  });
-  let data = null;
-  try { data = await res.json(); } catch (_) {}
+  const call = async () => {
+    const res = await fetch(`${window.WORTCOACH_CONFIG.COACH_API}/coach/${task}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal,
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    return { res, data };
+  };
+  let { res, data } = await call();
+  // Model nadiren gecersiz/bos cikti uretebilir; bir kez otomatik tekrar dene.
+  if (res.status === 502) ({ res, data } = await call());
   if (!res.ok) throw new Error((data && data.error) || 'Coach servisine ulasilamadi.');
   return data;
 };
