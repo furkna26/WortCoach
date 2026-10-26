@@ -286,13 +286,19 @@
 
   // Adım 3: Sözlük Zenginleştirmesi & Desteyi Kaydetme
   async function lookupEntry(lemma) {
-    if (!window.wmDB || !window.wmDB.dictionary) return null;
+    if (!lemma) return null;
     try {
-      const match = await window.wmDB.dictionary.where('germanWord').equalsIgnoreCase(lemma).first();
-      return match || null;
-    } catch (_) {
-      return null;
-    }
+      if (window.DictionaryService) {
+        if (typeof window.DictionaryService.searchExact === 'function') {
+          const match = window.DictionaryService.searchExact(lemma);
+          if (match) return match;
+        }
+        if (typeof window.DictionaryService.synthesizeInstantEntry === 'function') {
+          return window.DictionaryService.synthesizeInstantEntry(lemma);
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 
   async function saveDeck() {
@@ -307,13 +313,8 @@
     setBusy(true);
 
     try {
-      const deck = await window.wmDB.decks.add({
-        id: 'deck_' + Date.now(),
-        title: deckName,
-        color: '#2563EB',
-        icon: 'book',
-        createdAt: new Date().toISOString()
-      });
+      const createdDeck = await window.wmDB.createDeck(deckName, 'Koç tarafından üretildi', 'default');
+      const targetDeckId = createdDeck && createdDeck.id ? createdDeck.id : Date.now();
 
       let added = 0;
       for (let i = 0; i < selected.length; i++) {
@@ -321,13 +322,12 @@
         if (saveBtn) saveBtn.textContent = `Sözlükten Zenginleştiriliyor: ${i + 1} / ${selected.length}`;
 
         const entry = await lookupEntry(w.lemma);
-        const isNoun = w.pos === 'NOUN';
+        const isNoun = w.pos === 'NOUN' || (entry && entry.partOfSpeech === 'NOUN');
 
-        await window.wmDB.cards.add({
-          id: 'card_' + Math.random().toString(36).slice(2, 9),
-          deckId: deck,
-          front: w.lemma,
-          back: w.contextMeaning || (entry ? entry.meaningsTr : ''),
+        await window.wmDB.addCard({
+          deckId: targetDeckId,
+          germanWord: w.lemma,
+          meaningsTr: w.contextMeaning || (entry ? entry.meaningsTr : ''),
           partOfSpeech: (entry && entry.partOfSpeech) || POS_CARD[w.pos] || 'OTHER',
           article: isNoun && entry ? entry.article || '' : '',
           pluralForm: isNoun && entry ? entry.pluralForm || '' : '',
@@ -336,11 +336,7 @@
           praeteritum: entry ? entry.praeteritum || '' : '',
           partizipZwei: entry ? entry.partizipZwei || '' : '',
           hilfsverb: entry ? entry.hilfsverb || 'hat' : 'hat',
-          cefr: w.cefr || (entry && entry.cefr) || '',
-          interval: 1,
-          repetition: 0,
-          easeFactor: 2.5,
-          dueDate: new Date().toISOString()
+          cefr: w.cefr || (entry && entry.cefr) || 'A1'
         });
         added++;
       }

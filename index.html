@@ -590,8 +590,8 @@
     </symbol>
 
     <symbol id="nav-icon-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+      <polyline points="9 22 9 12 15 12 15 22"></polyline>
     </symbol>
 
     <!-- 2. Çeviri İkonu (Kullanıcının Tercih Ettiği Klasik Dünya/Küre İkonu) -->
@@ -603,8 +603,9 @@
 
     <!-- 3. Oyunlar İkonu (Oyun Kolu / Gamepad) -->
         <symbol id="nav-icon-study" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
-      <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+      <path d="m9 14 2 2 4-4"></path>
     </symbol>
     <symbol id="nav-icon-games" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="6" width="20" height="12" rx="4"></rect>
@@ -1302,10 +1303,6 @@
 
                 <div id="fc-back-subtext" class="scb-subtext">Almanca: -</div>
 
-                
-                  <div id="fc-back-cloze-sentence" class="fc-cloze-sentence">---</div>
-                </div>
-
                 <div id="fc-back-example-card" class="scb-example-card hidden">
                   <div class="scb-example-header">
                     <span>ÖRNEK CÜMLE</span>
@@ -1365,6 +1362,7 @@
               <span>+ Yeni Kart Ekle</span>
             </button>
           </div>
+        </div>
         </div>
       </section>
 
@@ -1741,25 +1739,7 @@
          ALT NAVİGASYON ÇUBUĞU (6 SEKME — Android Screenshot Parity)
          ==================================================================== -->
     <nav class="bottom-nav" aria-label="Ana Navigasyon">
-      <!-- 1. Sözlük (Kitap İkonu) -->
-      <button class="nav-item active" data-target="tab-home" aria-label="Sözlük">
-        <div class="nav-pill">
-          <svg class="svg-icon"><use href="#nav-icon-home"></use></svg>
-        </div>
-        <span class="nav-label">Sözlük</span>
-      </button>
-
-      <!-- 2. Çeviri (Küre İkonu) -->
-      <button class="nav-item" data-target="tab-translate" aria-label="Çeviri">
-        <div class="nav-pill">
-          <svg class="svg-icon"><use href="#nav-icon-translate"></use></svg>
-        </div>
-        <span class="nav-label">Çeviri</span>
-      </button>
-
-      
-
-      <!-- 4. Desteler (Deste İkonu) -->
+      <!-- 1. Desteler (Deste İkonu) -->
       <button class="nav-item" data-target="tab-decks" aria-label="Desteler">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-decks"></use></svg>
@@ -1767,7 +1747,7 @@
         <span class="nav-label">Desteler</span>
       </button>
 
-      <!-- 5. Kelimeler (Kart Listesi İkonu) -->
+      <!-- 2. Kelimeler (Kart Listesi İkonu) -->
       <button class="nav-item" data-target="tab-cards" aria-label="Kelimeler">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-cards"></use></svg>
@@ -1775,15 +1755,31 @@
         <span class="nav-label">Kelimeler</span>
       </button>
 
-      <!-- 6. Oyunlar (Gamepad İkonu) -->
+      <!-- 3. Ana Sayfa (Merkez Hub İkonu) -->
+      <button class="nav-item active" data-target="tab-home" aria-label="Ana Sayfa">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-home"></use></svg>
+        </div>
+        <span class="nav-label">Ana Sayfa</span>
+      </button>
+
+      <!-- 4. Çalış (Alıştırma & Koç İkonu) -->
       <button class="nav-item" data-target="tab-games" aria-label="Çalış">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-study"></use></svg>
         </div>
         <span class="nav-label">Çalış</span>
       </button>
-    
-      <!-- 7. Profil (Kullanıcı İkonu) -->
+
+      <!-- 5. Çeviri (Küre İkonu) -->
+      <button class="nav-item" data-target="tab-translate" aria-label="Çeviri">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-translate"></use></svg>
+        </div>
+        <span class="nav-label">Çeviri</span>
+      </button>
+
+      <!-- 6. Profil (Kullanıcı İkonu) -->
       <button class="nav-item" data-target="tab-profile" aria-label="Profil">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-profile"></use></svg>

@@ -441,26 +441,15 @@
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span>Kaydediliyor...</span>';
         try {
-          const deckId = 'coach_deck_' + Date.now();
-          await window.wmDB.decks.add({
-            id: deckId,
-            title: exercise.title || 'Koç Destesi',
-            color: '#2563EB',
-            icon: 'book',
-            createdAt: new Date().toISOString()
-          });
+          const deck = await window.wmDB.createDeck(exercise.title || 'Koç Destesi', 'Koç tarafından üretildi', 'default');
+          const targetDeckId = deck && deck.id ? deck.id : Date.now();
           for (const w of exercise.words) {
-            await window.wmDB.cards.add({
-              id: 'card_' + Math.random().toString(36).slice(2, 9),
-              deckId: deckId,
-              front: w.lemma,
-              back: w.contextMeaning || '',
+            await window.wmDB.addCard({
+              deckId: targetDeckId,
+              germanWord: w.lemma,
+              meaningsTr: w.contextMeaning || '',
               partOfSpeech: w.pos || 'NOUN',
-              exampleSentence: w.sourceSentence || '',
-              interval: 1,
-              repetition: 0,
-              easeFactor: 2.5,
-              dueDate: new Date().toISOString()
+              exampleSentence: w.sourceSentence || ''
             });
           }
           saveBtn.innerHTML = '<span>Desteye Kaydedildi</span>';

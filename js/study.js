@@ -49,16 +49,7 @@ class WortMeisterStudy {
       }
     });
 
-    document.getElementById('btn-fc-cloze-tts-front')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const card = this.getCurrentCard();
-      if (card && card.exampleSentence) {
-        const cleanEx = card.exampleSentence.replace(/\s*\(.*?\)\s*$/, '').trim();
-        window.wmTTS.speak(cleanEx || card.germanWord, 'de-DE');
-      } else {
-        this.speakCurrentCard();
-      }
-    });
+    
 
     document.getElementById('btn-fc-tts-back')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -295,9 +286,6 @@ class WortMeisterStudy {
     // 5. ÇALIŞMA MODU: CLOZE (BOŞLUK DOLDURMA) VS STANDART
     const standardContainer = document.getElementById('fc-front-standard-container');
     standardContainer?.classList.remove('hidden');
-      standardContainer?.classList.remove('hidden');
-      clozeFrontContainer?.classList.add('hidden');
-      clozeBackContainer?.classList.add('hidden');
 
       const nounContainer = document.getElementById('fc-front-noun-container');
       const nounArtBadge = document.getElementById('fc-front-noun-article');
@@ -389,7 +377,7 @@ class WortMeisterStudy {
     // 6. KART ARKA YÜZÜ
     const meaningTrEl = document.getElementById('fc-back-meaning-tr');
     if (meaningTrEl) {
-      meaningTrEl.textContent = card.meaningsTr || 'Anlam belirtilmedi';
+      meaningTrEl.textContent = card.meaningsTr || card.back || card.meaning || 'Anlam belirtilmedi';
     }
 
     const enRow = document.getElementById('fc-back-en-row');
@@ -409,7 +397,7 @@ class WortMeisterStudy {
     // Örnek Cümle Kartı (Arka Yüz)
     const exCard = document.getElementById('fc-back-example-card');
     const exText = document.getElementById('fc-back-example');
-    if (card.exampleSentence && !isClozeActive) {
+    if (card.exampleSentence) {
       exCard?.classList.remove('hidden');
       if (exText) exText.textContent = card.exampleSentence;
     } else {
