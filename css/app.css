@@ -219,7 +219,12 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
+}
+
+.app-header.header-hidden {
+  transform: translateY(-100%);
 }
 
 /* Tam Ekran Okuma Modu: Header & Bottom Nav Gizleme */

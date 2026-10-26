@@ -5019,3 +5019,29 @@ window.addEventListener('DOMContentLoaded', () => {
   window.wmApp = new WortCoachApp();
   window.wmApp.init();
 });
+
+
+// Akıllı Scroll Dinleyicisi: Aşağı kaydırırken WortCoach üst barını gizle, yukarı kaydırırken göster
+(function initHeaderScrollHide() {
+  let lastScrollY = window.scrollY;
+  let ticking = false;
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        const currentScrollY = window.scrollY;
+        const header = document.querySelector('.app-header');
+        if (header) {
+          if (currentScrollY > 50 && currentScrollY > lastScrollY + 8) {
+            header.classList.add('header-hidden');
+          } else if (currentScrollY < lastScrollY - 6 || currentScrollY <= 15) {
+            header.classList.remove('header-hidden');
+          }
+        }
+        lastScrollY = currentScrollY;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+})();

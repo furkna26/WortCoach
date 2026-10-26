@@ -24,6 +24,7 @@
 
   <!-- Critical Coach & Deck Builder UI Styles (Prevent Cache Mismatch) -->
   <style id="coach-critical-css">
+
     .coach-switch {
       display: flex;
       gap: 6px;
@@ -233,7 +234,215 @@
       border: 1px solid var(--border-subtle);
       border-bottom-left-radius: 4px;
     }
-  </style>
+  
+
+/* ===== Tam Boy Almanca Koçu Chat UI Stilleri ===== */
+.coach-chat-app-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100vh - 150px);
+  min-height: 560px;
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.coach-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 2px;
+  gap: 12px;
+}
+.coach-main-title {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+.coach-main-sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+.coach-level-selector-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.coach-level-label {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.coach-select-pill {
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.coach-quick-actions-bar {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  white-space: nowrap !important;
+  padding: 2px 2px 8px 2px !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+  flex-wrap: nowrap !important;
+}
+.coach-quick-actions-bar::-webkit-scrollbar {
+  display: none !important;
+}
+
+.coach-chat-stream {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  overflow-y: auto !important;
+  padding: 16px !important;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 18px !important;
+  min-height: 340px !important;
+  scroll-behavior: smooth !important;
+}
+
+.coach-welcome-bubble {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.coach-welcome-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+.coach-welcome-desc {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+.coach-policy-note {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.coach-attached-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  width: fit-content;
+}
+.coach-attached-name {
+  font-weight: 700;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coach-chip-remove {
+  background: none;
+  border: 0;
+  color: var(--palette-red);
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.coach-chat-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.coach-icon-attach-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.coach-icon-attach-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--brand-blue);
+  background: rgba(37, 99, 235, 0.1);
+}
+.coach-chat-textarea {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  padding: 8px 4px;
+  resize: none;
+  outline: none;
+  max-height: 120px;
+}
+.coach-chat-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: var(--brand-blue);
+  color: #FFFFFF;
+  border: 0;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.16s ease;
+}
+.coach-chat-submit-btn:hover:not(:disabled) {
+  background: var(--brand-blue-hover);
+}
+.coach-chat-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+</style>
 
 </head>
 <body>
@@ -775,217 +984,68 @@
       </section>
 
       <!-- ====================================================================
-           TAB: AKILLI OKUYUCU (tab-reader) — Tam Ekran & Belge İçe Aktarımı
+           TAB: ALMANCA KOÇU (tab-reader) — Tam Ekran İnteraktif Chat UI
            ==================================================================== -->
       <section id="tab-reader" class="tab-view">
-        <div class="translator-header-row">
-          <div>
-            <h1 class="page-title">Coach</h1>
-            <p class="page-subtitle">Yapay zeka destekli içerik analizi, deste oluşturma ve odaklı okuma</p>
-          </div>
-        </div>
-
-        <div class="coach-switch" role="tablist">
-          <button type="button" class="coach-switch-btn active" data-coach-view="deck">AI Deste Oluştur</button>
-          <button type="button" class="coach-switch-btn" data-coach-view="coach">Coach</button>
-          <button type="button" class="coach-switch-btn" data-coach-view="reader">Akıllı Okuyucu</button>
-        </div>
-
-        <!-- COACH: Belge / görsel / metin analizi ve yapay zeka destekli deste oluşturma -->
-        <div id="deck-builder-pane" class="coach-pane">
-          <div class="coach-card">
-            <input type="file" id="coach-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
-            <textarea id="coach-text-input" class="reader-textarea" rows="5" maxlength="35000" placeholder="Almanca bir metin yapıştırın veya bir görsel, PDF, DOCX ya da TXT dosyası yükleyin."></textarea>
-            <div id="coach-file-chip" class="coach-file-chip hidden">
-              <span id="coach-file-name"></span>
-              <button type="button" id="btn-coach-file-remove" aria-label="Dosyayı kaldır">Kaldır</button>
+        <div class="coach-chat-app-container">
+          <!-- Üst Bilgi & Seviye Çubuğu -->
+          <div class="coach-top-bar">
+            <div class="coach-top-info">
+              <h1 class="coach-main-title">Almanca Koçu</h1>
+              <p class="coach-main-sub">Akademik Metin Analizi, Dilbilgisi &amp; İnteraktif Alıştırma</p>
             </div>
-            <div class="coach-box-actions">
-              <button type="button" id="btn-coach-pick" class="btn-coach-large-pick">
-                <span>Dosya Seç</span>
-              </button>
-              <button type="button" id="btn-coach-analyze" class="btn-coach-large-analyze">
-                <span>İncele</span>
-              </button>
-            </div>
-            <div id="coach-status" class="coach-status hidden"></div>
-          </div>
-
-          <div id="coach-analysis" class="coach-card hidden">
-            <div class="coach-meta-row">
-              <span id="coach-type" class="coach-tag"></span>
-              <span id="coach-level" class="coach-tag"></span>
-            </div>
-            <p id="coach-summary" class="coach-summary"></p>
-            <div class="coach-ask-title">Ne yapmak istersin?</div>
-            <div id="coach-suggestions" class="coach-suggestions"></div>
-            <div class="coach-prompt-builder">
-              <label for="coach-instruction" class="coach-instruction-label">Özel Talimat veya Kelime Filtresi (İsteğe Bağlı):</label>
-              <textarea id="coach-instruction" class="coach-instruction-textarea" rows="2" maxlength="400" placeholder="Örn: Bu metindeki B1 fiilleri desteye ekle veya sadece çevre konusundaki kelimeleri seç..."></textarea>
-              <button type="button" id="btn-coach-build" class="btn-coach-build-full">
-                <span>Deste Oluştur</span>
-              </button>
+            <div class="coach-level-selector-box">
+              <label for="coach-user-level" class="coach-level-label">Seviye:</label>
+              <select id="coach-user-level" class="coach-select-pill">
+                <option value="A1">A1</option>
+                <option value="A2">A2</option>
+                <option value="B1" selected>B1</option>
+                <option value="B2">B2</option>
+                <option value="C1">C1</option>
+              </select>
             </div>
           </div>
 
-          <div id="coach-result" class="coach-card hidden">
-            <input type="text" id="coach-deck-name" class="form-control" maxlength="80" aria-label="Deste adı" />
-            <div class="coach-result-head">
-              <span id="coach-count"></span>
-              <button type="button" id="btn-coach-toggle-all" class="coach-link-btn">Tümünü Kaldır</button>
-            </div>
-            <div id="coach-word-list" class="coach-word-list"></div>
-            <button type="button" id="btn-coach-save" class="btn-primary-compact coach-save-btn">Desteyi Kaydet</button>
-          </div>
-        </div>
-
-        <!-- COACH: İnteraktif Almanca Koçu, Akademik Metin Çalışması ve Oyun Sistemi -->
-        <div id="coach-interactive-pane" class="coach-pane hidden">
-          <div class="coach-workspace-header">
-            <div class="coach-quick-actions">
-              <button type="button" class="coach-quick-btn" data-action="cloze">Boşluk Doldurma (Cloze)</button>
-              <button type="button" class="coach-quick-btn" data-action="matching">Eşleştirme Oyunu</button>
-              <button type="button" class="coach-quick-btn" data-action="grammar">Dilbilgisi Çalışması</button>
-              <button type="button" class="coach-quick-btn" data-action="academic">Akademik Metin Analizi</button>
-              <button type="button" class="coach-quick-btn" data-action="deck">Desteye Dönüştür</button>
-            </div>
-
-            <div class="coach-context-bar">
-              <input type="file" id="coach-chat-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
-              <button type="button" id="btn-coach-attach-file" class="coach-attach-btn" title="Üzerinde çalışmak için belge veya görsel ekle">
-                <svg class="svg-icon" style="width:15px;height:15px;"><use href="#icon-download"></use></svg>
-                <span>Çalışma Dosyası / Görsel Ekle</span>
-              </button>
-              <div id="coach-chat-file-chip" class="coach-file-chip hidden" style="margin:0; padding:4px 10px; font-size:0.78rem;">
-                <span id="coach-chat-file-name"></span>
-                <button type="button" id="btn-coach-chat-file-remove">Kaldır</button>
-              </div>
-              <div class="coach-level-pill-wrap">
-                <label for="coach-user-level" style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">Seviye:</label>
-                <select id="coach-user-level" class="dock-select" style="font-size:0.78rem; padding:4px 8px;">
-                  <option value="A1">A1</option>
-                  <option value="A2">A2</option>
-                  <option value="B1" selected>B1</option>
-                  <option value="B2">B2</option>
-                  <option value="C1">C1</option>
-                </select>
-              </div>
-            </div>
+          <!-- Hızlı Eylem Çipleri (Tek Satır Yatay Kaydırılabilir) -->
+          <div class="coach-quick-actions-bar">
+            <button type="button" class="coach-quick-btn" data-action="cloze">Boşluk Doldurma (Cloze)</button>
+            <button type="button" class="coach-quick-btn" data-action="matching">Eşleştirme Oyunu</button>
+            <button type="button" class="coach-quick-btn" data-action="grammar">Dilbilgisi Çalışması</button>
+            <button type="button" class="coach-quick-btn" data-action="academic">Akademik Metin Analizi</button>
+            <button type="button" class="coach-quick-btn" data-action="deck">Kelime Destesine Çevir</button>
           </div>
 
+          <!-- Sohbet Mesaj Akışı -->
           <div id="coach-chat-stream" class="coach-chat-stream">
-            <div class="coach-chat-welcome">
-              <h3 style="font-size:1.02rem; font-weight:800; color:var(--text-primary); margin-bottom:6px;">Almanca Koçunuz Hazır</h3>
-              <p style="font-size:0.86rem; color:var(--text-secondary); line-height:1.5; margin:0;">
-                Dilbilgisi kurallarını sorabilir, belgeleriniz üzerinde akademik çalışabilir veya yukarıdaki butonlarla anında interaktif boşluk doldurma, eşleştirme ve dilbilgisi oyunları başlatabilirsiniz.
+            <div class="coach-welcome-bubble">
+              <div class="coach-welcome-title">Almanca Dil Koçunuz Hazır</div>
+              <p class="coach-welcome-desc">
+                Almanca dilbilgisi kurallarını sorabilir, cümle çevirilerinizi kontrol ettirebilir veya aşağıdaki ataş butonuyla bir görsel, PDF ya da metin belgesi yükleyerek üzerinde akademik analiz ve interaktif alıştırmalar başlatabilirsiniz.
               </p>
+              <div class="coach-policy-note">
+                Güvenlik Bildirimi: Koç yalnızca Almanca dil eğitimi ve metin analizi konularında rehberlik eder.
+              </div>
             </div>
           </div>
 
+          <!-- Ekli Dosya Rozeti (Varsa) -->
+          <div id="coach-chat-file-chip" class="coach-attached-chip hidden">
+            <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-bookmark"></use></svg>
+            <span id="coach-chat-file-name" class="coach-attached-name">dosya.pdf</span>
+            <button type="button" id="btn-coach-chat-file-remove" class="coach-chip-remove" aria-label="Kaldır">Kaldır</button>
+          </div>
+
+          <!-- Alt Mesaj Giriş & Gönderim Çubuğu -->
           <div class="coach-chat-input-bar">
-            <textarea id="coach-chat-input" class="form-control" rows="2" maxlength="1500" placeholder="Koç'a bir soru sorun veya metin üzerinde alıştırma isteyin..."></textarea>
-            <button type="button" id="btn-coach-chat-send" class="btn-primary-compact coach-send-btn">
+            <input type="file" id="coach-chat-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
+            <button type="button" id="btn-coach-attach-file" class="coach-icon-attach-btn" title="Belge veya Görsel Yükle" aria-label="Belge veya Görsel Yükle">
+              <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-download"></use></svg>
+            </button>
+            <textarea id="coach-chat-input" class="coach-chat-textarea" rows="1" maxlength="1500" placeholder="Almanca ile ilgili bir soru sorun veya dosyanızı inceletin..."></textarea>
+            <button type="button" id="btn-coach-chat-send" class="coach-chat-submit-btn" aria-label="Gönder">
+              <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-check"></use></svg>
               <span>Gönder</span>
             </button>
-          </div>
-        </div>
-
-<!-- GÖRÜNÜM 1: METİN GİRİŞİ & DOSYA YÜKLEME PANELİ -->
-        <div id="reader-setup-pane" class="reader-setup-pane hidden">
-          <!-- Dosya İçe Aktarım Kartı (PDF, DOCX, TXT) -->
-          <div class="reader-upload-card" id="reader-drop-zone">
-            <input type="file" id="reader-file-input" accept=".pdf,.docx,.txt,image/png,image/jpeg,image/webp" class="hidden" />
-            <div class="upload-icon-circle">
-              <svg class="svg-icon"><use href="#icon-download"></use></svg>
-            </div>
-            <div class="upload-text-group">
-              <div class="upload-main-text">Belge veya Görsel Yükle (PDF, DOCX, TXT, Resim)</div>
-              <div class="upload-sub-text">Dosyayı buraya sürükleyin veya cihazınızdan seçin</div>
-            </div>
-            <button type="button" class="btn-select-file" id="btn-trigger-file-input">
-              <span>Dosya Seç</span>
-            </button>
-          </div>
-          <div id="reader-upload-status" class="reader-upload-status hidden"></div>
-
-          <!-- Metin Giriş Kartı -->
-          <div class="reader-text-input-wrap">
-            <textarea
-              id="reader-input-text"
-              class="reader-textarea"
-              placeholder="Almanca bir metin, haber veya makale yapıştırın veya yukarıdan PDF/DOCX belgesi yükleyin..."
-              rows="6"
-            ></textarea>
-            <div class="reader-parse-btn-row">
-              <select id="reader-sample-select" class="reader-select" title="Hazır Örnek Metinler">
-                <option value="">Örnek Metin Seçin...</option>
-                <option value="sample_a1">Der Alltag in Berlin (A1)</option>
-                <option value="sample_a2">Ein Wochenende in München (A2)</option>
-                <option value="sample_b1">Klimawandel und Zukunft (B1)</option>
-                <option value="sample_b2">Berufliches Bewerbungsgespräch (B2)</option>
-              </select>
-              <div class="reader-parse-actions-subrow">
-                <button type="button" id="btn-reader-clear" class="btn-secondary-compact" title="Temizle">
-                  <span>Temizle</span>
-                </button>
-                <button type="button" id="btn-reader-parse" class="btn-primary-compact">
-                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-check"></use></svg>
-                  <span>Metni Ayrıştır ve Oku</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- GÖRÜNÜM 2: TAM EKRAN ODAKLI OKUMA SAYFASI (FULLSCREEN READING VIEW) -->
-        <div id="reader-fullscreen-view" class="reader-fullscreen-view hidden">
-          <!-- Çok Sade Üst Bar (Minimalist Reader Bar) -->
-          <div class="reader-fs-topbar">
-            <button type="button" id="btn-reader-back-setup" class="btn-fs-icon-action" title="Geri" aria-label="Geri">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            </button>
-            <div class="reader-topbar-center">
-              <span class="reader-mode-title">Okuma Modu</span>
-              <span id="reader-word-count-badge" class="reader-word-count-badge"></span>
-            </div>
-            <button type="button" id="btn-toggle-reader-dock" class="btn-fs-icon-action" title="Kontrolleri A? / Kapat" aria-label="Kontroller">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
-            </button>
-          </div>
-
-          <!-- Okuma Tuvali (Distraction-Free Reading Canvas) -->
-          <div class="reader-fs-body">
-            <div id="reader-display-pane" class="reader-fs-canvas"></div>
-          </div>
-
-          <!-- Alt Yüzen Okuma & Ses Çubuğu (Floating Bottom Dock) -->
-          <div id="reader-floating-dock" class="reader-floating-dock">
-            <div class="dock-group font-group">
-              <button type="button" id="btn-reader-font-dec" class="dock-btn-compact" title="Yazıyı Küçült">A-</button>
-              <button type="button" id="btn-reader-font-inc" class="dock-btn-compact" title="Yazıyı Büyüt">A+</button>
-            </div>
-
-            <div class="dock-divider"></div>
-
-            <div class="dock-group">
-              <select id="reader-fs-speed-select" class="dock-select" title="Okuma Hızı">
-                <option value="0.75">0.75x</option>
-                <option value="0.90" selected>0.90x</option>
-                <option value="1.0">1.0x</option>
-                <option value="1.15">1.15x</option>
-              </select>
-            </div>
-
-            <div class="dock-divider"></div>
-
-            <div class="dock-group audio-group">
-              <button type="button" id="btn-reader-play-all" class="dock-action-btn dock-btn-play dock-icon-only" title="Dinle" aria-label="Dinle">
-                <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-volume"></use></svg>
-              </button>
-              <button type="button" id="btn-reader-stop" class="dock-action-btn dock-btn-stop dock-icon-only" title="Durdur" aria-label="Durdur">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
-              </button>
-            </div>
           </div>
         </div>
       </section>

@@ -1,3 +1,9 @@
+
+    // Almanca Dışı Alakasız Sorularda İstemci Koruması (Token Tasarrufu)
+    const NON_GERMAN_RE = /^(bana python|javascript|kod yaz|kimsin|hava nası|felsefe|siyaset|dolar|borsa|matematik|kuantum|şarkı sözü|hikaye yaz|yemek tarifi)/i;
+    function isOffTopic(text) {
+      return NON_GERMAN_RE.test((text || '').trim());
+    }
 /**
  * WortCoach - Coach & AI Deste Oluşturma & İnteraktif Akademik Çalışma
  * - AI Deste Oluşturma (sözlük uyumlu lemma çıkarımı ve deste kaydetme)
@@ -604,6 +610,17 @@
     if (msg) {
       appendChatMessage('user', msg);
       chatState.history.push({ role: 'user', text: msg });
+    }
+
+    // Katı Konu ve Token Koruması (Yalnızca Almanca Öğrenimi)
+    const OFF_TOPIC_RE = /(python|javascript|typescript|php|html|css|kod yaz|programlama|hava durumu|dolar kaç|borsa|bitcoin|kripto|felsefe|siyaset|seçim|magazin|yemek tarifi|burç|astroloji|matematik|fizik|kuantum|bana bir hikaye|fıkra anlat)/i;
+    if (msg && !action && !chatState.file && !chatState.contextText && OFF_TOPIC_RE.test(msg)) {
+      setTimeout(() => {
+        appendChatMessage('model', 'Maalesef bu konuda yardımcı olamam. Ben yalnızca Almanca öğreniminizde size rehberlik etmek üzere tasarlanmış bir dil koçuyum. Lütfen Almanca dilbilgisi, kelimeler veya metinlerinizle ilgili bir soru sorunuz.');
+        chatState.busy = false;
+        $('btn-coach-chat-send').disabled = false;
+      }, 300);
+      return;
     }
 
     const typingEl = document.createElement('div');
