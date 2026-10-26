@@ -1059,12 +1059,31 @@ class DictionaryService {
   }
 
   static async translateGermanToTr(text, signal) {
+    if (!text) return null;
+    // 1. Worker Proxy
+    try {
+      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: text, sl: 'de', tl: 'tr' }),
+        signal
+      }).then(r => r.json()).catch(() => null);
+      if (pRes && pRes.translation) return pRes.translation;
+    } catch (_) {}
+    // 2. MyMemory Fallback
+    try {
+      const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=de|tr`;
+      const mmRes = await fetch(mmUrl, { signal }).then((r) => r.json()).catch(() => null);
+      if (mmRes && mmRes.responseData && mmRes.responseData.translatedText) {
+        const trans = mmRes.responseData.translatedText.trim();
+        if (trans && trans.toLowerCase() !== text.toLowerCase()) return trans;
+      }
+    } catch (_) {}
+    // 3. Google Client Fallback
     try {
       const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=tr&dt=t&q=${encodeURIComponent(text)}`;
       const res = await fetch(url, { signal }).then((r) => r.json()).catch(() => null);
-      if (res && res[0]) {
-        return res[0].map((x) => x[0]).join('').trim();
-      }
+      if (res && res[0]) return res[0].map((x) => x[0]).join('').trim();
     } catch (_) {}
     return null;
   }
@@ -1082,8 +1101,32 @@ class DictionaryService {
 
   static async translateWordToGerman(cleanText, signal) {
     if (!cleanText) return null;
-    // 2. Google Translate Web API: ncelikle Trke -> Almanca (sl=tr&tl=de)
-    // (WortCoach kullanclar Trke klavyeyle veya Trke szck aradnda annda en doru karl bulur)
+    // 1. Worker Proxy (Trke -> Almanca)
+    try {
+      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: cleanText, sl: 'tr', tl: 'de' }),
+        signal
+      }).then(r => r.json()).catch(() => null);
+      if (pRes && pRes.translation && pRes.translation.toLowerCase() !== cleanText.toLowerCase()) {
+        return pRes.translation;
+      }
+    } catch (_) {}
+    // 2. MyMemory Corpus (Trke -> Almanca)
+    try {
+      const mmUrlTr = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText)}&langpair=tr|de`;
+      const mmResTr = await fetch(mmUrlTr, { signal }).then((r) => r.json()).catch(() => null);
+      if (mmResTr && mmResTr.responseData && mmResTr.responseData.translatedText) {
+        const mmTransTr = mmResTr.responseData.translatedText.trim();
+        if (mmTransTr && mmTransTr.toLowerCase() !== cleanText.toLowerCase()) {
+          return mmTransTr;
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') throw e;
+    }
+    // 3. Google Translate Web API Fallback
     try {
       const gUrlTr = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=tr&tl=de&dt=t&q=${encodeURIComponent(cleanText)}`;
       const resTr = await fetch(gUrlTr, { signal }).then((r) => r.json()).catch(() => null);
@@ -1214,9 +1257,8 @@ class DictionaryService {
 
     // Asla typo veya arama hatasını anlama kopyalama!
     // Yalnızca sorgu doğrulanmış bir Türkçe sözcükse (cami, araba, ev vb.) anlam olarak koru
-    const isCleanTurkishInput = (/[çğışöüÇĞİŞÖÜ]|(mek|mak)$/i.test(originalQuery) || sourceLang === 'tr') && originalQuery.length >= 3;
-    if (isCleanTurkishInput && !entry.meaningsTr) {
-      entry.meaningsTr = originalQuery;
+    if (!entry.meaningsTr && originalQuery) {
+      entry.meaningsTr = originalQuery.charAt(0).toUpperCase() + originalQuery.slice(1);
     }
     if (!entry.meaningsEn) {
       const fallbackEn = await this.translateGermanToEn(entry.germanWord, signal).catch(() => null);

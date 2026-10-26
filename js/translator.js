@@ -137,7 +137,18 @@ class WortMeisterTranslator {
   async translateTextHybrid(text, src, tgt, signal) {
     const cleanText = text.trim();
 
-    // 1. Google Translate Web Client (Yuksek Hiz, API Key istemez) - parcali ceviri
+    // 1. WortCoach Cloud Proxy (CORS Korumali, Hizli & Sinirsiz)
+    try {
+      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: cleanText, sl: src, tl: tgt }),
+        signal
+      }).then(r => r.json()).catch(() => null);
+      if (pRes && pRes.translation) return pRes.translation;
+    } catch (_) {}
+
+    // 2. Google Translate Web Client Fallback - parcali ceviri
     try {
       const out = [];
       for (const chunk of this.splitIntoChunks(cleanText)) {

@@ -861,7 +861,11 @@ class WortCoachApp {
 
     // Kullanıcının bu kelimeye eklediği özel anlamlar
     const savedCustomMeanings = this.getCustomMeaningsForWord(cleanWord);
-    const existingCards = await window.wmDB.getCardsByExactWord(cleanWord);
+    const existingCards = (window.wmDB && typeof window.wmDB.getCardsByExactWord === 'function')
+      ? await window.wmDB.getCardsByExactWord(cleanWord)
+      : (window.wmDB && typeof window.wmDB.getCardByWord === 'function')
+        ? [await window.wmDB.getCardByWord(cleanWord)].filter(Boolean)
+        : [];
     const existing = existingCards && existingCards.length > 0 ? existingCards[0] : null;
 
     // Desteler Listesi

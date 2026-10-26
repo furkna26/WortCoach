@@ -696,6 +696,45 @@ async function handleDatabaseApi(path, body, env, c) {
       return json({ ok: true }, 200, c.headers);
     }
 
+    // 15. Hızlı, Sınırsız ve Akıllı Çeviri Motoru (Gemini Flash + Fallback)
+    if (path === '/api/translate') {
+      const text = clean(body.q || body.text, 2000);
+      const sl = clean(body.sl, 10) || 'auto';
+      const tl = clean(body.tl, 10) || 'de';
+      if (!text) return json({ ok: true, translation: '' }, 200, c.headers);
+
+      // 1. Gemini Flash Çevirisi (0 kota sınırı, tam doğruluk)
+      if (env.GEMINI_KEY) {
+        try {
+          const sys = `Sen üst düzey bir iki dilli sözlük ve çeviri motorusun. Sana verilen metni ${tl === 'de' ? 'Almanca' : 'Türkçe'} diline çevir. İsim ise Almancada artikelini (der/die/das) ekle. Yalnızca JSON { "translation": "..." } formatında yanıt ver.`;
+          const schema = {
+            type: 'OBJECT',
+            properties: { translation: { type: 'STRING' } },
+            required: ['translation']
+          };
+          const out = await callGemini(env, sys, schema, [{ text }], 300);
+          if (out && out.translation) {
+            return json({ ok: true, translation: out.translation.trim() }, 200, c.headers);
+          }
+        } catch (_) {}
+      }
+
+      // 2. MyMemory Fallback
+      try {
+        const pair = `${sl === 'auto' ? 'tr' : sl}|${tl}`;
+        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
+        const res = await fetch(mmUrl, { signal: AbortSignal.timeout(5000) });
+        const data = await res.json();
+        let translation = data?.responseData?.translatedText || '';
+        if (translation && !translation.includes('MYMEMORY WARNING')) {
+          translation = translation.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+          return json({ ok: true, translation }, 200, c.headers);
+        }
+      } catch (_) {}
+
+      return json({ ok: false, translation: '' }, 200, c.headers);
+    }
+
     return json({ error: 'Geçersiz API uç noktası.' }, 404, c.headers);
   } catch (err) {
     return json({ error: 'Sunucu hatası: ' + err.message }, 500, c.headers);
