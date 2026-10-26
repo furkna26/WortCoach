@@ -575,6 +575,8 @@
       const prof = this.getActiveProfile();
       const payloadDecks = [];
 
+      // Sadece kullanıcının kendi yerel desteleri ve kartları senkronize edilir.
+      // Küratörlü hazır paketler (A1, A2, vb.) asla bulut destelerine gönderilmez.
       for (const d of localDecks) {
         const cards = await this.getLocalCardsSafe(d.id);
         if (!cards || cards.length === 0) continue;
@@ -594,19 +596,8 @@
         });
       }
 
-      // Kullanıcının yerel destelerinde henüz kelime yoksa (yeni kurulum), arkadaşların ve açık profilin boş görünmemesi için A1 temel paketini varsayılan paylaşım destesi olarak ekle
-      if (payloadDecks.length === 0 && Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0]) {
-        const p0 = window.CURATED_CEFR_PACKS[0];
-        payloadDecks.push({
-          title: p0.name,
-          description: p0.description || 'Temel Almanca Kelime Paketi',
-          words: (p0.cards || []).slice(0, 30).map(c => ({
-            lemma: c.article ? `${c.article} ${c.germanWord}` : c.germanWord,
-            contextMeaning: c.meaningsTr || '',
-            pos: c.partOfSpeech || 'NOUN',
-            sourceSentence: c.exampleSentence || ''
-          }))
-        });
+      if (payloadDecks.length === 0) {
+        return 0;
       }
 
       try {
@@ -618,7 +609,7 @@
         });
         return res.syncedCount || payloadDecks.length;
       } catch (e) {
-        console.warn('Otomatik bulut senkronizasyonu başarısız:', e.message);
+        console.warn('Otomatik senkronizasyon hatası:', e.message);
         return 0;
       }
     }
@@ -774,10 +765,12 @@
       }
 
       let html = '';
+      const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
       decks.forEach(d => {
         const wCount = d.wordCount || (d.words && d.words.length) || (d.words_json && d.words_json.length) || 0;
         const author = d.authorUsername || d.username || 'Topluluk Yazarı';
         const dateStr = formatDisplayDate(d.createdAt || d.created_at);
+        const isOwner = d.ownerId && (d.ownerId === myId || (this.user && d.ownerId === this.user.id));
 
         html += `
           <div class="public-deck-card" data-pub-id="${d.id}">
@@ -791,7 +784,8 @@
             ${d.description ? `<div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.4;">${d.description}</div>` : ''}
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">${wCount} Kelime</span>
-              <div class="public-deck-actions">
+              <div class="public-deck-actions" style="display:flex; gap:6px;">
+                ${isOwner ? `<button type="button" class="btn-remove-pub-deck" data-pub-id="${d.id}" style="padding:4px 8px; font-size:0.75rem; background:#EF4444; border:1px solid #EF4444; color:#fff; border-radius:6px; font-weight:700;">Yayından Kaldır</button>` : ''}
                 <button type="button" class="btn-preview-pub-deck" data-pub-id="${d.id}">İncele</button>
                 <button type="button" class="btn-import-pub-deck" data-pub-id="${d.id}">Kütüphaneme Ekle</button>
               </div>
@@ -800,6 +794,26 @@
         `;
       });
       container.innerHTML = html;
+
+      // Yayından Kaldırma Butonu
+      container.querySelectorAll('.btn-remove-pub-deck').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const did = btn.getAttribute('data-pub-id');
+          if (!confirm('Bu desteyi herkese açık kütüphaneden kaldırmak istediğinize emin misiniz?')) return;
+          btn.disabled = true;
+          btn.textContent = 'Kaldırılıyor...';
+          try {
+            await this.apiCall('decks/public/remove', { deckId: did, ownerId: myId });
+            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste yayından kaldırıldı.');
+            await this.renderPublicDecks();
+          } catch (err) {
+            alert('Hata: ' + err.message);
+            btn.disabled = false;
+            btn.textContent = 'Yayından Kaldır';
+          }
+        });
+      });
 
       // Buton olayları
       container.querySelectorAll('.btn-preview-pub-deck').forEach(btn => {
@@ -914,39 +928,92 @@
       }
 
       let html = '';
+      const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
+
       clubs.forEach(c => {
         const memberCount = (c.members && c.members.length) || 1;
         const deckCount = (c.decks && c.decks.length) || 0;
+        const isMember = (c.members || []).some(m => m.id === myId || (this.user && m.id === this.user.id));
+        const isPublic = c.isPublic !== false && c.access !== 'code';
+
+        let actionBtnHtml = '';
+        if (isMember) {
+          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-open-club-view" data-club-id="${c.id}" style="padding:6px 12px; font-size:0.78rem;">İncele</button>`;
+        } else if (isPublic) {
+          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-direct-join-club" data-club-id="${c.id}" style="padding:6px 12px; font-size:0.78rem; background:#10B981; border-color:#10B981;">Tıkla Katıl</button>`;
+        } else {
+          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-trigger-code-join" data-club-code="${c.code || ''}" style="padding:6px 12px; font-size:0.78rem; background:var(--brand-blue);">Kodla Katıl</button>`;
+        }
+
+        const subText = isPublic
+          ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; font-size:0.72rem; padding:2px 6px; border-radius:4px; font-weight:700;">Herkese Açık</span>${c.description ? ' · ' + c.description : ''}`
+          : `<span class="badge" style="background:rgba(239,68,68,0.15); color:#EF4444; font-size:0.72rem; padding:2px 6px; border-radius:4px; font-weight:700;">Özel Kulüp</span>${isMember ? ` · Kod: <strong>${c.code}</strong>` : ''}${c.description ? ' · ' + c.description : ''}`;
+
         html += `
           <div class="club-card" data-club-id="${c.id}">
-            <div>
+            <div style="flex:1;">
               <div class="club-info-title">${c.name}</div>
-              <div class="club-info-sub">Kod: <strong style="color:var(--brand-blue-hover);">${c.code}</strong>${c.description ? ' · ' + c.description : ''}</div>
+              <div class="club-info-sub" style="margin-top:2px;">${subText}</div>
               <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">${memberCount} Üye · ${deckCount} Kulüp Destesi</div>
             </div>
-            <button type="button" class="btn-primary-compact btn-open-club-view" data-club-id="${c.id}" style="padding:6px 12px; font-size:0.78rem;">İncele</button>
+            <div style="margin-left:8px;">
+              ${actionBtnHtml}
+            </div>
           </div>
         `;
       });
       container.innerHTML = html;
 
+      // İncele ve Kart Tıklaması
       container.querySelectorAll('.btn-open-club-view, .club-card').forEach(el => {
         el.addEventListener('click', (e) => {
+          if (e.target.closest('.btn-direct-join-club') || e.target.closest('.btn-trigger-code-join')) return;
           e.stopPropagation();
           const cid = el.getAttribute('data-club-id');
           const cObj = clubs.find(x => String(x.id) === String(cid));
           if (cObj) this.openClubDetailModal(cObj);
         });
       });
+
+      // Herkese Açık Doğrudan Katıl
+      container.querySelectorAll('.btn-direct-join-club').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const cid = btn.getAttribute('data-club-id');
+          btn.disabled = true;
+          btn.textContent = 'Katılınıyor...';
+          try {
+            const updated = await this.joinClubDirect(cid);
+            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`"${updated.name}" kulübüne katıldınız.`);
+            await this.renderClubs();
+            this.openClubDetailModal(updated);
+          } catch (err) {
+            alert(err.message);
+            btn.disabled = false;
+            btn.textContent = 'Tıkla Katıl';
+          }
+        });
+      });
+
+      // Kod ile Katıl Butonu
+      container.querySelectorAll('.btn-trigger-code-join').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const code = btn.getAttribute('data-club-code');
+          const input = $('input-join-club-code');
+          if (input && code) input.value = code;
+          $('modal-join-club')?.classList.remove('hidden');
+        });
+      });
     }
 
-    async createClub(name, description) {
+    async createClub(name, description, access = 'public') {
       const prof = this.getActiveProfile();
       const ownerId = this.isCloudConnected() ? this.user.id : (prof.id || 'local_user');
       const ownerUsername = prof.username || 'Kurucu';
 
       try {
-        const res = await this.apiCall('clubs/create', { name, description, ownerId, ownerUsername });
+        const res = await this.apiCall('clubs/create', { name, description, ownerId, ownerUsername, access });
         return res.club;
       } catch (e) {
         // Yerel fallback
@@ -956,6 +1023,8 @@
         const newClub = {
           id: 'club_' + Date.now(),
           code,
+          access,
+          isPublic: access === 'public',
           name,
           description,
           ownerId,
@@ -968,6 +1037,16 @@
         localStorage.setItem(this.localClubsKey, JSON.stringify(list));
         return newClub;
       }
+    }
+
+    async joinClubDirect(clubId) {
+      const prof = this.getActiveProfile();
+      const userId = this.isCloudConnected() ? this.user.id : (prof.id || 'local_user');
+      const username = prof.username || 'Üye';
+
+      const res = await this.apiCall('clubs/join', { clubId, userId, username });
+      if (!res.ok) throw new Error(res.error || 'Kulübe katılım başarısız oldu.');
+      return res.club;
     }
 
     async joinClubByCode(code) {
@@ -997,10 +1076,25 @@
       const modal = $('modal-club-detail');
       if (!modal) return;
 
+      const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
+      const isOwner = clubObj.ownerId === myId || (this.user && clubObj.ownerId === this.user.id);
+
       if ($('club-detail-name')) $('club-detail-name').textContent = clubObj.name;
-      if ($('club-detail-code-badge')) $('club-detail-code-badge').textContent = clubObj.code;
+      if ($('club-detail-code-badge')) {
+        // Herkese açık ise kod yerine "Herkese Açık" rozeti
+        if (clubObj.access === 'code' || isOwner) {
+          $('club-detail-code-badge').textContent = clubObj.code;
+          $('club-detail-code-badge').classList.remove('hidden');
+        } else {
+          $('club-detail-code-badge').textContent = 'Herkese Açık';
+        }
+      }
       const members = clubObj.members || [];
       if ($('club-detail-meta')) $('club-detail-meta').textContent = `${members.length} Üye`;
+
+      // Kurucu Silme Butonu Görünürlüğü
+      const dangerZone = $('club-owner-danger-zone');
+      if (dangerZone) dangerZone.classList.toggle('hidden', !isOwner);
 
       // Kulüp Desteleri
       const decksBox = $('club-decks-container');
@@ -1012,18 +1106,23 @@
           let html = '';
           decks.forEach(d => {
             const wList = d.words || [];
+            const canRemoveDeck = isOwner || d.addedById === myId;
             html += `
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
                   <div style="font-weight:800; font-size:0.9rem; color:var(--text-primary);">${d.title}</div>
                   <div style="font-size:0.75rem; color:var(--text-muted);">${wList.length} Kelime · Ekleyen: ${d.addedBy || 'Üye'}</div>
                 </div>
-                <button type="button" class="btn-primary-compact btn-import-club-deck" data-deck-id="${d.id}" style="padding:6px 10px; font-size:0.78rem;">Destelerime Ekle</button>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="btn-primary-compact btn-import-club-deck" data-deck-id="${d.id}" style="padding:6px 10px; font-size:0.78rem;">Destelerime Ekle</button>
+                  ${canRemoveDeck ? `<button type="button" class="btn-primary-compact btn-remove-club-deck" data-deck-id="${d.id}" style="padding:6px 8px; font-size:0.75rem; background:#EF4444; border-color:#EF4444; color:#fff;">Sil</button>` : ''}
+                </div>
               </div>
             `;
           });
           decksBox.innerHTML = html;
 
+          // Desteleri Kütüphaneye Ekle
           decksBox.querySelectorAll('.btn-import-club-deck').forEach(btn => {
             btn.addEventListener('click', async (e) => {
               const did = e.currentTarget.getAttribute('data-deck-id');
@@ -1045,6 +1144,25 @@
               }
             });
           });
+
+          // Kulüp Destesini Kaldır
+          decksBox.querySelectorAll('.btn-remove-club-deck').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const did = e.currentTarget.getAttribute('data-deck-id');
+              if (!confirm('Bu desteyi kulüp havuzundan silmek istediğinize emin misiniz?')) return;
+              btn.disabled = true;
+              try {
+                const res = await this.apiCall('clubs/decks/remove', { clubId: clubObj.id, ownerId: myId, deckId: did });
+                if (res.ok && res.club) {
+                  this.viewingClub = res.club;
+                  this.openClubDetailModal(res.club);
+                }
+              } catch (err) {
+                alert('Hata: ' + err.message);
+                btn.disabled = false;
+              }
+            });
+          });
         }
       }
 
@@ -1053,26 +1171,50 @@
       if (membersBox) {
         let mHtml = '';
         members.forEach(m => {
+          const isThisMemberOwner = m.id === clubObj.ownerId;
+          const canKick = isOwner && !isThisMemberOwner;
           mHtml += `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid var(--border-subtle);">
               <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary);">${m.username}</span>
-              <span class="badge" style="font-size:0.72rem; padding:2px 8px; background:var(--accent-primary-soft); color:var(--brand-blue-hover);">${m.role || 'Üye'}</span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="badge" style="font-size:0.72rem; padding:2px 8px; background:var(--accent-primary-soft); color:var(--brand-blue-hover);">${m.role || (isThisMemberOwner ? 'Kurucu' : 'Üye')}</span>
+                ${canKick ? `<button type="button" class="btn-primary-compact btn-kick-club-member" data-member-id="${m.id}" style="padding:3px 6px; font-size:0.7rem; background:#EF4444; border-color:#EF4444; color:#fff;">Çıkar</button>` : ''}
+              </div>
             </div>
           `;
         });
         membersBox.innerHTML = mHtml;
+
+        // Üyeyi Çıkar
+        membersBox.querySelectorAll('.btn-kick-club-member').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const mid = e.currentTarget.getAttribute('data-member-id');
+            if (!confirm('Bu üyeyi kulüpten çıkarmak istediğinize emin misiniz?')) return;
+            btn.disabled = true;
+            try {
+              const res = await this.apiCall('clubs/members/remove', { clubId: clubObj.id, ownerId: myId, memberId: mid });
+              if (res.ok && res.club) {
+                this.viewingClub = res.club;
+                this.openClubDetailModal(res.club);
+              }
+            } catch (err) {
+              alert('Hata: ' + err.message);
+              btn.disabled = false;
+            }
+          });
+        });
       }
 
       modal.classList.remove('hidden');
     }
 
     // =========================================================================
-    // 1v1 ZAMANA KARŞI DÜELLO MOTORU
+    // ZAMANA KARŞI DÜELLO & ÇOK OYUNCULU KAPIŞMA (SIFIR BOT - GERÇEK LOBİ)
     // =========================================================================
     async start1v1MatchAsHost(deckSelection) {
       const resolved = await this.getDeckWithCardsBySelection(deckSelection);
       if (!resolved.words || resolved.words.length < 4) {
-        throw new Error('1v1 kapışma için seçilen destede en az 4 kelime olmalıdır.');
+        throw new Error('Kapışma için seçilen destede en az 4 kelime olmalıdır.');
       }
 
       const words = resolved.words;
@@ -1080,82 +1222,195 @@
       let pin = 'VS-' + Math.floor(1000 + Math.random() * 9000);
       const deckTitle = resolved.title || 'Deste';
 
+      let roomObj = {
+        pin,
+        type: '1v1',
+        hostId: prof.id || 'host',
+        hostName: prof.username || 'Host',
+        deckTitle,
+        words,
+        status: 'lobby',
+        players: [{ id: prof.id || 'host', name: prof.username || 'Host', score: 0, isHost: true }]
+      };
+
       try {
         const res = await this.apiCall('multiplayer/room/create', {
           type: '1v1',
           hostId: prof.id || 'host',
           hostName: prof.username || 'Host',
-          deckTitle: deckTitle,
+          deckTitle,
           words,
           duration: 60
         });
-        if (res.ok && res.room) pin = res.room.pin;
+        if (res.ok && res.room) roomObj = res.room;
       } catch (_) {}
 
-      // Yerel maçı başlat
-      this.init1v1GameView(pin, deckTitle, words);
+      this.init1v1Lobby(roomObj, true);
     }
 
     async join1v1Match(pin) {
       const cleanPin = (pin || '').trim().toUpperCase();
-      if (!cleanPin) throw new Error('Lütfen geçerli bir davet kodu girin (Örn: VS-1234).');
+      if (!cleanPin) throw new Error('Lütfen geçerli bir katılım PIN kodu girin (Örn: VS-1234).');
 
-      let words = [];
-      let deckTitle = 'Zamana Karşı Deste';
+      const prof = this.getActiveProfile();
+      let roomObj = null;
 
       try {
         const res = await this.apiCall('multiplayer/room/join', {
           pin: cleanPin,
-          playerId: this.getActiveProfile().id,
-          playerName: this.getActiveProfile().username
+          playerId: prof.id || 'player_' + Date.now(),
+          playerName: prof.username || 'Yarışmacı'
         });
         if (res.ok && res.room) {
-          words = res.room.words || [];
-          deckTitle = res.room.deckTitle || deckTitle;
+          roomObj = res.room;
         }
       } catch (e) {
         throw new Error(e.message || 'Oda bulunamadı veya süresi doldu.');
       }
 
-      if (words.length < 4) throw new Error('Maç verisine ulaşılamadı.');
-      this.init1v1GameView(cleanPin, deckTitle, words);
+      if (!roomObj || !Array.isArray(roomObj.words) || roomObj.words.length < 4) {
+        throw new Error('Oda verisine veya kelimelere ulaşılamadı.');
+      }
+
+      this.init1v1Lobby(roomObj, false);
     }
 
-    init1v1GameView(pin, title, words) {
+    init1v1Lobby(room, isHost) {
+      if (this.match1v1PollTimer) clearInterval(this.match1v1PollTimer);
+      if (this.match1v1Timer) clearInterval(this.match1v1Timer);
+
+      const prof = this.getActiveProfile();
       this.match1v1State = {
-        timerId: null,
-        remainingSec: 60,
-        words: [...words].sort(() => Math.random() - 0.5).slice(0, 10),
+        roomPin: room.pin,
+        deckTitle: room.deckTitle || 'Deste',
+        words: room.words || [],
+        isHost,
+        players: room.players || [{ id: prof.id, name: prof.username, score: 0, isHost }],
         currentIndex: 0,
         correctCount: 0,
         wrongCount: 0,
         myScore: 0,
-        roomPin: pin
+        remainingSec: 60,
+        status: 'lobby'
       };
 
       const modal = $('modal-arena-1v1-game');
       if (!modal) return;
 
-      if ($('arena-1v1-match-title')) $('arena-1v1-match-title').textContent = `${title} (Kod: ${pin})`;
-      if ($('arena-1v1-results-box')) $('arena-1v1-results-box').classList.add('hidden');
-      if ($('arena-1v1-question-box')) $('arena-1v1-question-box').classList.remove('hidden');
-      if ($('arena-1v1-options-grid')) $('arena-1v1-options-grid').classList.remove('hidden');
+      // Faz geçişi: Lobi göster, oyun ve sonuç gizli
+      $('arena-1v1-phase-lobby')?.classList.remove('hidden');
+      $('arena-1v1-phase-game')?.classList.add('hidden');
+      $('arena-1v1-results-box')?.classList.add('hidden');
 
+      if ($('arena-1v1-match-title')) $('arena-1v1-match-title').textContent = this.match1v1State.deckTitle;
+      if ($('arena-1v1-pin-display')) $('arena-1v1-pin-display').textContent = room.pin;
+
+      // Host vs Misafir Buton Durumu
+      const startBtn = $('btn-start-1v1-lobby-match');
+      const waitingMsg = $('arena-1v1-guest-waiting-msg');
+      if (startBtn) startBtn.classList.toggle('hidden', !isHost);
+      if (waitingMsg) waitingMsg.classList.toggle('hidden', !!isHost);
+
+      this.render1v1LobbyPlayers();
       modal.classList.remove('hidden');
+
+      // 2 Saniyelik Canlı Lobi Polling Döngüsü (Sunucu KV ile senkronizasyon)
+      this.match1v1PollTimer = setInterval(async () => {
+        try {
+          const res = await this.apiCall('multiplayer/room/state', { pin: room.pin });
+          if (res.ok && res.room) {
+            const updatedRoom = res.room;
+            const prevCount = this.match1v1State.players.length;
+            this.match1v1State.players = updatedRoom.players || [];
+
+            // Yeni oyuncu katıldı mı bildirimi
+            if (this.match1v1State.players.length > prevCount) {
+              const lastPlayer = this.match1v1State.players[this.match1v1State.players.length - 1];
+              if (lastPlayer && lastPlayer.id !== prof.id && window.wmApp && window.wmApp.showToast) {
+                window.wmApp.showToast(`${lastPlayer.name} odaya katıldı.`);
+              }
+            }
+
+            this.render1v1LobbyPlayers();
+
+            // Host oyunu başlattıysa misafirleri de otomatik soru ekranına al
+            if (!this.match1v1State.isHost && updatedRoom.status === 'active') {
+              clearInterval(this.match1v1PollTimer);
+              this.match1v1PollTimer = null;
+              this.start1v1ActualGame(updatedRoom.words || this.match1v1State.words);
+            }
+          }
+        } catch (_) {}
+      }, 2000);
+    }
+
+    render1v1LobbyPlayers() {
+      const chipList = $('arena-1v1-players-chip-list');
+      const countEl = $('arena-1v1-player-count');
+      if (!chipList) return;
+
+      const prof = this.getActiveProfile();
+      let html = '';
+      const players = this.match1v1State.players || [];
+      if (countEl) countEl.textContent = players.length;
+
+      players.forEach(p => {
+        const isMe = p.id === prof.id || p.name === prof.username;
+        const hostBadge = p.isHost ? ' (Host)' : '';
+        html += `
+          <span class="badge" style="background:${isMe ? 'var(--brand-blue)' : 'var(--bg-surface)'}; border:1px solid ${isMe ? 'transparent' : 'var(--border-medium)'}; color:${isMe ? '#fff' : 'var(--text-primary)'}; font-size:0.85rem; padding:6px 14px; border-radius:20px; font-weight:700;">
+            ${p.name}${hostBadge}${isMe ? ' (Siz)' : ''}
+          </span>
+        `;
+      });
+      chipList.innerHTML = html;
+    }
+
+    async launch1v1GameByHost() {
+      if (!this.match1v1State.isHost) return;
+      if (this.match1v1PollTimer) clearInterval(this.match1v1PollTimer);
+      this.match1v1PollTimer = null;
+
+      try {
+        await this.apiCall('multiplayer/room/start', {
+          pin: this.match1v1State.roomPin,
+          hostId: this.getActiveProfile().id
+        });
+      } catch (_) {}
+
+      this.start1v1ActualGame(this.match1v1State.words);
+    }
+
+    start1v1ActualGame(words) {
+      if (this.match1v1PollTimer) clearInterval(this.match1v1PollTimer);
+      this.match1v1PollTimer = null;
+
+      $('arena-1v1-phase-lobby')?.classList.add('hidden');
+      $('arena-1v1-phase-game')?.classList.remove('hidden');
+      $('arena-1v1-results-box')?.classList.add('hidden');
+
+      this.match1v1State.words = [...words].sort(() => Math.random() - 0.5).slice(0, 10);
+      this.match1v1State.currentIndex = 0;
+      this.match1v1State.correctCount = 0;
+      this.match1v1State.wrongCount = 0;
+      this.match1v1State.myScore = 0;
+      this.match1v1State.remainingSec = 60;
+      this.match1v1State.status = 'active';
+
       this.render1v1Question();
       this.start1v1Timer();
     }
 
     start1v1Timer() {
-      if (this.match1v1State.timerId) clearInterval(this.match1v1State.timerId);
+      if (this.match1v1Timer) clearInterval(this.match1v1Timer);
       const timerEl = $('arena-1v1-timer');
 
-      this.match1v1State.timerId = setInterval(() => {
+      this.match1v1Timer = setInterval(() => {
         this.match1v1State.remainingSec -= 1;
         if (timerEl) timerEl.textContent = this.match1v1State.remainingSec + 's';
 
         if (this.match1v1State.remainingSec <= 0) {
-          clearInterval(this.match1v1State.timerId);
+          clearInterval(this.match1v1Timer);
           this.finish1v1Match();
         }
       }, 1000);
@@ -1175,7 +1430,6 @@
       if ($('arena-1v1-word-lemma')) $('arena-1v1-word-lemma').textContent = q.lemma;
       if ($('arena-1v1-word-sentence')) $('arena-1v1-word-sentence').textContent = q.sourceSentence || '';
 
-      // 4 Seçenek Üret
       const correctMeaning = q.contextMeaning;
       const otherWords = st.words.filter(w => w.contextMeaning !== correctMeaning);
       const wrongOptions = otherWords.sort(() => Math.random() - 0.5).slice(0, 3).map(w => w.contextMeaning);
@@ -1197,22 +1451,33 @@
       grid.innerHTML = html;
 
       grid.querySelectorAll('.btn-arena-option').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
           const selected = decodeURIComponent(e.currentTarget.getAttribute('data-opt'));
           const isCorrect = selected === correctMeaning;
 
           grid.querySelectorAll('.btn-arena-option').forEach(b => b.disabled = true);
+          let earnedPoints = 0;
           if (isCorrect) {
             e.currentTarget.style.background = '#10B981';
             e.currentTarget.style.color = '#fff';
             st.correctCount += 1;
             const speedBonus = Math.max(10, Math.round(st.remainingSec * 2));
-            st.myScore += (100 + speedBonus);
+            earnedPoints = 100 + speedBonus;
+            st.myScore += earnedPoints;
           } else {
             e.currentTarget.style.background = '#EF4444';
             e.currentTarget.style.color = '#fff';
             st.wrongCount += 1;
           }
+
+          try {
+            this.apiCall('multiplayer/room/submit_score', {
+              pin: st.roomPin,
+              playerId: this.getActiveProfile().id,
+              points: earnedPoints,
+              questionIndex: st.currentIndex
+            }).catch(() => {});
+          } catch (_) {}
 
           setTimeout(() => {
             st.currentIndex += 1;
@@ -1223,22 +1488,20 @@
     }
 
     async finish1v1Match() {
-      if (this.match1v1State.timerId) clearInterval(this.match1v1State.timerId);
+      if (this.match1v1Timer) clearInterval(this.match1v1Timer);
       const st = this.match1v1State;
 
-      if ($('arena-1v1-question-box')) $('arena-1v1-question-box').classList.add('hidden');
-      if ($('arena-1v1-options-grid')) $('arena-1v1-options-grid').classList.add('hidden');
-      if ($('arena-1v1-results-box')) $('arena-1v1-results-box').classList.remove('hidden');
+      $('arena-1v1-phase-game')?.classList.add('hidden');
+      $('arena-1v1-results-box')?.classList.remove('hidden');
 
       if ($('arena-1v1-final-correct')) $('arena-1v1-final-correct').textContent = st.correctCount;
       if ($('arena-1v1-final-wrong')) $('arena-1v1-final-wrong').textContent = st.wrongCount;
       if ($('arena-1v1-final-pts')) $('arena-1v1-final-pts').textContent = st.myScore;
 
-      // ELO Ödülü: Doğru sayısı çoğunluktaysa +25 ELO
       const isWinner = st.correctCount >= 6;
       const eloDelta = isWinner ? 25 : -10;
       if ($('arena-1v1-winner-text')) $('arena-1v1-winner-text').textContent = isWinner ? 'Tebrikler! Maçı Kazandınız' : 'İyi Mücadele!';
-      if ($('arena-1v1-elo-result')) $('arena-1v1-elo-result').textContent = isWinner ? `+${eloDelta} ELO Kazandınız!` : `${eloDelta} ELO`;
+      if ($('arena-1v1-elo-result')) $('arena-1v1-elo-result').textContent = isWinner ? `+${eloDelta} Puan Kazandınız!` : `${eloDelta} Puan`;
 
       await this.recordActivity({
         type: 'review',
@@ -1305,11 +1568,14 @@
     }
 
     initKahootView(pin, deckTitle, words, duration, isHost) {
+      if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
       const prof = this.getActiveProfile();
+
       this.kahootState = {
         pin,
+        deckTitle,
         isHost,
-        players: [{ id: prof.id, name: prof.username, score: 0 }],
+        players: [{ id: prof.id, name: prof.username, score: 0, isHost }],
         words: [...words],
         duration: Number(duration) || 15,
         currentIndex: 0,
@@ -1324,9 +1590,41 @@
       if ($('kahoot-room-pin-display')) $('kahoot-room-pin-display').textContent = `PIN: ${pin}`;
       if ($('kahoot-lobby-deck-title')) $('kahoot-lobby-deck-title').textContent = deckTitle;
 
+      const startBtn = $('btn-start-kahoot-match');
+      const waitMsg = $('kahoot-guest-waiting-msg');
+      if (startBtn) startBtn.classList.toggle('hidden', !isHost);
+      if (waitMsg) waitMsg.classList.toggle('hidden', !!isHost);
+
       this.showKahootPhase('lobby');
       this.renderKahootLobbyPlayers();
       modal.classList.remove('hidden');
+
+      // 2 Saniyelik Kahoot Lobi Polling'i
+      this.kahootPollTimer = setInterval(async () => {
+        try {
+          const res = await this.apiCall('multiplayer/room/state', { pin });
+          if (res.ok && res.room) {
+            const updated = res.room;
+            const prevCount = this.kahootState.players.length;
+            this.kahootState.players = updated.players || [];
+
+            if (this.kahootState.players.length > prevCount) {
+              const lastPlayer = this.kahootState.players[this.kahootState.players.length - 1];
+              if (lastPlayer && lastPlayer.id !== prof.id && window.wmApp && window.wmApp.showToast) {
+                window.wmApp.showToast(`${lastPlayer.name} odaya katıldı.`);
+              }
+            }
+
+            this.renderKahootLobbyPlayers();
+
+            if (!this.kahootState.isHost && updated.status === 'active') {
+              clearInterval(this.kahootPollTimer);
+              this.kahootPollTimer = null;
+              this.startKahootQuestion();
+            }
+          }
+        } catch (_) {}
+      }, 2000);
     }
 
     showKahootPhase(phaseName) {
@@ -1341,25 +1639,35 @@
       const chipList = $('kahoot-players-chip-list');
       if (!chipList) return;
       const prof = this.getActiveProfile();
-      let html = `
-        <span class="badge" style="background:var(--brand-blue); color:#fff; font-size:0.85rem; padding:6px 14px; border-radius:20px; font-weight:800;">
-          ${prof.username} (Siz)
-        </span>
-      `;
-      // Simülasyon oyuncular (grup hissi için)
-      if (this.kahootState.players.length === 1) {
-        ['AlmancaAvcisi', 'Lukas_Berlin'].forEach(bot => {
-          this.kahootState.players.push({ id: bot, name: bot, score: 0 });
-          this.kahootState.scores[bot] = 0;
-          html += `
-            <span class="badge" style="background:var(--bg-surface); border:1px solid var(--border-subtle); color:var(--text-primary); font-size:0.85rem; padding:6px 14px; border-radius:20px; font-weight:700;">
-              ${bot}
-            </span>
-          `;
-        });
-      }
+      let html = '';
+
+      // Kesinlikle Sıfır Bot: Sadece odaya gerçekten katılan kullanıcılar listelenir
+      this.kahootState.players.forEach(p => {
+        const isMe = p.id === prof.id || p.name === prof.username;
+        const hostBadge = p.isHost ? ' (Host)' : '';
+        html += `
+          <span class="badge" style="background:${isMe ? 'var(--brand-blue)' : 'var(--bg-surface)'}; border:1px solid ${isMe ? 'transparent' : 'var(--border-subtle)'}; color:${isMe ? '#fff' : 'var(--text-primary)'}; font-size:0.85rem; padding:6px 14px; border-radius:20px; font-weight:700;">
+            ${p.name}${hostBadge}${isMe ? ' (Siz)' : ''}
+          </span>
+        `;
+      });
       chipList.innerHTML = html;
       if ($('kahoot-player-count')) $('kahoot-player-count').textContent = this.kahootState.players.length;
+    }
+
+    async launchKahootGameByHost() {
+      if (!this.kahootState.isHost) return;
+      if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
+      this.kahootPollTimer = null;
+
+      try {
+        await this.apiCall('multiplayer/room/start', {
+          pin: this.kahootState.pin,
+          hostId: this.getActiveProfile().id
+        });
+      } catch (_) {}
+
+      this.startKahootQuestion();
     }
 
     startKahootQuestion() {
@@ -1419,31 +1727,43 @@
       st.currentAnswerCorrect = isCorrect;
 
       const prof = this.getActiveProfile();
+      let earnedPoints = 0;
       if (isCorrect) {
-        const points = Math.round(1000 * (st.remainingSec / st.duration));
-        st.scores[prof.username] = (st.scores[prof.username] || 0) + Math.max(200, points);
+        const timeFactor = st.remainingSec / st.duration;
+        earnedPoints = Math.round(500 + 500 * timeFactor);
+        st.scores[prof.username] = (st.scores[prof.username] || 0) + Math.max(200, earnedPoints);
       }
 
-      // Diğer simüle oyunculara rastgele puan ekle
-      st.players.forEach(p => {
-        if (p.name !== prof.username) {
-          if (Math.random() > 0.35) {
-            const botPts = Math.floor(400 + Math.random() * 500);
-            st.scores[p.name] = (st.scores[p.name] || 0) + botPts;
-          }
-        }
-      });
+      // KV Sunucusuna puanı ilet
+      try {
+        this.apiCall('multiplayer/room/submit_score', {
+          pin: st.pin,
+          playerId: prof.id,
+          points: earnedPoints,
+          questionIndex: st.currentIndex
+        }).catch(() => {});
+      } catch (_) {}
 
       this.endKahootQuestion(isCorrect);
     }
 
-    endKahootQuestion(isCorrect) {
+    async endKahootQuestion(isCorrect) {
       this.showKahootPhase('intermediate');
       const feedback = $('kahoot-answer-feedback');
       if (feedback) {
         feedback.textContent = isCorrect ? 'Harika! Doğru Cevap' : 'Yanlış Seçenek!';
         feedback.style.color = isCorrect ? '#10B981' : '#EF4444';
       }
+
+      // Sunucudan güncel puan tablosunu çek
+      try {
+        const res = await this.apiCall('multiplayer/room/state', { pin: this.kahootState.pin });
+        if (res.ok && res.room && Array.isArray(res.room.players)) {
+          res.room.players.forEach(p => {
+            this.kahootState.scores[p.name] = p.score || 0;
+          });
+        }
+      } catch (_) {}
 
       const boardEl = $('kahoot-intermediate-leaderboard');
       if (boardEl) {
@@ -1461,9 +1781,18 @@
       }
     }
 
-    finishKahootGame() {
+    async finishKahootGame() {
       if (this.kahootState.timerId) clearInterval(this.kahootState.timerId);
       this.showKahootPhase('podium');
+
+      try {
+        const res = await this.apiCall('multiplayer/room/state', { pin: this.kahootState.pin });
+        if (res.ok && res.room && Array.isArray(res.room.players)) {
+          res.room.players.forEach(p => {
+            this.kahootState.scores[p.name] = p.score || 0;
+          });
+        }
+      } catch (_) {}
 
       const sorted = Object.entries(this.kahootState.scores).sort((a, b) => b[1] - a[1]);
       if ($('podium-1st-name')) $('podium-1st-name').textContent = sorted[0] ? sorted[0][0] : '-';
@@ -1480,6 +1809,67 @@
         isCorrect: true,
         responseTimeMs: 2500,
         customEloDelta: 30
+      });
+    }
+
+    // =========================================================================
+    // MAÇA ARKADAŞ DAVET ETME SİSTEMİ
+    // =========================================================================
+    async openInviteFriendMatchModal(roomPin, matchType = '1v1', deckTitle = 'Deste') {
+      const modal = $('modal-invite-friend-match');
+      if (!modal) return;
+
+      if ($('invite-match-pin-target')) $('invite-match-pin-target').textContent = roomPin;
+      const listContainer = $('invite-friends-list-container');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = '<div style="text-align:center; padding:12px; font-size:0.82rem; color:var(--text-muted);">Arkadaşlar yükleniyor...</div>';
+      modal.classList.remove('hidden');
+
+      const friends = await this.getFriendsLeaderboard();
+      if (!Array.isArray(friends) || friends.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; padding:16px; font-size:0.85rem; color:var(--text-muted);">Henüz arkadaşınız bulunmuyor. Sosyal sekmesinden arkadaş ekleyebilirsiniz.</div>';
+        return;
+      }
+
+      const prof = this.getActiveProfile();
+      let html = '';
+      friends.forEach(f => {
+        html += `
+          <div style="background:var(--bg-surface); padding:8px 12px; border-radius:10px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${f.username}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${f.friend_code || ''}</div>
+            </div>
+            <button type="button" class="btn-primary-compact btn-send-match-inv" data-user-id="${f.id}" data-username="${f.username}" style="padding:5px 12px; font-size:0.75rem; background:#10B981; border-color:#10B981;">Davet Et</button>
+          </div>
+        `;
+      });
+      listContainer.innerHTML = html;
+
+      listContainer.querySelectorAll('.btn-send-match-inv').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const targetId = e.currentTarget.getAttribute('data-user-id');
+          const targetName = e.currentTarget.getAttribute('data-username');
+          e.currentTarget.disabled = true;
+          e.currentTarget.textContent = 'Gönderildi';
+
+          try {
+            await this.apiCall('multiplayer/invite/send', {
+              fromUserId: prof.id || this.user?.id,
+              fromUsername: prof.username || 'Arkadaşın',
+              toUserId: targetId,
+              pin: roomPin,
+              type: matchType,
+              deckTitle
+            });
+            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`${targetName} kullanıcısına maç daveti gönderildi.`);
+          } catch (err) {
+            alert('Davet gönderilemedi: ' + err.message);
+            e.currentTarget.disabled = false;
+            e.currentTarget.textContent = 'Davet Et';
+          }
+        });
       });
     }
 
@@ -1694,6 +2084,9 @@
 
     async sendDeckToFriend(friendObj, deckSelection) {
       if (!this.isCloudConnected()) throw new Error('Arkadaşınıza deste göndermek için lütfen giriş yapın.');
+      if (String(deckSelection).startsWith('pack:')) {
+        throw new Error('Hazır küratörlü desteler gönderilemez. Yalnızca kendi destelerinizi gönderebilirsiniz.');
+      }
       const resolved = await this.getDeckWithCardsBySelection(deckSelection);
       if (!resolved.words || resolved.words.length === 0) {
         throw new Error('Seçilen destede kelime bulunmuyor.');
@@ -1731,8 +2124,28 @@
       }
 
       box.classList.remove('hidden');
-      let html = `<div class="section-subheading" style="margin-bottom:8px; color:var(--brand-blue-hover);">Gelen Deste Paylaşımları (${gifts.length})</div>`;
+      let html = `<div class="section-subheading" style="margin-bottom:8px; color:var(--brand-blue-hover);">Gelen Bildirimler &amp; Davetler (${gifts.length})</div>`;
       gifts.forEach(g => {
+        if (g.type === 'match_invite') {
+          html += `
+            <div class="pending-req-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap; background:rgba(239,68,68,0.06); border-radius:8px; margin-bottom:6px; padding:8px;">
+              <div style="flex:1; min-width:180px;">
+                <div style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">
+                  <span style="color:#EF4444; font-weight:900;">${g.fromUsername}</span> seni ${g.matchType === 'kahoot' ? 'Kahoot Grubuna' : 'Zamana Karşı Düelloya'} davet etti!
+                </div>
+                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
+                  Oda PIN: <strong>${g.pin}</strong> · ${g.deckTitle}
+                </div>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="btn-primary-compact btn-join-match-invite" data-gift-id="${g.id}" data-pin="${g.pin}" data-type="${g.matchType || '1v1'}" style="padding:5px 12px; font-size:0.76rem; background:#EF4444; border-color:#EF4444; color:#fff;">Odaya Katıl</button>
+                <button type="button" class="btn-primary-compact btn-ignore-deck-gift" data-gift-id="${g.id}" style="padding:5px 10px; font-size:0.76rem; background:transparent; color:var(--text-muted); border:1px solid var(--border-subtle);">Reddet</button>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
         const count = g.wordCount || (Array.isArray(g.words) ? g.words.length : 0);
         html += `
           <div class="pending-req-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap;">
@@ -1752,6 +2165,25 @@
         `;
       });
       box.innerHTML = html;
+
+      box.querySelectorAll('.btn-join-match-invite').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const gid = e.currentTarget.getAttribute('data-gift-id');
+          const pin = e.currentTarget.getAttribute('data-pin');
+          const mType = e.currentTarget.getAttribute('data-type');
+          try {
+            await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+            this.renderIncomingDeckGifts();
+            if (mType === 'kahoot') {
+              await this.joinKahootRoom(pin);
+            } else {
+              await this.join1v1Match(pin);
+            }
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      });
 
       box.querySelectorAll('.btn-accept-deck-gift').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -2103,38 +2535,54 @@
       const nonEmptyLocal = decks.find(d => (d.cardCount || 0) > 0);
       if (nonEmptyLocal) {
         defaultVal = String(nonEmptyLocal.id);
-      } else if (packs.length > 0) {
-        defaultVal = 'pack:' + packs[0].code;
       } else if (decks.length > 0) {
         defaultVal = String(decks[0].id);
       }
 
-      let html = '';
+      // 1. Sadece Kullanıcının Kendi Desteleri (Paylaşım, Kulüp ve Arkadaş Gönderimleri için)
+      let userOnlyHtml = '';
       if (decks.length > 0) {
-        html += `<optgroup label="Benim Destelerim">`;
+        userOnlyHtml += `<optgroup label="Benim Destelerim">`;
         for (const d of decks) {
           const count = d.cardCount || 0;
           const label = d.name || d.title || 'Genel Deste';
           const sel = String(d.id) === defaultVal ? ' selected' : '';
-          html += `<option value="${d.id}"${sel}>${label} (${count} kelime)</option>`;
+          userOnlyHtml += `<option value="${d.id}"${sel}>${label} (${count} kelime)</option>`;
         }
-        html += `</optgroup>`;
+        userOnlyHtml += `</optgroup>`;
+      } else {
+        userOnlyHtml = `<option value="">Henüz yerel desteniz yok</option>`;
       }
 
+      // 2. Oyunlar için Genişletilmiş Liste (Yerel Desteler + Hazır Seviye Paketleri)
+      let gameHtml = userOnlyHtml;
       if (packs.length > 0) {
-        html += `<optgroup label="Hazır Seviye Desteleri (Küratörlü)">`;
+        gameHtml += `<optgroup label="Hazır Seviye Desteleri (Küratörlü)">`;
         for (const p of packs) {
           const val = 'pack:' + p.code;
           const count = Array.isArray(p.cards) ? p.cards.length : 0;
           const sel = val === defaultVal ? ' selected' : '';
-          html += `<option value="${val}"${sel}>${p.name} (${count} kelime)</option>`;
+          gameHtml += `<option value="${val}"${sel}>${p.name} (${count} kelime)</option>`;
         }
-        html += `</optgroup>`;
+        gameHtml += `</optgroup>`;
       }
 
+      // Oyun seçicilerine hem yerel hem hazır paketler
+      ['arena-1v1-deck-select', 'arena-kahoot-deck-select'].forEach(id => {
+        const el = $(id);
+        if (el) {
+          const prevVal = el.value;
+          el.innerHTML = gameHtml;
+          if (prevVal && Array.from(el.options).some(o => o.value === prevVal)) {
+            el.value = prevVal;
+          } else if (defaultVal) {
+            el.value = defaultVal;
+          }
+        }
+      });
+
+      // Paylaşım, Kulüp ve Arkadaş Gönderimlerine KESİNLİKLE sadece kullanıcının kendi desteleri
       [
-        'arena-1v1-deck-select',
-        'arena-kahoot-deck-select',
         'select-collab-deck',
         'select-publish-target-deck',
         'select-club-target-deck',
@@ -2143,8 +2591,8 @@
         const el = $(id);
         if (el) {
           const prevVal = el.value;
-          el.innerHTML = html;
-          if (prevVal && Array.from(el.options).some(o => o.value === prevVal && !o.textContent.includes('(0 kelime)'))) {
+          el.innerHTML = userOnlyHtml;
+          if (prevVal && Array.from(el.options).some(o => o.value === prevVal)) {
             el.value = prevVal;
           } else if (defaultVal) {
             el.value = defaultVal;
@@ -2314,6 +2762,7 @@
       $('btn-submit-create-club')?.addEventListener('click', async () => {
         const name = $('input-club-name')?.value.trim();
         const desc = $('input-club-desc')?.value.trim();
+        const access = $('select-club-access')?.value || 'public';
         if (!name) {
           alert('Lütfen bir kulüp adı girin.');
           return;
@@ -2321,17 +2770,33 @@
         const btn = $('btn-submit-create-club');
         if (btn) btn.disabled = true;
         try {
-          const club = await this.createClub(name, desc);
+          const club = await this.createClub(name, desc, access);
           $('modal-create-club')?.classList.add('hidden');
           if ($('input-club-name')) $('input-club-name').value = '';
           if ($('input-club-desc')) $('input-club-desc').value = '';
-          if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`Kulüp kuruldu! Kod: ${club.code}`);
+          if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`Kulüp başarıyla kuruldu!`);
           await this.renderClubs();
           this.openClubDetailModal(club);
         } catch (err) {
           alert(err.message);
         } finally {
           if (btn) btn.disabled = false;
+        }
+      });
+
+      // Kulüp Kapat / Sil (Yalnızca Kurucu)
+      $('btn-delete-club')?.addEventListener('click', async () => {
+        if (!this.viewingClub) return;
+        if (!confirm(`"${this.viewingClub.name}" kulübünü ve tüm kulüp havuzunu kapatıp silmek istediğinize emin misiniz?`)) return;
+
+        const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
+        try {
+          await this.apiCall('clubs/delete', { clubId: this.viewingClub.id, ownerId: myId });
+          $('modal-club-detail')?.classList.add('hidden');
+          if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Kulüp başarıyla kapatıldı.');
+          await this.renderClubs();
+        } catch (err) {
+          alert('Hata: ' + err.message);
         }
       });
 
@@ -2373,6 +2838,10 @@
           alert('Lütfen bir deste seçin.');
           return;
         }
+        if (String(deckVal).startsWith('pack:')) {
+          alert('Hazır küratörlü paketler kulüp havuzuna eklenemez.');
+          return;
+        }
         const btn = $('btn-confirm-add-club-deck');
         btn.disabled = true;
         btn.textContent = 'Ekleniyor...';
@@ -2381,10 +2850,12 @@
           if (!resolved.words || resolved.words.length === 0) {
             throw new Error('Seçilen destede henüz kelime bulunmuyor.');
           }
+          const prof = this.getActiveProfile();
           const res = await this.apiCall('clubs/decks/add', {
             clubId: this.viewingClub.id,
             deck: { id: 'cdeck_' + Date.now(), title: resolved.title, words: resolved.words },
-            username: this.getActiveProfile().username
+            username: prof.username,
+            userId: prof.id || this.user?.id
           });
           if (res.club) {
             this.viewingClub = res.club;
@@ -2410,7 +2881,6 @@
       $('btn-start-club-match')?.addEventListener('click', async () => {
         if (!this.viewingClub) return;
         $('modal-club-detail')?.classList.add('hidden');
-        // Eğer kulüpte deste varsa ilk kulüp destesiyle doğrudan Kahoot başlat, yoksa Arena sekmesine geç
         const clubDecks = this.viewingClub.decks || [];
         if (clubDecks.length > 0 && Array.isArray(clubDecks[0].words) && clubDecks[0].words.length >= 4) {
           const cd = clubDecks[0];
@@ -2482,7 +2952,7 @@
         $('arena-panel-1v1').classList.add('hidden');
       });
 
-      // 1v1 Maç Eylemleri
+      // 1v1 Maç Eylemleri & Lobi
       $('btn-create-1v1-room')?.addEventListener('click', async () => {
         const deckId = $('arena-1v1-deck-select')?.value;
         if (!deckId) return;
@@ -2502,9 +2972,39 @@
         }
       });
 
+      $('btn-copy-1v1-pin')?.addEventListener('click', () => {
+        const pin = $('arena-1v1-pin-display')?.textContent || this.match1v1State?.roomPin;
+        if (pin && navigator.clipboard) {
+          navigator.clipboard.writeText(pin).then(() => {
+            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('PIN kodu kopyalandı.');
+          });
+        }
+      });
+
+      $('btn-open-invite-friend-1v1')?.addEventListener('click', () => {
+        const pin = this.match1v1State?.roomPin || $('arena-1v1-pin-display')?.textContent;
+        if (pin) this.openInviteFriendMatchModal(pin, '1v1', this.match1v1State?.deckTitle || 'Deste');
+      });
+
+      $('btn-open-invite-friend-kahoot')?.addEventListener('click', () => {
+        const pin = this.kahootState?.pin;
+        if (pin) this.openInviteFriendMatchModal(pin, 'kahoot', this.kahootState?.deckTitle || 'Deste');
+      });
+
+      $('btn-close-invite-friend-match')?.addEventListener('click', () => {
+        $('modal-invite-friend-match')?.classList.add('hidden');
+      });
+
+      $('btn-start-1v1-lobby-match')?.addEventListener('click', () => {
+        this.launch1v1GameByHost();
+      });
+
       $('btn-close-1v1-game')?.addEventListener('click', () => {
         if (confirm('Maçtan ayrılmak istediğinize emin misiniz?')) {
-          if (this.match1v1State.timerId) clearInterval(this.match1v1State.timerId);
+          if (this.match1v1PollTimer) clearInterval(this.match1v1PollTimer);
+          if (this.match1v1Timer) clearInterval(this.match1v1Timer);
+          this.match1v1PollTimer = null;
+          this.match1v1Timer = null;
           $('modal-arena-1v1-game')?.classList.add('hidden');
         }
       });
@@ -2537,12 +3037,14 @@
       });
 
       $('btn-start-kahoot-match')?.addEventListener('click', () => {
-        this.startKahootQuestion();
+        this.launchKahootGameByHost();
       });
 
       $('btn-close-kahoot-game')?.addEventListener('click', () => {
         if (confirm('Kahoot oyunundan ayrılmak istediğinize emin misiniz?')) {
-          if (this.kahootState.timerId) clearInterval(this.kahootState.timerId);
+          if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
+          if (this.kahootState?.timerId) clearInterval(this.kahootState.timerId);
+          this.kahootPollTimer = null;
           $('modal-arena-kahoot-game')?.classList.add('hidden');
         }
       });

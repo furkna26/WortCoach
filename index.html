@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.6.1" />
-  <link rel="stylesheet" href="css/components.css?v=3.6.1" />
+  <link rel="stylesheet" href="css/app.css?v=3.6.2" />
+  <link rel="stylesheet" href="css/components.css?v=3.6.2" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -3165,11 +3165,18 @@
         <input type="text" id="input-club-name" class="form-control" placeholder="Örn: Goethe B2 Çalışma Grubu" required maxlength="50" />
       </div>
       <div class="auth-input-group">
+        <label for="select-club-access">Katılım Türü</label>
+        <select id="select-club-access" class="form-control">
+          <option value="public">Herkese Açık (Doğrudan Tıkla Katıl)</option>
+          <option value="code">Özel (Davet &amp; Katılım Kodu ile)</option>
+        </select>
+      </div>
+      <div class="auth-input-group">
         <label for="input-club-desc">Kulüp Açıklaması</label>
         <textarea id="input-club-desc" class="form-control" rows="2" placeholder="Birlikte kelime desteleri paylaşacak ve yarışacağız..." maxlength="150"></textarea>
       </div>
       <button type="button" id="btn-submit-create-club" class="btn-coach-build-full" style="margin-top:10px;">
-        <span>Kulübü Kur &amp; Davet Kodu Al</span>
+        <span>Kulübü Kur</span>
       </button>
     </div>
   </div>
@@ -3263,15 +3270,20 @@
       <!-- Kulüp Üyeleri -->
       <div class="section-subheading" style="margin-bottom:6px;">Kulüp Üyeleri</div>
       <div id="club-members-container" style="display:flex; flex-direction:column; gap:6px;"></div>
+
+      <!-- Kurucu Yönetim Butonu -->
+      <div id="club-owner-danger-zone" class="hidden" style="margin-top:16px; padding-top:12px; border-top:1px dashed var(--border-medium); text-align:right;">
+        <button type="button" id="btn-delete-club" class="btn-primary-compact" style="background:#EF4444; border-color:#EF4444; font-size:0.75rem; padding:6px 12px;">Kulübü Kapat / Sil</button>
+      </div>
     </div>
   </div>
 
-  <!-- MODAL: 1v1 ZAMANA KARŞI MAÇ OYUNU (modal-arena-1v1-game) -->
+  <!-- MODAL: 1v1 / ZAMANA KARŞI DÜELLO MAÇ OYUNU (modal-arena-1v1-game) -->
   <div id="modal-arena-1v1-game" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true">
     <div class="modal-sheet" style="max-width:540px; height:92vh; display:flex; flex-direction:column; padding:18px;">
       <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div>
-          <span class="badge" style="background:#EF4444; color:#fff; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">1v1 Düello</span>
+          <span class="badge" style="background:#EF4444; color:#fff; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">Canlı Düello</span>
           <h3 style="font-size:1.15rem; font-weight:900; margin:2px 0 0;" id="arena-1v1-match-title">Zamana Karşı Kapışma</h3>
         </div>
         <button type="button" id="btn-close-1v1-game" class="icon-btn-ghost" aria-label="Ayrıl">
@@ -3279,36 +3291,72 @@
         </button>
       </div>
 
-      <!-- Maç Bilgi / Sayaç / Skor Şeridi -->
-      <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:0.72rem; color:var(--text-muted);">SİZİN SKORUNUZ</div>
-          <div id="arena-1v1-my-score" style="font-size:1.3rem; font-weight:900; color:var(--brand-blue);">0</div>
+      <!-- FAZ 1: DÜELLO LOBİ EKRANI -->
+      <div id="arena-1v1-phase-lobby" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+        <div style="text-align:center; padding:16px 0;">
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">KATILIM PIN KODU</div>
+          <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:14px;">
+            <div id="arena-1v1-pin-display" style="font-size:1.8rem; font-weight:900; letter-spacing:2px; color:var(--brand-blue); background:var(--bg-surface); padding:8px 18px; border-radius:12px; border:2px dashed var(--border-medium);">VS-0000</div>
+            <button type="button" id="btn-copy-1v1-pin" class="btn-primary-compact" style="padding:10px 14px; font-size:0.85rem;" title="Kodu Kopyala">Kopyala</button>
+          </div>
+          
+          <div style="margin:12px 0;">
+            <button type="button" id="btn-open-invite-friend-1v1" class="btn-primary-compact" style="background:#10B981; border-color:#10B981; padding:10px 18px; font-weight:700;">
+              <span>Arkadaşını Davet Et</span>
+            </button>
+          </div>
+
+          <div style="margin-top:18px;">
+            <div style="font-size:0.82rem; font-weight:800; color:var(--text-secondary); margin-bottom:10px;">
+              Odadaki Katılımcılar (<span id="arena-1v1-player-count">1</span>)
+            </div>
+            <div id="arena-1v1-players-chip-list" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:40px;"></div>
+          </div>
         </div>
-        <div style="text-align:center;">
-          <div style="font-size:0.72rem; color:var(--text-muted);">KALAN SÜRE</div>
-          <div id="arena-1v1-timer" style="font-size:1.4rem; font-weight:900; color:#EF4444;">60s</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:0.72rem; color:var(--text-muted);">SORU</div>
-          <div id="arena-1v1-q-counter" style="font-size:1.2rem; font-weight:800; color:var(--text-primary);">1 / 10</div>
+
+        <div style="padding-top:16px;">
+          <div id="arena-1v1-guest-waiting-msg" class="hidden" style="text-align:center; font-size:0.88rem; color:var(--text-muted); padding:12px; background:var(--bg-surface); border-radius:12px; margin-bottom:10px;">
+            Oda sahibinin oyunu başlatması bekleniyor...
+          </div>
+          <button type="button" id="btn-start-1v1-lobby-match" class="btn-coach-build-full" style="background:#EF4444; font-size:1.05rem; padding:14px;">
+            <span>Kapışmayı Başlat</span>
+          </button>
         </div>
       </div>
 
-      <!-- Soru Alanı -->
-      <div id="arena-1v1-question-box" style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px;">
-        <div id="arena-1v1-word-pos" style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Nomen</div>
-        <div id="arena-1v1-word-lemma" style="font-size:1.8rem; font-weight:900; color:var(--text-primary); margin:6px 0;">das Haus</div>
-        <div id="arena-1v1-word-sentence" style="font-size:0.85rem; color:var(--text-secondary); font-style:italic;">Hier ist mein Haus.</div>
+      <!-- FAZ 2: OYUN / SORULAR EKRANI -->
+      <div id="arena-1v1-phase-game" class="hidden" style="flex:1; display:flex; flex-direction:column;">
+        <!-- Maç Bilgi / Sayaç / Skor Şeridi -->
+        <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.72rem; color:var(--text-muted);">SİZİN SKORUNUZ</div>
+            <div id="arena-1v1-my-score" style="font-size:1.3rem; font-weight:900; color:var(--brand-blue);">0</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:0.72rem; color:var(--text-muted);">KALAN SÜRE</div>
+            <div id="arena-1v1-timer" style="font-size:1.4rem; font-weight:900; color:#EF4444;">60s</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.72rem; color:var(--text-muted);">SORU</div>
+            <div id="arena-1v1-q-counter" style="font-size:1.2rem; font-weight:800; color:var(--text-primary);">1 / 10</div>
+          </div>
+        </div>
+
+        <!-- Soru Alanı -->
+        <div id="arena-1v1-question-box" style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px;">
+          <div id="arena-1v1-word-pos" style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Nomen</div>
+          <div id="arena-1v1-word-lemma" style="font-size:1.8rem; font-weight:900; color:var(--text-primary); margin:6px 0;">das Haus</div>
+          <div id="arena-1v1-word-sentence" style="font-size:0.85rem; color:var(--text-secondary); font-style:italic;">Hier ist mein Haus.</div>
+        </div>
+
+        <!-- 4 Seçenek Butonu -->
+        <div id="arena-1v1-options-grid" style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:14px;"></div>
       </div>
 
-      <!-- 4 Seçenek Butonu -->
-      <div id="arena-1v1-options-grid" style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:14px;"></div>
-
-      <!-- Maç Bitiş & Podyum Kartı (Gizli başlar) -->
-      <div id="arena-1v1-results-box" class="hidden" style="text-align:center; padding:20px; background:var(--bg-surface); border-radius:18px; border:1px solid var(--border-medium);">
+      <!-- FAZ 3: MAÇ BİTİŞ & PODYUM KARTI -->
+      <div id="arena-1v1-results-box" class="hidden" style="text-align:center; padding:20px; background:var(--bg-surface); border-radius:18px; border:1px solid var(--border-medium); margin-top:auto; margin-bottom:auto;">
         <div style="font-size:1.4rem; font-weight:900; color:var(--text-primary); margin-bottom:6px;" id="arena-1v1-winner-text">Maç Tamamlandı!</div>
-        <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:14px;" id="arena-1v1-elo-result">+25 ELO Kazandınız!</div>
+        <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:14px;" id="arena-1v1-elo-result">+25 Puan Kazandınız!</div>
         <div style="display:flex; justify-content:center; gap:24px; margin-bottom:18px;">
           <div>
             <div style="font-size:0.75rem; color:var(--text-muted);">Doğru</div>
@@ -3327,6 +3375,22 @@
           <span>Arenaya Dön</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MAÇA ARKADAŞ DAVET ET (modal-invite-friend-match) -->
+  <div id="modal-invite-friend-match" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:420px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Arkadaşını Kapışmaya Davet Et</div>
+        <button type="button" id="btn-close-invite-friend-match" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div style="font-size:0.84rem; color:var(--text-secondary); margin-bottom:12px;" id="invite-friend-match-desc">
+        Oda PIN: <b id="invite-match-pin-target">VS-0000</b>
+      </div>
+      <div id="invite-friends-list-container" style="display:flex; flex-direction:column; gap:8px; max-height:45vh; overflow-y:auto; margin-bottom:12px;"></div>
     </div>
   </div>
 
@@ -3349,13 +3413,21 @@
         <div style="text-align:center; padding:16px 0;">
           <div style="font-size:1.3rem; font-weight:900; color:var(--text-primary); margin-bottom:4px;" id="kahoot-lobby-deck-title">Almanca Kelime Yarışması</div>
           <div style="font-size:0.82rem; color:var(--text-muted);">Diğer yarışmacılar bu PIN ile odaya bekleniyor...</div>
-          <div style="margin-top:16px;">
+          <div style="margin:12px 0;">
+            <button type="button" id="btn-open-invite-friend-kahoot" class="btn-primary-compact" style="background:#10B981; border-color:#10B981; padding:8px 16px; font-weight:700;">
+              <span>Arkadaşını Davet Et</span>
+            </button>
+          </div>
+          <div style="margin-top:14px;">
             <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); margin-bottom:8px;">Odadaki Oyuncular (<span id="kahoot-player-count">1</span>)</div>
             <div id="kahoot-players-chip-list" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
           </div>
         </div>
 
         <div style="padding-top:16px;">
+          <div id="kahoot-guest-waiting-msg" class="hidden" style="text-align:center; font-size:0.88rem; color:var(--text-muted); padding:12px; background:var(--bg-surface); border-radius:12px; margin-bottom:10px;">
+            Oda sahibinin oyunu başlatması bekleniyor...
+          </div>
           <button type="button" id="btn-start-kahoot-match" class="btn-coach-build-full" style="background:#8B5CF6; font-size:1.05rem; padding:14px;">
             <span>Oyunu Başlat</span>
           </button>
@@ -3490,24 +3562,24 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.6.1"></script>
-  <script src="js/db.js?v=3.6.1"></script>
-  <script src="js/verbHelper.js?v=3.6.1"></script>
-  <script src="js/grammarEnrichment.js?v=3.6.1"></script>
-  <script src="js/offlineDictionary.js?v=3.6.1"></script>
-  <script src="js/dictionary.js?v=3.6.1"></script>
-  <script src="js/curatedPacks.js?v=3.6.1"></script>
-  <script src="js/seeder.js?v=3.6.1"></script>
-  <script src="js/tts.js?v=3.6.1"></script>
-  <script src="js/pronunciation.js?v=3.6.1"></script>
-  <script src="js/translator.js?v=3.6.1"></script>
-  <script src="js/game.js?v=3.6.1"></script>
-  <script src="js/study.js?v=3.6.1"></script>
-  <script src="js/stats.js?v=3.6.1"></script>
-  <script src="js/coach.js?v=3.6.1"></script>
-  <script src="js/deckBuilder.js?v=3.6.1"></script>
-  <script src="js/social.js?v=3.6.1"></script>
-  <script src="js/app.js?v=3.6.1"></script>
+  <script src="js/config.js?v=3.6.2"></script>
+  <script src="js/db.js?v=3.6.2"></script>
+  <script src="js/verbHelper.js?v=3.6.2"></script>
+  <script src="js/grammarEnrichment.js?v=3.6.2"></script>
+  <script src="js/offlineDictionary.js?v=3.6.2"></script>
+  <script src="js/dictionary.js?v=3.6.2"></script>
+  <script src="js/curatedPacks.js?v=3.6.2"></script>
+  <script src="js/seeder.js?v=3.6.2"></script>
+  <script src="js/tts.js?v=3.6.2"></script>
+  <script src="js/pronunciation.js?v=3.6.2"></script>
+  <script src="js/translator.js?v=3.6.2"></script>
+  <script src="js/game.js?v=3.6.2"></script>
+  <script src="js/study.js?v=3.6.2"></script>
+  <script src="js/stats.js?v=3.6.2"></script>
+  <script src="js/coach.js?v=3.6.2"></script>
+  <script src="js/deckBuilder.js?v=3.6.2"></script>
+  <script src="js/social.js?v=3.6.2"></script>
+  <script src="js/app.js?v=3.6.2"></script>
 </body>
 </html>
 

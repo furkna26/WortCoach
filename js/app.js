@@ -882,8 +882,12 @@ class WortCoachApp {
     // Desteler Listesi
     const decks = await window.wmDB.getAllDecks();
     const currentCardDeckId = existing ? Number(existing.deckId) : null;
-    const deckOptionsHtml = decks
-      .map((d) => `<option value="${d.id}" ${currentCardDeckId === Number(d.id) ? 'selected' : ''}>${d.name} (${d.cardCount || 0} kart)</option>`)
+    let collabOptHtml = '';
+    if (window.wmSocial && window.wmSocial.activeCollabSession) {
+      collabOptHtml = `<option value="collab:active" selected>[Ortak Deste] ${window.wmSocial.activeCollabSession.title}</option>`;
+    }
+    const deckOptionsHtml = collabOptHtml + decks
+      .map((d) => `<option value="${d.id}" ${(!collabOptHtml && currentCardDeckId === Number(d.id)) ? 'selected' : ''}>${d.name} (${d.cardCount || 0} kart)</option>`)
       .join('') + `<option value="__NEW_DECK__">+ Yeni Deste Oluştur...</option>`;
 
     // DeepL çevirilerini parçala ve varsayılan olarak seçili yap
@@ -1134,6 +1138,13 @@ class WortCoachApp {
 
       const deckSelect = document.getElementById('fallback-target-deck');
       let targetDeckId = deckSelect ? deckSelect.value : null;
+
+      if (targetDeckId === 'collab:active' && window.wmSocial && window.wmSocial.activeCollabSession) {
+        const fullWord = selectedArticle ? `${selectedArticle} ${cleanWord}` : cleanWord;
+        await window.wmSocial.addCardToActiveCollab(fullWord, selectedMeanings.join(', '), selectedPos || 'NOUN', '');
+        this.showToast(`"${fullWord}" doğrudan ortak desteye eklendi.`);
+        return;
+      }
 
       if (targetDeckId === '__NEW_DECK__') {
         const newDeckName = prompt('Yeni deste ismi giriniz:', 'Almanca Kelimeler');
@@ -2183,8 +2194,12 @@ class WortCoachApp {
     // Desteler Listesi
     const decks = await window.wmDB.getAllDecks();
     const currentCardDeckId = existing ? Number(existing.deckId) : null;
-    const deckOptionsHtml = decks
-      .map((d) => `<option value="${d.id}" ${currentCardDeckId === Number(d.id) ? 'selected' : ''}>${d.name} (${d.cardCount || 0} kart)</option>`)
+    let collabOptHtml = '';
+    if (window.wmSocial && window.wmSocial.activeCollabSession) {
+      collabOptHtml = `<option value="collab:active" selected>[Ortak Deste] ${window.wmSocial.activeCollabSession.title}</option>`;
+    }
+    const deckOptionsHtml = collabOptHtml + decks
+      .map((d) => `<option value="${d.id}" ${(!collabOptHtml && currentCardDeckId === Number(d.id)) ? 'selected' : ''}>${d.name} (${d.cardCount || 0} kart)</option>`)
       .join('') + `<option value="__NEW_DECK__">+ Yeni Deste Oluştur...</option>`;
 
     // Kayıt Butonu
@@ -2563,6 +2578,21 @@ class WortCoachApp {
 
       const deckSelect = document.getElementById('inline-target-deck');
       let targetDeckId = deckSelect ? deckSelect.value : null;
+
+      if (targetDeckId === 'collab:active' && window.wmSocial && window.wmSocial.activeCollabSession) {
+        const fullWord = isNoun && canonicalArticle ? `${canonicalArticle} ${cleanWord}` : cleanWord;
+        const selectedTrNodes = container.querySelectorAll('#inline-tr-chips .meaning-chip.selected');
+        let selectedTr = Array.from(selectedTrNodes).map((c) => c.getAttribute('data-val')).filter(Boolean);
+        if (selectedTr.length === 0) selectedTr = trMeanings.slice(0, 1);
+        const selectedExCards = container.querySelectorAll('#inline-examples-list .example-radio-card.selected');
+        let selectedExList = Array.from(selectedExCards)
+          .map((c) => (c.getAttribute('data-ex') || '').replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim())
+          .filter(Boolean);
+        const finalEx = selectedExList.join(' | ') || (examples[0] ? examples[0].replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim() : '');
+        await window.wmSocial.addCardToActiveCollab(fullWord, selectedTr.join(', '), pos, finalEx);
+        this.showToast(`"${fullWord}" doğrudan ortak desteye eklendi.`);
+        return;
+      }
 
       if (targetDeckId === '__NEW_DECK__') {
         const newDeckName = prompt('Yeni deste ismi giriniz:', 'Almanca Kelimeler');
@@ -4178,6 +4208,17 @@ class WortCoachApp {
         return;
       }
 
+      const selectedDeckVal = document.getElementById('card-deck-select')?.value;
+      if (selectedDeckVal === 'collab:active' && window.wmSocial && window.wmSocial.activeCollabSession) {
+        const fullWord = finalArticle ? `${finalArticle} ${finalWord}` : finalWord;
+        const mean = document.getElementById('card-meaning-tr')?.value || document.getElementById('card-meaning-en')?.value || '';
+        const ex = document.getElementById('card-example-input')?.value || '';
+        await window.wmSocial.addCardToActiveCollab(fullWord, mean, pos, ex);
+        modal.classList.add('hidden');
+        this.showToast(`"${fullWord}" doğrudan ortak desteye eklendi.`);
+        return;
+      }
+
       const newCard = await window.wmDB.addCard({
         deckId: Number(document.getElementById('card-deck-select').value),
         targetLanguage: 'de', // Kesinlikle Almanca ('de')
@@ -4223,7 +4264,13 @@ class WortCoachApp {
     }
     const select = document.getElementById('card-deck-select');
     if (!select) return;
-    select.innerHTML = decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
+
+    let collabOptHtml = '';
+    if (window.wmSocial && window.wmSocial.activeCollabSession) {
+      collabOptHtml = `<option value="collab:active" selected>[Ortak Deste] ${window.wmSocial.activeCollabSession.title} (${window.wmSocial.activeCollabSession.code})</option>`;
+    }
+
+    select.innerHTML = collabOptHtml + decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
   }
 
   async openAddCardModal() {

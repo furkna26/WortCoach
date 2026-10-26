@@ -902,6 +902,11 @@ async function handleDatabaseApi(path, body, env, c) {
       const search = clean(body.search || '', 40).toLowerCase();
       const deckMap = new Map();
 
+      const isCuratedTitle = (t) => {
+        const cleanT = (t || '').toLowerCase();
+        return cleanT.startsWith('a1:') || cleanT.startsWith('a2:') || cleanT.startsWith('b1:') || cleanT.startsWith('b2:') || cleanT.startsWith('c1:') || cleanT.startsWith('c2:') || cleanT.includes('hazır kelime') || cleanT.includes('küratör');
+      };
+
       // 1. Strongly-consistent KV index:pubdecks oku
       if (env.LIMITS) {
         try {
@@ -909,10 +914,19 @@ async function handleDatabaseApi(path, body, env, c) {
           if (idxStr) {
             const idxList = JSON.parse(idxStr);
             if (Array.isArray(idxList)) {
+              let changed = false;
+              const filteredIdx = [];
               for (const d of idxList) {
-                if (!d || d.title === 'Test Deste' || !Array.isArray(d.words) || d.words.length === 0) continue;
+                if (!d || d.title === 'Test Deste' || String(d.title || '').includes('?') || !Array.isArray(d.words) || d.words.length === 0 || isCuratedTitle(d.title)) {
+                  changed = true;
+                  continue;
+                }
                 const key = `${d.ownerId || 'anon'}_${(d.title || '').toLowerCase()}`;
                 deckMap.set(key, d);
+                filteredIdx.push(d);
+              }
+              if (changed) {
+                await env.LIMITS.put('index:pubdecks', JSON.stringify(filteredIdx), { expirationTtl: 86400 * 60 });
               }
             }
           }
@@ -931,8 +945,10 @@ async function handleDatabaseApi(path, body, env, c) {
         const dbDecks = await dRes.json().catch(() => []);
         if (Array.isArray(dbDecks)) {
           for (const d of dbDecks) {
-            if (d.title === 'Test Deste') {
-              await sbFetch(`/rest/v1/decks?id=eq.${d.id}`, { method: 'DELETE' });
+            if (d.title === 'Test Deste' || String(d.title || '').includes('?') || isCuratedTitle(d.title)) {
+              if (isCuratedTitle(d.title) || d.title === 'Test Deste') {
+                await sbFetch(`/rest/v1/decks?id=eq.${d.id}`, { method: 'DELETE' });
+              }
               continue;
             }
             const words = Array.isArray(d.words_json) ? d.words_json : [];
@@ -962,7 +978,7 @@ async function handleDatabaseApi(path, body, env, c) {
             const valStr = await env.LIMITS.get(keyObj.name);
             if (valStr) {
               const parsed = JSON.parse(valStr);
-              if (parsed && parsed.title !== 'Test Deste' && Array.isArray(parsed.words) && parsed.words.length > 0) {
+              if (parsed && parsed.title !== 'Test Deste' && !String(parsed.title || '').includes('?') && !isCuratedTitle(parsed.title) && Array.isArray(parsed.words) && parsed.words.length > 0) {
                 const k = `${parsed.ownerId || 'anon'}_${(parsed.title || '').toLowerCase()}`;
                 if (!deckMap.has(k)) deckMap.set(k, parsed);
               }
@@ -984,6 +1000,31 @@ async function handleDatabaseApi(path, body, env, c) {
 
       publicDecks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       return json({ ok: true, decks: publicDecks }, 200, c.headers);
+    }
+
+    // 14b-1. Herkese Açık Desteyi Yayından Kaldır / Sil
+    if (path === '/api/decks/public/remove') {
+      const deckId = clean(body.deckId, 60);
+      const ownerId = clean(body.ownerId, 40);
+      if (!deckId || !ownerId) return json({ error: 'Eksik parametre.' }, 400, c.headers);
+
+      if (env.LIMITS) {
+        await env.LIMITS.delete(`pubdeck:${deckId}`);
+        try {
+          const idxStr = await env.LIMITS.get('index:pubdecks');
+          if (idxStr) {
+            let list = JSON.parse(idxStr);
+            if (Array.isArray(list)) {
+              list = list.filter(d => !(String(d.id) === String(deckId) && (d.ownerId === ownerId || !d.ownerId)));
+              await env.LIMITS.put('index:pubdecks', JSON.stringify(list), { expirationTtl: 86400 * 60 });
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Supabase üzerinden de sil
+      await sbFetch(`/rest/v1/decks?id=eq.${deckId}&owner_id=eq.${ownerId}`, { method: 'DELETE' });
+      return json({ ok: true }, 200, c.headers);
     }
 
     // 14b-2. Arkadaşa Doğrudan Deste Gönderme (Gelen Kutusu / Inbox)
@@ -1048,6 +1089,7 @@ async function handleDatabaseApi(path, body, env, c) {
       const description = clean(body.description, 200) || '';
       const ownerId = clean(body.ownerId, 40);
       const ownerUsername = clean(body.ownerUsername, 40) || 'Yönetici';
+      const access = clean(body.access, 20) === 'code' ? 'code' : 'public';
       if (!name || !ownerId) return json({ error: 'Kulüp adı ve kurucu bilgisi zorunludur.' }, 400, c.headers);
 
       const clubCode = 'KLB-' + Math.floor(1000 + Math.random() * 9000);
@@ -1055,6 +1097,8 @@ async function handleDatabaseApi(path, body, env, c) {
       const clubObj = {
         id: clubId,
         code: clubCode,
+        access, // 'public' | 'code'
+        isPublic: access === 'public',
         name,
         description,
         ownerId,
@@ -1081,24 +1125,107 @@ async function handleDatabaseApi(path, body, env, c) {
 
     if (path === '/api/clubs/join') {
       const code = clean(body.code, 20).toUpperCase();
+      const directClubId = clean(body.clubId, 50);
       const userId = clean(body.userId, 40);
       const username = clean(body.username, 40) || 'Üye';
-      if (!code || !userId) return json({ error: 'Kulüp kodu ve kullanıcı bilgisi eksik.' }, 400, c.headers);
-
+      if (!userId) return json({ error: 'Kullanıcı bilgisi eksik.' }, 400, c.headers);
       if (!env.LIMITS) return json({ error: 'Depolama alanı aktif değil.' }, 500, c.headers);
 
-      const clubId = await env.LIMITS.get(`club_code:${code}`);
-      if (!clubId) return json({ error: 'Bu koda ait bir kulüp veya sınıf bulunamadı.' }, 404, c.headers);
+      let targetClubId = directClubId;
+      if (!targetClubId && code) {
+        targetClubId = await env.LIMITS.get(`club_code:${code}`);
+      }
+      if (!targetClubId) return json({ error: 'Bu koda ait bir kulüp veya sınıf bulunamadı.' }, 404, c.headers);
 
-      const clubStr = await env.LIMITS.get(`club:${clubId}`);
+      const clubStr = await env.LIMITS.get(`club:${targetClubId}`);
       if (!clubStr) return json({ error: 'Kulüp kaydına ulaşılamadı.' }, 404, c.headers);
 
       const clubObj = JSON.parse(clubStr);
-      if (!clubObj.members.some(m => m.id === userId)) {
-        clubObj.members.push({ id: userId, username, role: 'Üye', joinedAt: new Date().toISOString() });
-        await env.LIMITS.put(`club:${clubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 60 });
+      // Eğer doğrudan katılıyorsa ve kulüp kodluysa kontrol et
+      if (!code && clubObj.access === 'code' && clubObj.ownerId !== userId) {
+        return json({ error: 'Bu kulüp özeldir, lütfen katılım kodu giriniz.' }, 403, c.headers);
       }
 
+      if (!clubObj.members.some(m => m.id === userId)) {
+        clubObj.members.push({ id: userId, username, role: 'Üye', joinedAt: new Date().toISOString() });
+        await env.LIMITS.put(`club:${targetClubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 60 });
+      }
+
+      return json({ ok: true, club: clubObj }, 200, c.headers);
+    }
+
+    if (path === '/api/clubs/delete') {
+      const clubId = clean(body.clubId, 50);
+      const ownerId = clean(body.ownerId, 40);
+      if (!clubId || !ownerId || !env.LIMITS) return json({ error: 'Eksik parametre.' }, 400, c.headers);
+
+      const clubStr = await env.LIMITS.get(`club:${clubId}`);
+      if (!clubStr) return json({ error: 'Kulüp bulunamadı.' }, 404, c.headers);
+
+      const clubObj = JSON.parse(clubStr);
+      if (clubObj.ownerId !== ownerId) {
+        return json({ error: 'Kulübü sadece kurucusu silebilir.' }, 403, c.headers);
+      }
+
+      await env.LIMITS.delete(`club:${clubId}`);
+      if (clubObj.code) await env.LIMITS.delete(`club_code:${clubObj.code}`);
+
+      try {
+        const idxStr = await env.LIMITS.get('index:clubs');
+        if (idxStr) {
+          let clubIds = JSON.parse(idxStr);
+          if (Array.isArray(clubIds)) {
+            clubIds = clubIds.filter(id => id !== clubId);
+            await env.LIMITS.put('index:clubs', JSON.stringify(clubIds), { expirationTtl: 86400 * 60 });
+          }
+        }
+      } catch (_) {}
+
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    if (path === '/api/clubs/members/remove') {
+      const clubId = clean(body.clubId, 50);
+      const ownerId = clean(body.ownerId, 40);
+      const memberId = clean(body.memberId, 40);
+      if (!clubId || !ownerId || !memberId || !env.LIMITS) return json({ error: 'Eksik parametre.' }, 400, c.headers);
+
+      const clubStr = await env.LIMITS.get(`club:${clubId}`);
+      if (!clubStr) return json({ error: 'Kulüp bulunamadı.' }, 404, c.headers);
+
+      const clubObj = JSON.parse(clubStr);
+      if (clubObj.ownerId !== ownerId && ownerId !== memberId) {
+        return json({ error: 'Bu işlem için yetkiniz yok.' }, 403, c.headers);
+      }
+      if (memberId === clubObj.ownerId) {
+        return json({ error: 'Kulüp kurucusu üyelikten çıkarılamaz.' }, 400, c.headers);
+      }
+
+      clubObj.members = (clubObj.members || []).filter(m => m.id !== memberId);
+      await env.LIMITS.put(`club:${clubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 60 });
+      return json({ ok: true, club: clubObj }, 200, c.headers);
+    }
+
+    if (path === '/api/clubs/decks/remove') {
+      const clubId = clean(body.clubId, 50);
+      const ownerId = clean(body.ownerId, 40);
+      const deckId = clean(body.deckId, 60);
+      if (!clubId || !ownerId || !deckId || !env.LIMITS) return json({ error: 'Eksik parametre.' }, 400, c.headers);
+
+      const clubStr = await env.LIMITS.get(`club:${clubId}`);
+      if (!clubStr) return json({ error: 'Kulüp bulunamadı.' }, 404, c.headers);
+
+      const clubObj = JSON.parse(clubStr);
+      // Kurucu silebilir veya desteyi ekleyen silebilir
+      const targetDeck = (clubObj.decks || []).find(d => d.id === deckId);
+      if (!targetDeck) return json({ error: 'Deste bulunamadı.' }, 404, c.headers);
+
+      if (clubObj.ownerId !== ownerId && targetDeck.addedById !== ownerId) {
+        return json({ error: 'Bu desteyi silme yetkiniz yok.' }, 403, c.headers);
+      }
+
+      clubObj.decks = clubObj.decks.filter(d => d.id !== deckId);
+      await env.LIMITS.put(`club:${clubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 60 });
       return json({ ok: true, club: clubObj }, 200, c.headers);
     }
 
@@ -1140,6 +1267,7 @@ async function handleDatabaseApi(path, body, env, c) {
       const clubId = clean(body.clubId, 50);
       const deck = body.deck;
       const addedBy = clean(body.username, 40) || 'Üye';
+      const addedById = clean(body.userId || body.ownerId, 40);
       if (!clubId || !deck || !env.LIMITS) return json({ error: 'Geçersiz parametreler.' }, 400, c.headers);
 
       const clubStr = await env.LIMITS.get(`club:${clubId}`);
@@ -1153,6 +1281,7 @@ async function handleDatabaseApi(path, body, env, c) {
         words: deck.words || [],
         wordCount: Array.isArray(deck.words) ? deck.words.length : 0,
         addedBy,
+        addedById,
         addedAt: new Date().toISOString()
       };
       clubObj.decks.push(clubDeck);
@@ -1196,12 +1325,24 @@ async function handleDatabaseApi(path, body, env, c) {
     }
 
     if (path === '/api/multiplayer/room/join') {
-      const pin = clean(body.pin, 20).toUpperCase();
+      const rawPin = clean(body.pin, 20).toUpperCase();
       const playerId = clean(body.playerId, 40);
       const playerName = clean(body.playerName, 40) || 'Yarışmacı';
-      if (!pin || !playerId || !env.LIMITS) return json({ error: 'PIN ve oyuncu adı zorunludur.' }, 400, c.headers);
+      if (!rawPin || !playerId || !env.LIMITS) return json({ error: 'PIN ve oyuncu adı zorunludur.' }, 400, c.headers);
 
-      const roomStr = await env.LIMITS.get(`room:${pin}`);
+      let roomStr = await env.LIMITS.get(`room:${rawPin}`);
+      let effectivePin = rawPin;
+      if (!roomStr && !rawPin.startsWith('VS-')) {
+        const altPin = `VS-${rawPin}`;
+        roomStr = await env.LIMITS.get(`room:${altPin}`);
+        if (roomStr) effectivePin = altPin;
+      }
+      if (!roomStr && rawPin.startsWith('VS-')) {
+        const altPin = rawPin.replace('VS-', '');
+        roomStr = await env.LIMITS.get(`room:${altPin}`);
+        if (roomStr) effectivePin = altPin;
+      }
+
       if (!roomStr) return json({ error: 'Oda bulunamadı veya süresi doldu.' }, 404, c.headers);
 
       const room = JSON.parse(roomStr);
@@ -1210,20 +1351,79 @@ async function handleDatabaseApi(path, body, env, c) {
       const existingPlayer = room.players.find(p => p.id === playerId);
       if (!existingPlayer) {
         room.players.push({ id: playerId, name: playerName, score: 0, answers: {}, isHost: false });
-        await env.LIMITS.put(`room:${pin}`, JSON.stringify(room), { expirationTtl: 7200 });
+        await env.LIMITS.put(`room:${effectivePin}`, JSON.stringify(room), { expirationTtl: 7200 });
       }
 
       return json({ ok: true, room }, 200, c.headers);
     }
 
-    if (path === '/api/multiplayer/room/state') {
-      const pin = clean(body.pin, 20).toUpperCase();
-      if (!pin || !env.LIMITS) return json({ error: 'PIN eksik.' }, 400, c.headers);
+    if (path === '/api/multiplayer/room/leave') {
+      const rawPin = clean(body.pin, 20).toUpperCase();
+      const playerId = clean(body.playerId, 40);
+      if (!rawPin || !playerId || !env.LIMITS) return json({ ok: true }, 200, c.headers);
 
-      const roomStr = await env.LIMITS.get(`room:${pin}`);
+      let roomStr = await env.LIMITS.get(`room:${rawPin}`);
+      let effectivePin = rawPin;
+      if (!roomStr && !rawPin.startsWith('VS-')) {
+        const altPin = `VS-${rawPin}`;
+        roomStr = await env.LIMITS.get(`room:${altPin}`);
+        if (roomStr) effectivePin = altPin;
+      }
+      if (!roomStr) return json({ ok: true }, 200, c.headers);
+
+      const room = JSON.parse(roomStr);
+      room.players = (room.players || []).filter(p => p.id !== playerId);
+      await env.LIMITS.put(`room:${effectivePin}`, JSON.stringify(room), { expirationTtl: 7200 });
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    if (path === '/api/multiplayer/room/state') {
+      const rawPin = clean(body.pin, 20).toUpperCase();
+      if (!rawPin || !env.LIMITS) return json({ error: 'PIN eksik.' }, 400, c.headers);
+
+      let roomStr = await env.LIMITS.get(`room:${rawPin}`);
+      if (!roomStr && !rawPin.startsWith('VS-')) {
+        roomStr = await env.LIMITS.get(`room:VS-${rawPin}`);
+      }
+      if (!roomStr && rawPin.startsWith('VS-')) {
+        roomStr = await env.LIMITS.get(`room:${rawPin.replace('VS-', '')}`);
+      }
       if (!roomStr) return json({ error: 'Oda bulunamadı.' }, 404, c.headers);
 
       return json({ ok: true, room: JSON.parse(roomStr) }, 200, c.headers);
+    }
+
+    if (path === '/api/multiplayer/invite/send') {
+      const fromUserId = clean(body.fromUserId, 40);
+      const fromUsername = clean(body.fromUsername, 40) || 'Arkadaşın';
+      const toUserId = clean(body.toUserId, 40);
+      const pin = clean(body.pin, 20).toUpperCase();
+      const type = clean(body.type, 20) || '1v1';
+      const deckTitle = clean(body.deckTitle, 80) || 'Deste Kapışması';
+      if (!fromUserId || !toUserId || !pin || !env.LIMITS) {
+        return json({ error: 'Eksik davet bilgisi.' }, 400, c.headers);
+      }
+
+      const inviteObj = {
+        id: 'inv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        type: 'match_invite',
+        matchType: type, // '1v1' veya 'kahoot'
+        fromUserId,
+        fromUsername,
+        toUserId,
+        pin,
+        deckTitle,
+        sentAt: new Date().toISOString()
+      };
+
+      const inboxKey = `inbox:${toUserId}`;
+      const existingStr = await env.LIMITS.get(inboxKey);
+      let inbox = existingStr ? JSON.parse(existingStr) : [];
+      if (!Array.isArray(inbox)) inbox = [];
+      inbox.unshift(inviteObj);
+      await env.LIMITS.put(inboxKey, JSON.stringify(inbox.slice(0, 30)), { expirationTtl: 86400 * 2 }); // 2 gün geçerli
+
+      return json({ ok: true, invite: inviteObj }, 200, c.headers);
     }
 
     if (path === '/api/multiplayer/room/start') {
