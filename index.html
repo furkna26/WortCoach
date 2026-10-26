@@ -1390,6 +1390,18 @@
             <div class="game-card-desc">Soru sorun, dilbilgisi kurallarını öğrenin, çalışma belgelerinizi ve görsellerinizi yükleyerek anında pratik ve analiz yapın.</div>
           </div>
 
+          <!-- 2. Koç ile Deste Oluşturma (AI Deste Motoru) -->
+          <div class="game-card featured-game-card" id="btn-open-deck-builder-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#nav-icon-decks"></use></svg>
+              </div>
+              <span class="badge" style="background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); color:#FBBF24; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DESTE MOTORU</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Koç ile Deste Oluşturma</div>
+            <div class="game-card-desc">Metin, kitap sayfası, görsel veya PDF yükleyin; yapay zeka seviyeye göre kelimeleri ayıklayıp otomatik deste oluştursun.</div>
+          </div>
+
           <!-- 2. Telaffuz Koçu (Aussprache-Trainer) -->
           <div class="game-card featured-game-card" id="btn-open-pron-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
@@ -2283,11 +2295,7 @@
               <option value="AZURE_CLOUD">Microsoft Azure Speech GOP (Bulut API)</option>
             </select>
           </div>
-          <div style="display:flex; gap:8px; margin-bottom:8px;">
-            <input type="password" id="input-azure-speech-key" class="form-control" placeholder="Opsiyonel: Azure Speech Key (Aylık 5 saat ücretsiz)" style="flex:1; font-size:0.82rem;" />
-            <input type="text" id="input-azure-speech-region" class="form-control" placeholder="westeurope" value="westeurope" style="width:110px; font-size:0.82rem;" title="Azure Bölgesi (örn: westeurope, germanywestcentral)" />
-            <button type="button" id="btn-save-azure-key" class="btn-primary-compact">Kaydet</button>
-          </div>
+          
           <span style="font-size:0.72rem; color:var(--text-muted); display:block; line-height:1.4;">
             <strong>Wav2Vec2 Neural CTC</strong> ve <strong>Montreal Forced Aligner (MFA Viterbi)</strong> motorları %100 ücretsiz ve tarayıcı içi çalışır. Dilerseniz Azure Speech anahtarıyla bulut GOP motorunu da kullanabilirsiniz.
           </span>
@@ -2790,6 +2798,81 @@
     </div>
   </div>
 
+  
+  <!-- MODAL: KOÇ İLE DESTE OLUŞTURMA (modal-deck-builder) -->
+  <div id="modal-deck-builder" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true" aria-labelledby="deck-builder-title">
+    <div class="modal-sheet" style="max-width:760px; height:92vh; display:flex; flex-direction:column; padding:20px; overflow-y:auto;">
+      <div class="modal-header" style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h3 id="deck-builder-title" style="font-size:1.3rem; font-weight:900; margin:0; color:var(--text-primary);">Koç ile Deste Oluşturma</h3>
+          <p style="font-size:0.82rem; color:var(--text-secondary); margin:2px 0 0;">Yapay zeka ile belge, görsel veya metinden sözlük uyumlu kelime destesi üretin</p>
+        </div>
+        <button id="btn-close-deck-builder" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- Giriş Kartı: Dosya & Metin Girişi -->
+      <div class="coach-card" style="margin-bottom:14px;">
+        <input type="file" id="deck-builder-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
+        <textarea id="deck-builder-text-input" class="reader-textarea" rows="4" maxlength="30000" placeholder="Metni buraya yapıştırın veya bir görsel, PDF, DOCX ya da TXT dosyası yükleyin..."></textarea>
+        
+        <div id="deck-builder-file-chip" class="coach-file-chip hidden" style="margin-top:8px;">
+          <svg class="svg-icon" style="width:14px;height:14px;"><use href="#icon-paperclip"></use></svg>
+          <span id="deck-builder-file-name" style="font-weight:700;">dosya.pdf</span>
+          <button type="button" id="btn-deck-builder-file-remove" class="coach-chip-remove" aria-label="Dosyayı kaldır">Kaldır</button>
+        </div>
+
+        <div class="coach-actions" style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px;">
+          <button type="button" id="btn-deck-builder-pick" class="btn-secondary-compact" style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px; border-radius:10px; font-weight:800;">
+            <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-paperclip"></use></svg>
+            <span>Dosya Seç</span>
+          </button>
+          <button type="button" id="btn-deck-builder-analyze" class="btn-primary-compact" style="display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:10px; font-weight:800; background:var(--brand-blue); color:#fff;">
+            <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-sparkle"></use></svg>
+            <span>İçeriği İncele</span>
+          </button>
+        </div>
+        <div id="deck-builder-status" class="coach-status hidden" style="margin-top:10px; font-size:0.84rem; font-weight:700;"></div>
+      </div>
+
+      <!-- Analiz & Talimat Kartı -->
+      <div id="deck-builder-analysis" class="coach-card hidden" style="margin-bottom:14px; background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:14px; padding:16px;">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+          <span id="deck-builder-type" class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-weight:800; font-size:0.75rem; padding:4px 8px; border-radius:6px;">Belge</span>
+          <span id="deck-builder-level" class="badge" style="background:rgba(16,185,129,0.18); color:#34D399; font-weight:800; font-size:0.75rem; padding:4px 8px; border-radius:6px;">B1</span>
+        </div>
+        <p id="deck-builder-summary" style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5; margin:0 0 12px;"></p>
+        
+        <div style="font-size:0.8rem; font-weight:800; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">Önerilen Deste Talimatları:</div>
+        <div id="deck-builder-suggestions" class="coach-quick-actions" style="margin-bottom:12px;"></div>
+
+        <div class="coach-prompt-builder">
+          <label for="deck-builder-instruction" class="coach-instruction-label">ÖZEL TALİMAT (İSTEĞE BAĞLI)</label>
+          <textarea id="deck-builder-instruction" class="coach-instruction-textarea" rows="2" maxlength="300" placeholder="Örn: Bu metindeki A2-B1 seviyesi fiil ve isimleri desteye çevir..."></textarea>
+          <button type="button" id="btn-deck-builder-build" class="btn-coach-build-full" style="margin-top:8px;">
+            <span>Deste Oluştur</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Çıkarılan Kelimeler & Kaydetme Kartı -->
+      <div id="deck-builder-result" class="coach-card hidden" style="background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:14px; padding:16px;">
+        <div style="margin-bottom:12px;">
+          <label for="deck-builder-deck-name" style="font-size:0.8rem; font-weight:800; color:var(--text-muted); display:block; margin-bottom:4px;">DESTE ADI</label>
+          <input type="text" id="deck-builder-deck-name" class="form-control" maxlength="80" style="font-weight:800; font-size:1.05rem;" />
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span id="deck-builder-count" style="font-size:0.84rem; font-weight:800; color:var(--text-secondary);">0 kelime seçildi</span>
+          <button type="button" id="btn-deck-builder-toggle-all" class="coach-link-btn" style="background:none; border:0; color:var(--brand-blue-hover); font-weight:800; font-size:0.8rem; cursor:pointer;">Tümünü Seç / Kaldır</button>
+        </div>
+        <div id="deck-builder-word-list" style="max-height:320px; overflow-y:auto; margin-bottom:14px;"></div>
+        <button type="button" id="btn-deck-builder-save" class="btn-coach-build-full">
+          <span>Desteyi Kütüphaneme Kaydet</span>
+        </button>
+      </div>
+    </div>
+  </div>
   <!-- TOAST BİLDİRİM ALANI -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
@@ -2809,6 +2892,7 @@
   <script src="js/study.js?v=3.5.0"></script>
   <script src="js/stats.js?v=3.5.0"></script>
   <script src="js/coach.js?v=3.5.0"></script>
+  <script src="js/deckBuilder.js?v=3.5.0"></script>
   <script src="js/social.js?v=3.5.0"></script>
   <script src="js/app.js?v=3.5.0"></script>
 </body>

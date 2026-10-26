@@ -339,22 +339,25 @@ function sanitizeCoachChat(o) {
 // SUPABASE BACKEND PROXY (Kullanıcı veritabanını görmez)
 // ==========================================
 const SB_URL = 'https://zomxltwusqvqbpbgcdki.supabase.co';
-const SB_KEY = atob('c2Jfc2VjcmV0X211b3hjdnFxaTdCRWp1ajhXUVRBRWdfLTRvbEpkazE=');
 
-const sbFetch = (endpoint, options = {}) => {
-  return fetch(`${SB_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation',
-      ...(options.headers || {})
-    }
-  });
-};
+function getSbFetch(env) {
+  const sbKey = env.SUPABASE_SECRET || '';
+  return (endpoint, options = {}) => {
+    return fetch(`${SB_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'apikey': sbKey,
+        'Authorization': `Bearer ${sbKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+        ...(options.headers || {})
+      }
+    });
+  };
+}
 
 async function handleDatabaseApi(path, body, env, c) {
+  const sbFetch = getSbFetch(env);
   try {
     // 1. Kayıt Ol (Admin API ile onaysız direkt aktif etme)
     if (path === '/api/auth/register') {
