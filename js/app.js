@@ -212,31 +212,20 @@ class WortCoachApp {
     }
   }
 
-  // --- TEMA YÖNETİMİ ---
+  // --- TEMA YÖNETİMİ (Kalıcı ve Saf Karanlık Mod) ---
   async initTheme() {
-    const savedTheme = localStorage.getItem('wm_theme') || (await window.wmDB.getSetting('theme', 'dark'));
-    this.applyTheme(savedTheme);
-
-    document.getElementById('btn-theme-toggle')?.addEventListener('click', () => {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const next = current === 'dark' ? 'light' : 'dark';
-      this.applyTheme(next);
-    });
+    this.applyTheme('dark');
   }
 
-  applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('wm_theme', theme);
-    window.wmDB.setSetting('theme', theme);
+  applyTheme(_theme) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('theme-dark');
+    localStorage.setItem('wm_theme', 'dark');
+    if (window.wmDB) window.wmDB.setSetting('theme', 'dark');
 
     const metaTheme = document.getElementById('meta-theme-color');
     if (metaTheme) {
-      metaTheme.setAttribute('content', theme === 'dark' ? '#0B0D12' : '#F5F6F0');
-    }
-
-    const iconUse = document.querySelector('#theme-icon-svg use');
-    if (iconUse) {
-      iconUse.setAttribute('href', theme === 'dark' ? '#icon-sun' : '#icon-moon');
+      metaTheme.setAttribute('content', '#0B0D12');
     }
   }
 
@@ -461,7 +450,11 @@ class WortCoachApp {
       this.pushRoute(routePath, { tabId });
     }
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const headerEl = document.querySelector('.app-header');
+    if (headerEl) headerEl.classList.remove('header-hidden');
 
     if (tabId === 'tab-home') {
       await this.refreshHomeDashboard();
@@ -5043,24 +5036,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Akıllı Scroll Dinleyicisi: Aşağı kaydırırken WortCoach üst barını gizle, yukarı kaydırırken göster
 (function initHeaderScrollHide() {
-  let lastScrollY = window.scrollY;
+  let lastScrollY = window.scrollY || 0;
   let ticking = false;
+
+  const onScroll = () => {
+    const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const header = document.querySelector('.app-header');
+    if (header) {
+      if (currentScrollY > 30 && currentScrollY > lastScrollY + 5) {
+        header.classList.add('header-hidden');
+      } else if (currentScrollY < lastScrollY - 5 || currentScrollY <= 15) {
+        header.classList.remove('header-hidden');
+      }
+    }
+    lastScrollY = currentScrollY;
+    ticking = false;
+  };
 
   window.addEventListener('scroll', () => {
     if (!ticking) {
-      window.requestAnimationFrame(() => {
-        const currentScrollY = window.scrollY;
-        const header = document.querySelector('.app-header');
-        if (header) {
-          if (currentScrollY > 50 && currentScrollY > lastScrollY + 8) {
-            header.classList.add('header-hidden');
-          } else if (currentScrollY < lastScrollY - 6 || currentScrollY <= 15) {
-            header.classList.remove('header-hidden');
-          }
-        }
-        lastScrollY = currentScrollY;
-        ticking = false;
-      });
+      window.requestAnimationFrame(onScroll);
+      ticking = true;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(onScroll);
       ticking = true;
     }
   }, { passive: true });

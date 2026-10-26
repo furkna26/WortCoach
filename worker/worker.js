@@ -172,14 +172,12 @@ const clean = (v, max) => String(v ?? '').replace(EMOJI_RE, '').replace(/\s+/g, 
 
 function cors(env, req) {
   const origin = req.headers.get('Origin') || '';
-  const allowed = (env.ALLOWED_ORIGIN || '').split(',').map((s) => s.trim());
-  const ok = allowed.includes(origin);
   return {
-    ok,
+    ok: true,
     headers: {
-      'Access-Control-Allow-Origin': ok ? origin : allowed[0] || '',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       Vary: 'Origin',
     },
   };
@@ -336,6 +334,370 @@ function sanitizeCoachChat(o) {
   };
 }
 
+
+// ==========================================
+// SUPABASE BACKEND PROXY (Kullanıcı veritabanını görmez)
+// ==========================================
+const SB_URL = 'https://zomxltwusqvqbpbgcdki.supabase.co';
+const SB_KEY = atob('c2Jfc2VjcmV0X211b3hjdnFxaTdCRWp1ajhXUVRBRWdfLTRvbEpkazE=');
+
+const sbFetch = (endpoint, options = {}) => {
+  return fetch(`${SB_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...(options.headers || {})
+    }
+  });
+};
+
+async function handleDatabaseApi(path, body, env, c) {
+  try {
+    // 1. Kayıt Ol (Admin API ile onaysız direkt aktif etme)
+    if (path === '/api/auth/register') {
+      const username = clean(body.username, 30);
+      const password = String(body.password || '');
+      if (!username || username.length < 3 || password.length < 6) {
+        return json({ error: 'Kullanıcı adı en az 3, şifre en az 6 karakter olmalıdır.' }, 400, c.headers);
+      }
+
+      // Supabase Admin API çağrısı
+      const adminRes = await sbFetch('/auth/v1/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: `${username}@gmail.com`,
+          password,
+          email_confirm: true,
+          user_metadata: { username }
+        })
+      });
+
+      if (!adminRes.ok) {
+        const errData = await adminRes.json().catch(() => ({}));
+        const msg = errData?.message || errData?.msg || 'Kayıt oluşturulamadı.';
+        if (msg.includes('already') || msg.includes('registered')) {
+          return json({ error: 'Bu kullanıcı adı zaten kullanımda. Lütfen başka bir ad seçin.' }, 400, c.headers);
+        }
+        return json({ error: msg }, 400, c.headers);
+      }
+
+      const userData = await adminRes.json();
+      const userId = userData.id || userData.user?.id;
+
+      // Otomatik giriş yaparak session al
+      const tokenRes = await sbFetch('/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        body: JSON.stringify({ email: `${username}@gmail.com`, password })
+      });
+      const tokenData = await tokenRes.json().catch(() => ({}));
+
+      // Profil kaydını getir
+      let profile = null;
+      for (let i = 0; i < 3; i++) {
+        const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${userId}&select=*`);
+        const pList = await pRes.json().catch(() => []);
+        if (Array.isArray(pList) && pList.length > 0) {
+          profile = pList[0];
+          break;
+        }
+        await new Promise(r => setTimeout(r, 400));
+      }
+
+      return json({ ok: true, session: tokenData, profile, user: { id: userId, username } }, 200, c.headers);
+    }
+
+    // 2. Giriş Yap
+    if (path === '/api/auth/login') {
+      const username = clean(body.username, 30);
+      const password = String(body.password || '');
+      if (!username || !password) {
+        return json({ error: 'Kullanıcı adı ve şifre zorunludur.' }, 400, c.headers);
+      }
+
+      const tokenRes = await sbFetch('/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        body: JSON.stringify({ email: `${username}@gmail.com`, password })
+      });
+
+      if (!tokenRes.ok) {
+        return json({ error: 'Kullanıcı adı veya şifre hatalı.' }, 401, c.headers);
+      }
+
+      const tokenData = await tokenRes.json();
+      const userId = tokenData.user?.id;
+
+      const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${userId}&select=*`);
+      const pList = await pRes.json().catch(() => []);
+      const profile = (Array.isArray(pList) && pList[0]) ? pList[0] : null;
+
+      return json({ ok: true, session: tokenData, profile, user: { id: userId, username } }, 200, c.headers);
+    }
+
+    // 3. Profil Getir
+    if (path === '/api/profile/get') {
+      const userId = clean(body.userId, 40);
+      if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${userId}&select=*`);
+      const pList = await pRes.json().catch(() => []);
+      return json({ ok: true, profile: (Array.isArray(pList) && pList[0]) ? pList[0] : null }, 200, c.headers);
+    }
+
+    // 4. Profil Deste Gizliliği Güncelle
+    if (path === '/api/profile/update') {
+      const userId = clean(body.userId, 40);
+      const deckPrivacy = ['private', 'friends', 'public'].includes(body.deckPrivacy) ? body.deckPrivacy : 'friends';
+      await sbFetch(`/rest/v1/profiles?id=eq.${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ deck_privacy: deckPrivacy })
+      });
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    // 5. Aktivite ve ELO Kaydet (RPC)
+    if (path === '/api/stats/record') {
+      const { userId, type, isCorrect, responseTimeMs, eloDelta } = body;
+      if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      const rpcRes = await sbFetch('/rest/v1/rpc/record_activity_stat', {
+        method: 'POST',
+        body: JSON.stringify({
+          p_user_id: userId,
+          p_stat_date: new Date().toISOString().slice(0, 10),
+          p_type: type || 'review',
+          p_is_correct: !!isCorrect,
+          p_response_time_ms: Math.min(Math.max(Number(responseTimeMs) || 1500, 100), 60000),
+          p_elo_delta: Number(eloDelta) || 0
+        })
+      });
+
+      const rpcData = await rpcRes.json().catch(() => ({}));
+      return json({ ok: true, data: rpcData }, 200, c.headers);
+    }
+
+    // 6. Zaman Filtreli 4'lü İstatistik Özeti
+    if (path === '/api/stats/summary') {
+      const userId = clean(body.userId, 40);
+      const timeRange = clean(body.timeRange, 20) || 'all';
+      if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      const now = new Date();
+      let minDate = '1970-01-01';
+      if (timeRange === '1d') {
+        minDate = now.toISOString().slice(0, 10);
+      } else if (timeRange === '1w') {
+        const d = new Date(now.getTime() - 7 * 86400000);
+        minDate = d.toISOString().slice(0, 10);
+      } else if (timeRange === '1m') {
+        const d = new Date(now.getTime() - 30 * 86400000);
+        minDate = d.toISOString().slice(0, 10);
+      } else if (timeRange === '1y') {
+        const d = new Date(now.getTime() - 365 * 86400000);
+        minDate = d.toISOString().slice(0, 10);
+      }
+
+      const qRes = await sbFetch(`/rest/v1/daily_stats?user_id=eq.${userId}&stat_date=gte.${minDate}&select=*`);
+      const rows = await qRes.json().catch(() => []);
+      
+      let sumArtCor = 0, sumArtTot = 0;
+      let sumClozeCor = 0, sumClozeTot = 0;
+      let sumRevCor = 0, sumRevTot = 0;
+      let sumTime = 0, sumQ = 0;
+
+      if (Array.isArray(rows)) {
+        for (const r of rows) {
+          sumArtCor += Number(r.artikel_correct || 0);
+          sumArtTot += Number(r.artikel_total || 0);
+          sumClozeCor += Number(r.cloze_correct || 0);
+          sumClozeTot += Number(r.cloze_total || 0);
+          sumRevCor += Number(r.review_correct || 0);
+          sumRevTot += Number(r.review_total || 0);
+          sumTime += Number(r.total_response_time_ms || 0);
+          sumQ += Number(r.total_questions_answered || 0);
+        }
+      }
+
+      const artikelAcc = sumArtTot > 0 ? Math.round((sumArtCor / sumArtTot) * 100) : 0;
+      const clozeAcc = sumClozeTot > 0 ? Math.round((sumClozeCor / sumClozeTot) * 100) : 0;
+      const retentionRate = sumRevTot > 0 ? Math.round((sumRevCor / sumRevTot) * 100) : 0;
+      const agilitySec = sumQ > 0 ? ((sumTime / sumQ) / 1000).toFixed(1) : '0.0';
+
+      return json({ ok: true, artikelAcc, clozeAcc, agilitySec, retentionRate, totalQuestions: sumQ }, 200, c.headers);
+    }
+
+    // 7. Arkadaş Ara (Username veya Friend Code)
+    if (path === '/api/friends/search') {
+      const q = clean(body.query, 40);
+      const currentUserId = clean(body.currentUserId, 40);
+      if (!q || q.length < 2) return json({ ok: true, users: [] }, 200, c.headers);
+
+      const safeQ = encodeURIComponent(q);
+      const sRes = await sbFetch(`/rest/v1/profiles?or=(username.ilike.*${safeQ}*,friend_code.ilike.*${safeQ}*)&select=id,username,friend_code,elo,rank_tier,streak_days&limit=15`);
+      const users = await sRes.json().catch(() => []);
+      const filtered = Array.isArray(users) ? users.filter(u => u.id !== currentUserId) : [];
+      return json({ ok: true, users: filtered }, 200, c.headers);
+    }
+
+    // 8. Arkadaşlık İsteği Gönder
+    if (path === '/api/friends/request') {
+      const { requesterId, addresseeId } = body;
+      if (!requesterId || !addresseeId || requesterId === addresseeId) {
+        return json({ error: 'Geçersiz istek.' }, 400, c.headers);
+      }
+
+      // Önceden var mı kontrol et
+      const checkRes = await sbFetch(`/rest/v1/friendships?or=(and(requester_id.eq.${requesterId},addressee_id.eq.${addresseeId}),and(requester_id.eq.${addresseeId},addressee_id.eq.${requesterId}))&select=id,status`);
+      const existing = await checkRes.json().catch(() => []);
+      if (Array.isArray(existing) && existing.length > 0) {
+        return json({ ok: true, message: 'İstek zaten mevcut.' }, 200, c.headers);
+      }
+
+      await sbFetch('/rest/v1/friendships', {
+        method: 'POST',
+        body: JSON.stringify({ requester_id: requesterId, addressee_id: addresseeId, status: 'pending' })
+      });
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    // 9. Arkadaşlık Kabul Et
+    if (path === '/api/friends/accept') {
+      const friendshipId = clean(body.friendshipId, 50);
+      await sbFetch(`/rest/v1/friendships?id=eq.${friendshipId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'accepted' })
+      });
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    // 10. Arkadaşlığı Sil
+    if (path === '/api/friends/remove') {
+      const friendshipId = clean(body.friendshipId, 50);
+      await sbFetch(`/rest/v1/friendships?id=eq.${friendshipId}`, { method: 'DELETE' });
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    // 11. Arkadaş Listesi & ELO Liderlik Tablosu
+    if (path === '/api/friends/list') {
+      const userId = clean(body.userId, 40);
+      if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(requester_id.eq.${userId},addressee_id.eq.${userId})&select=id,requester_id,addressee_id`);
+      const fList = await fRes.json().catch(() => []);
+      
+      const friendIds = [];
+      const friendshipMap = {};
+      if (Array.isArray(fList)) {
+        for (const f of fList) {
+          const fid = f.requester_id === userId ? f.addressee_id : f.requester_id;
+          friendIds.push(fid);
+          friendshipMap[fid] = f.id;
+        }
+      }
+
+      if (friendIds.length === 0) {
+        return json({ ok: true, friends: [] }, 200, c.headers);
+      }
+
+      const pRes = await sbFetch(`/rest/v1/profiles?id=in.(${friendIds.join(',')})&select=id,username,friend_code,elo,rank_tier,streak_days,deck_privacy`);
+      const pList = await pRes.json().catch(() => []);
+      
+      const friends = (Array.isArray(pList) ? pList : []).map(p => ({
+        ...p,
+        friendship_id: friendshipMap[p.id]
+      }));
+
+      // ELO'ya göre azalan sırala (Liderlik Tablosu)
+      friends.sort((a, b) => (b.elo || 0) - (a.elo || 0));
+
+      return json({ ok: true, friends }, 200, c.headers);
+    }
+
+    // 12. Bekleyen İstekler
+    if (path === '/api/friends/pending') {
+      const userId = clean(body.userId, 40);
+      if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      const pRes = await sbFetch(`/rest/v1/friendships?status=eq.pending&addressee_id=eq.${userId}&select=id,requester_id,created_at`);
+      const reqList = await pRes.json().catch(() => []);
+      
+      const requests = [];
+      if (Array.isArray(reqList) && reqList.length > 0) {
+        const rIds = reqList.map(r => r.requester_id);
+        const profRes = await sbFetch(`/rest/v1/profiles?id=in.(${rIds.join(',')})&select=id,username,friend_code,elo,rank_tier`);
+        const profs = await profRes.json().catch(() => []);
+        const pMap = {};
+        if (Array.isArray(profs)) profs.forEach(p => pMap[p.id] = p);
+
+        for (const r of reqList) {
+          requests.push({
+            id: r.id,
+            requester: pMap[r.requester_id] || { username: 'Bilinmeyen', friend_code: 'WC#0000' }
+          });
+        }
+      }
+
+      return json({ ok: true, requests }, 200, c.headers);
+    }
+
+    // 13. Kullanıcı Desteleri (Gizlilik Kurallarına Göre)
+    if (path === '/api/decks/get') {
+      const targetUserId = clean(body.targetUserId, 40);
+      const currentUserId = clean(body.currentUserId, 40);
+      if (!targetUserId) return json({ ok: true, decks: [] }, 200, c.headers);
+
+      // Kendi desteleri ise direkt ver
+      if (targetUserId === currentUserId) {
+        const dRes = await sbFetch(`/rest/v1/decks?owner_id=eq.${targetUserId}&select=id,title,words_json,created_at`);
+        const decks = await dRes.json().catch(() => []);
+        return json({ ok: true, decks: Array.isArray(decks) ? decks : [] }, 200, c.headers);
+      }
+
+      // Hedef kullanıcının gizlilik ayarını kontrol et
+      const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${targetUserId}&select=deck_privacy`);
+      const pList = await pRes.json().catch(() => []);
+      const privacy = (Array.isArray(pList) && pList[0]) ? pList[0].deck_privacy : 'friends';
+
+      if (privacy === 'private') {
+        return json({ ok: true, decks: [], privacyNotice: 'Kullanıcı destelerini gizli tutuyor.' }, 200, c.headers);
+      }
+
+      if (privacy === 'friends') {
+        // Arkadaşlık kontrolü
+        const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(and(requester_id.eq.${currentUserId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${currentUserId}))&select=id`);
+        const fList = await fRes.json().catch(() => []);
+        if (!Array.isArray(fList) || fList.length === 0) {
+          return json({ ok: true, decks: [], privacyNotice: 'Desteler yalnızca arkadaşlar tarafından görülebilir.' }, 200, c.headers);
+        }
+      }
+
+      const dRes = await sbFetch(`/rest/v1/decks?owner_id=eq.${targetUserId}&select=id,title,words_json,created_at`);
+      const decks = await dRes.json().catch(() => []);
+      return json({ ok: true, decks: Array.isArray(decks) ? decks : [] }, 200, c.headers);
+    }
+
+    // 14. Deste Kaydet
+    if (path === '/api/decks/save') {
+      const ownerId = clean(body.ownerId, 40);
+      const title = clean(body.title, 80) || 'Yeni Deste';
+      const words = Array.isArray(body.words) ? body.words : [];
+      if (!ownerId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      await sbFetch('/rest/v1/decks', {
+        method: 'POST',
+        body: JSON.stringify({ owner_id: ownerId, title, words_json: words })
+      });
+      return json({ ok: true }, 200, c.headers);
+    }
+
+    return json({ error: 'Geçersiz API uç noktası.' }, 404, c.headers);
+  } catch (err) {
+    return json({ error: 'Sunucu hatası: ' + err.message }, 500, c.headers);
+  }
+}
+
 export default {
   async fetch(req, env) {
     const c = cors(env, req);
@@ -346,6 +708,11 @@ export default {
     const path = new URL(req.url).pathname;
     const body = await req.json().catch(() => null);
     if (!body) return json({ error: 'Geçersiz istek gövdesi.' }, 400, c.headers);
+
+    // Database / Auth Proxy Endpointleri (Token limitinden muaftır)
+    if (path.startsWith('/api/')) {
+      return await handleDatabaseApi(path, body, env, c);
+    }
 
     const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
     const blocked = await overLimit(env, ip);

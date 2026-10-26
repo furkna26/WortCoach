@@ -102,74 +102,16 @@
 }
 
 [data-theme="light"] {
-  --bg-main: #F3F4F6;
-  --bg-surface: #FFFFFF;
-  --bg-elevated: #F8FAFC;
-  --bg-nav: rgba(255, 255, 255, 0.90);
-
-  --bg-base: var(--bg-main);
-  --bg-surface-elevated: var(--bg-elevated);
-  --bg-inner: #F1F5F9;
-  --bg-inner-subtle: #E2E8F0;
-  --bg-glass: var(--bg-nav);
-  --bg-surface-glass: var(--bg-nav);
-
-  --border-subtle: #E2E8F0;
-  --border-focus: #3B82F6;
-  --border-medium: #CBD5E1;
-  --border-strong: #3B82F6;
-
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
+  /* Karanlık Mod Zorunlu (Aydınlık mod tamamen devre dışı) */
+  --bg-main: #0B0D12;
+  --bg-surface: #131720;
+  --bg-elevated: #1B202C;
+  --bg-nav: rgba(19, 23, 32, 0.88);
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
   --text-muted: #64748B;
-
-  --accent-primary: #3B82F6;
-  --accent-primary-soft: rgba(59, 130, 246, 0.14);
-  --accent-emerald: #10B981;
-  --accent-emerald-soft: rgba(16, 185, 129, 0.14);
-  --accent-amber: #F59E0B;
-
-  --brand-blue: var(--accent-primary);
-  --brand-blue-hover: #2563EB;
-  --brand-blue-deep: #1D4ED8;
-  --brand-blue-soft: var(--accent-primary-soft);
-  --brand-blue-glow: rgba(59, 130, 246, 0.25);
-  --palette-green: var(--accent-emerald);
-  --palette-yellow: var(--accent-amber);
-  --palette-red: #EF4444;
-  --palette-teal: var(--accent-primary);
-  --palette-sand: #475569;
-
-  --badge-neutral-bg: #F1F5F9;
-  --badge-neutral-border: #CBD5E1;
-  --badge-neutral-text: #334155;
-
-  --badge-der-bg: #F1F5F9;
-  --badge-der-text: #2563EB;
-  --badge-die-bg: #F1F5F9;
-  --badge-die-text: #DC2626;
-  --badge-das-bg: #F1F5F9;
-  --badge-das-text: #059669;
-
-  --badge-verb-bg: #F1F5F9;
-  --badge-verb-text: #334155;
-  --badge-noun-bg: #F1F5F9;
-  --badge-noun-text: #334155;
-  --badge-adj-bg: #F1F5F9;
-  --badge-adj-text: #334155;
-  --badge-prep-bg: #F1F5F9;
-  --badge-prep-text: #334155;
-
-  --badge-reflexiv-bg: #F1F5F9;
-  --badge-reflexiv-border: #CBD5E1;
-  --badge-reflexiv-text: #334155;
-
-  --badge-trennbar-bg: #F1F5F9;
-  --badge-trennbar-border: #CBD5E1;
-  --badge-trennbar-text: #334155;
-
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --border-subtle: #242B3A;
+  --border-medium: #2E384D;
 }
 
 *,

@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="tr" data-theme="dark">
+<html lang="tr" data-theme="dark" data-theme="dark" class="theme-dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/app.css?v=3.5.0" />
   <link rel="stylesheet" href="css/components.css?v=3.5.0" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
@@ -241,10 +241,9 @@
 .coach-chat-app-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  height: calc(100vh - 150px);
-  min-height: 560px;
-  max-width: 900px;
+  gap: 8px;
+  height: calc(100dvh - 130px);
+  max-width: 760px;
   margin: 0 auto;
   width: 100%;
 }
@@ -311,11 +310,11 @@
   flex-direction: column !important;
   gap: 14px !important;
   overflow-y: auto !important;
-  padding: 16px !important;
-  background: var(--bg-surface) !important;
-  border: 1px solid var(--border-subtle) !important;
-  border-radius: 18px !important;
-  min-height: 340px !important;
+  padding: 8px 4px 16px 4px !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  min-height: 200px !important;
   scroll-behavior: smooth !important;
 }
 
@@ -881,16 +880,11 @@
         <div class="brand-subtitle">Akıllı Sözlük &amp; Kelime Koçu</div>
       </div>
       <div class="header-actions">
-        <button type="button" id="btn-open-profile" class="profile-header-pill" title="Profil, Lig ve Arkadaşlar" aria-label="Profil ve Lig">
-          <span class="user-tier-dot" style="background:#CD7F32"></span>
-          <span class="user-elo-text">Bronz · 1000</span>
-        </button>
+        
         <button id="btn-install-pwa" class="icon-btn-sm hidden" title="Uygulamayı Yükle" aria-label="Uygulamayı Yükle">
           <svg class="svg-icon"><use href="#icon-download"></use></svg>
         </button>
-        <button id="btn-theme-toggle" class="icon-btn-sm" title="Temayı Değiştir" aria-label="Temayı Değiştir">
-          <svg class="svg-icon" id="theme-icon-svg"><use href="#icon-sun"></use></svg>
-        </button>
+        
         <button id="btn-open-settings" class="icon-btn-sm" title="Ayarlar" aria-label="Ayarlar">
           <svg class="svg-icon"><use href="#icon-settings"></use></svg>
         </button>
@@ -1101,14 +1095,7 @@
       <section id="tab-reader" class="tab-view">
         <div class="coach-chat-app-container">
 
-          <!-- Geri Dön Butonu -->
-          <div class="coach-chat-top-nav" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-            <button type="button" id="btn-coach-back-to-games" class="prof-auth-link-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem;">
-              <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-arrow-left"></use></svg>
-              <span>Pratik &amp; Oyunlara Dön</span>
-            </button>
-            <div style="font-size:0.82rem; font-weight:800; color:var(--text-secondary);">Almanca Dil Koçu</div>
-          </div>
+
 
           <!-- Sohbet Mesaj Akışı -->
           <div id="coach-chat-stream" class="coach-chat-stream"></div>
@@ -1375,7 +1362,6 @@
             </button>
           </div>
         </div>
-        </div>
       </section>
 
       <!-- ====================================================================
@@ -1385,8 +1371,8 @@
         <div class="games-hub-header" style="margin-bottom:18px;">
           <div class="section-header-row">
             <div>
-              <h2 class="section-title" style="font-size:1.45rem; font-weight:900; margin:0;">Kelime Oyunları</h2>
-              <p style="font-size:0.84rem; color:var(--text-muted); margin-top:3px;">Kablo eşleştirme ve pratik quiz oyunları</p>
+              <h2 class="section-title" style="font-size:1.45rem; font-weight:900; margin:0;">Çalış</h2>
+              <p style="font-size:0.84rem; color:var(--text-muted); margin-top:3px;">Almanca dil koçu, telaffuz koçu, akıllı okuyucu ve interaktif alıştırmalar</p>
             </div>
           </div>
         </div>
@@ -2664,7 +2650,6 @@
 
       <!-- PANE 3: AYARLAR & DESTE GİZLİLİĞİ & BULUT -->
       <div id="pane-prof-settings" class="profile-pane hidden">
-        </div>
       </div>
     </div>
   </div>

@@ -1,8 +1,6 @@
 // WortCoach istemci yapılandırması
 window.WORTCOACH_CONFIG = {
   COACH_API: 'https://wortcoach-proxy.mosmandurmaz26.workers.dev',
-  SUPABASE_URL: 'https://zomxltwusqvqbpbgcdki.supabase.co',
-  SUPABASE_ANON_KEY: localStorage.getItem('wortcoach_sb_key') || atob('c2Jfc2VjcmV0X211b3hjdnFxaTdCRWp1ajhXUVRBRWdfLTRvbEpkazE='),
 };
 
 /**
