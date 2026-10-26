@@ -53,9 +53,11 @@
       this.currentFilterRange = '7d';
       this.friendFilterRange = '7d';
       this.viewingFriendProfile = null;
+      this.sendingDeckTargetFriend = null;
       this.viewingPreviewDeck = null;
       this.viewingClub = null;
       this.activeCollabSession = null;
+      this.autoSyncTimer = null;
 
       // 1v1 Maç Durumu
       this.match1v1State = {
@@ -100,7 +102,9 @@
         if (savedSession && savedSession.user) {
           this.user = savedSession.user;
           this.profile = savedProfile || null;
-          this.loadProfile().catch(() => {});
+          this.loadProfile().then(() => {
+            this.autoSyncDecksToCloud().catch(() => {});
+          }).catch(() => {});
         }
       } catch (e) {
         console.warn('Oturum okunamadı:', e.message);
@@ -108,6 +112,12 @@
 
       this.updateUI();
       this.attachEventListeners();
+      setTimeout(() => {
+        this.populateDeckSelects().catch(() => {});
+        if (this.isCloudConnected()) {
+          this.autoSyncDecksToCloud().catch(() => {});
+        }
+      }, 1200);
     }
 
     // Backend Proxy Çağrısı (Tarayıcıda anahtar bulundurmaz)
@@ -490,20 +500,134 @@
     }
 
     // =========================================================================
-    // DESTE SENKRONİZASYONU & PAYLAŞIMI ("PAYLAŞILAN DESTELERİ GÖREMİYORUM" ÇÖZÜMÜ)
+    // DESTE SEÇİM ÇÖZÜMLEYİCİSİ (YEREL DESTELER + HAZIR KÜRATÖRLÜ PAKETLER)
     // =========================================================================
-    async syncLocalDeckToCloud(deckId, isPublic = false, description = '') {
-      const decks = await this.getLocalDecksSafe();
-      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
-      if (!deck) throw new Error('Deste bulunamadı.');
+    async getDeckWithCardsBySelection(selectionVal) {
+      const val = String(selectionVal || '').trim();
+      if (val.startsWith('pack:')) {
+        const packCode = val.slice(5);
+        const packs = Array.isArray(window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : [];
+        const pack = packs.find(p => p.code === packCode) || packs[0];
+        if (!pack) throw new Error('Hazır deste paketi bulunamadı.');
+        const words = (pack.cards || []).map(c => ({
+          lemma: (c.article ? `${c.article} ${c.germanWord}` : c.germanWord) || '',
+          contextMeaning: c.meaningsTr || '',
+          pos: c.partOfSpeech || 'NOUN',
+          sourceSentence: c.exampleSentence || ''
+        }));
+        return {
+          id: val,
+          title: pack.name,
+          name: pack.name,
+          description: pack.description || '',
+          words,
+          cards: words
+        };
+      }
 
-      const cards = await this.getLocalCardsSafe(deck.id);
-      const words = cards.map(c => ({
-        lemma: c.germanWord || c.front || '',
-        contextMeaning: c.meaningsTr || c.back || '',
+      const decks = await this.getLocalDecksSafe();
+      const deck = decks.find(d => String(d.id) === val || Number(d.id) === Number(val));
+      if (!deck) {
+        // Fallback: Hazır paket varsa ilk hazır paketi dön
+        const packs = Array.isArray(window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : [];
+        if (packs.length > 0) {
+          return this.getDeckWithCardsBySelection('pack:' + packs[0].code);
+        }
+        throw new Error('Seçilen deste bulunamadı.');
+      }
+
+      let rawCards = await this.getLocalCardsSafe(deck.id);
+      const words = rawCards.map(c => ({
+        lemma: (c.article && !String(c.germanWord || '').toLowerCase().startsWith(c.article.toLowerCase() + ' '))
+          ? `${c.article} ${c.germanWord}`
+          : (c.germanWord || c.front || c.lemma || ''),
+        contextMeaning: c.meaningsTr || c.back || c.contextMeaning || '',
         pos: c.partOfSpeech || c.pos || 'NOUN',
-        sourceSentence: c.example || c.contextSentence || ''
+        sourceSentence: c.exampleSentence || c.example || c.sourceSentence || ''
       }));
+
+      return {
+        id: deck.id,
+        title: deck.name || deck.title || 'Genel Deste',
+        name: deck.name || deck.title || 'Genel Deste',
+        description: deck.description || '',
+        words,
+        cards: words
+      };
+    }
+
+    // =========================================================================
+    // DESTE SENKRONİZASYONU & OTOMATİK BULUT SENKRONİZASYONU
+    // =========================================================================
+    scheduleAutoSync() {
+      if (this.autoSyncTimer) clearTimeout(this.autoSyncTimer);
+      this.autoSyncTimer = setTimeout(() => {
+        this.populateDeckSelects().catch(() => {});
+        if (this.isCloudConnected()) {
+          this.autoSyncDecksToCloud().catch(() => {});
+        }
+      }, 1500);
+    }
+
+    async autoSyncDecksToCloud() {
+      if (!this.isCloudConnected()) return 0;
+      const localDecks = await this.getLocalDecksSafe();
+      const prof = this.getActiveProfile();
+      const payloadDecks = [];
+
+      for (const d of localDecks) {
+        const cards = await this.getLocalCardsSafe(d.id);
+        if (!cards || cards.length === 0) continue;
+        const words = cards.map(c => ({
+          lemma: (c.article && !String(c.germanWord || '').toLowerCase().startsWith(c.article.toLowerCase() + ' '))
+            ? `${c.article} ${c.germanWord}`
+            : (c.germanWord || c.front || ''),
+          contextMeaning: c.meaningsTr || c.back || '',
+          pos: c.partOfSpeech || c.pos || 'NOUN',
+          sourceSentence: c.exampleSentence || c.example || ''
+        }));
+        payloadDecks.push({
+          id: d.id,
+          title: d.name || d.title || 'Deste',
+          description: d.description || '',
+          words
+        });
+      }
+
+      // Kullanıcının yerel destelerinde henüz kelime yoksa (yeni kurulum), arkadaşların ve açık profilin boş görünmemesi için A1 temel paketini varsayılan paylaşım destesi olarak ekle
+      if (payloadDecks.length === 0 && Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0]) {
+        const p0 = window.CURATED_CEFR_PACKS[0];
+        payloadDecks.push({
+          title: p0.name,
+          description: p0.description || 'Temel Almanca Kelime Paketi',
+          words: (p0.cards || []).slice(0, 30).map(c => ({
+            lemma: c.article ? `${c.article} ${c.germanWord}` : c.germanWord,
+            contextMeaning: c.meaningsTr || '',
+            pos: c.partOfSpeech || 'NOUN',
+            sourceSentence: c.exampleSentence || ''
+          }))
+        });
+      }
+
+      try {
+        const res = await this.apiCall('decks/sync_all', {
+          ownerId: this.user.id,
+          username: prof.username || 'Kullanıcı',
+          deckPrivacy: prof.deck_privacy || 'friends',
+          decks: payloadDecks
+        });
+        return res.syncedCount || payloadDecks.length;
+      } catch (e) {
+        console.warn('Otomatik bulut senkronizasyonu başarısız:', e.message);
+        return 0;
+      }
+    }
+
+    async syncLocalDeckToCloud(deckSelection, isPublic = false, description = '') {
+      const resolved = await this.getDeckWithCardsBySelection(deckSelection);
+      if (!resolved.words || resolved.words.length === 0) {
+        throw new Error('Seçilen destede henüz kelime bulunmuyor. Lütfen içinde kelime olan bir deste seçin.');
+      }
 
       const prof = this.getActiveProfile();
       const ownerId = this.isCloudConnected() ? this.user.id : (prof.id || 'local_user');
@@ -512,46 +636,57 @@
       const payload = {
         ownerId,
         authorUsername,
-        title: deck.name || deck.title || 'Deste',
-        description,
+        title: resolved.title,
+        description: description || resolved.description || '',
         isPublic: !!isPublic,
-        words
+        words: resolved.words
       };
+
+      // Yerel yedek listesini de her zaman güncelle
+      let pubList = [];
+      try {
+        pubList = JSON.parse(localStorage.getItem(this.localPublicDecksKey)) || [];
+      } catch (_) {}
+      const localPubDeck = {
+        id: 'pub_' + Date.now(),
+        ownerId,
+        title: resolved.title,
+        authorUsername,
+        description: payload.description,
+        isPublic: !!isPublic,
+        words: resolved.words,
+        wordCount: resolved.words.length,
+        createdAt: new Date().toISOString()
+      };
+      if (isPublic) {
+        pubList = pubList.filter(x => !(x.ownerId === ownerId && (x.title || '').toLowerCase() === resolved.title.toLowerCase()));
+        pubList.unshift(localPubDeck);
+        localStorage.setItem(this.localPublicDecksKey, JSON.stringify(pubList.slice(0, 50)));
+      }
 
       try {
         const res = await this.apiCall('decks/save', payload);
         return res;
       } catch (e) {
-        // Çevrimdışı / Local Fallback Depolama
-        let pubList = [];
-        try {
-          pubList = JSON.parse(localStorage.getItem(this.localPublicDecksKey)) || [];
-        } catch (_) {}
-        const localPubDeck = {
-          id: 'pub_' + Date.now(),
-          ownerId,
-          title: deck.name || deck.title || 'Deste',
-          authorUsername,
-          description,
-          isPublic: !!isPublic,
-          words,
-          wordCount: words.length,
-          createdAt: new Date().toISOString()
-        };
-        pubList.unshift(localPubDeck);
-        localStorage.setItem(this.localPublicDecksKey, JSON.stringify(pubList));
         return { ok: true, deckId: localPubDeck.id, offline: true };
       }
     }
 
     async syncAllDecksToCloud() {
+      if (this.isCloudConnected()) {
+        const synced = await this.autoSyncDecksToCloud();
+        if (synced > 0) return synced;
+      }
       const decks = await this.getLocalDecksSafe();
       let count = 0;
       for (const d of decks) {
-        try {
-          await this.syncLocalDeckToCloud(d.id, false);
-          count++;
-        } catch (_) {}
+        const cards = await this.getLocalCardsSafe(d.id);
+        if (cards.length > 0) {
+          try {
+            await this.syncLocalDeckToCloud(d.id, (this.getActiveProfile().deck_privacy === 'public'));
+            count++;
+          } catch (_) {}
+        }
       }
       return count;
     }
@@ -573,17 +708,18 @@
       const createdDeck = await this.addLocalDeckSafe(title);
       const newDeckId = (createdDeck && createdDeck.id) ? createdDeck.id : 1;
 
-      const words = cloudDeck.words_json || cloudDeck.words || [];
+      const words = cloudDeck.words_json || cloudDeck.words || cloudDeck.cards || [];
       for (const w of words) {
         await this.addLocalCardSafe({
           deckId: newDeckId,
           lemma: w.lemma || w.front || w.germanWord || '',
           contextMeaning: w.contextMeaning || w.back || w.meaningsTr || '',
           pos: w.pos || w.partOfSpeech || 'NOUN',
-          sourceSentence: w.sourceSentence || w.example || ''
+          sourceSentence: w.sourceSentence || w.example || w.exampleSentence || ''
         });
       }
 
+      await this.populateDeckSelects();
       if (window.wmApp && window.wmApp.refreshDecksView) {
         await window.wmApp.refreshDecksView();
       }
@@ -734,11 +870,7 @@
     async openPublishDeckModal() {
       const modal = $('modal-publish-deck');
       if (!modal) return;
-      const select = $('select-publish-target-deck');
-      if (select) {
-        const decks = await this.getLocalDecksSafe();
-        select.innerHTML = decks.map(d => `<option value="${d.id}">${d.name || d.title}</option>`).join('');
-      }
+      await this.populateDeckSelects();
       modal.classList.remove('hidden');
     }
 
@@ -789,7 +921,7 @@
           <div class="club-card" data-club-id="${c.id}">
             <div>
               <div class="club-info-title">${c.name}</div>
-              <div class="club-info-sub">${c.category || 'Genel'} · Kod: <strong style="color:var(--brand-blue-hover);">${c.code}</strong></div>
+              <div class="club-info-sub">Kod: <strong style="color:var(--brand-blue-hover);">${c.code}</strong>${c.description ? ' · ' + c.description : ''}</div>
               <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">${memberCount} Üye · ${deckCount} Kulüp Destesi</div>
             </div>
             <button type="button" class="btn-primary-compact btn-open-club-view" data-club-id="${c.id}" style="padding:6px 12px; font-size:0.78rem;">İncele</button>
@@ -800,6 +932,7 @@
 
       container.querySelectorAll('.btn-open-club-view, .club-card').forEach(el => {
         el.addEventListener('click', (e) => {
+          e.stopPropagation();
           const cid = el.getAttribute('data-club-id');
           const cObj = clubs.find(x => String(x.id) === String(cid));
           if (cObj) this.openClubDetailModal(cObj);
@@ -807,13 +940,13 @@
       });
     }
 
-    async createClub(name, category, description) {
+    async createClub(name, description) {
       const prof = this.getActiveProfile();
       const ownerId = this.isCloudConnected() ? this.user.id : (prof.id || 'local_user');
       const ownerUsername = prof.username || 'Kurucu';
 
       try {
-        const res = await this.apiCall('clubs/create', { name, category, description, ownerId, ownerUsername });
+        const res = await this.apiCall('clubs/create', { name, description, ownerId, ownerUsername });
         return res.club;
       } catch (e) {
         // Yerel fallback
@@ -824,7 +957,6 @@
           id: 'club_' + Date.now(),
           code,
           name,
-          category,
           description,
           ownerId,
           ownerUsername,
@@ -868,14 +1000,14 @@
       if ($('club-detail-name')) $('club-detail-name').textContent = clubObj.name;
       if ($('club-detail-code-badge')) $('club-detail-code-badge').textContent = clubObj.code;
       const members = clubObj.members || [];
-      if ($('club-detail-meta')) $('club-detail-meta').textContent = `${members.length} Üye · ${clubObj.category || 'Genel'}`;
+      if ($('club-detail-meta')) $('club-detail-meta').textContent = `${members.length} Üye`;
 
       // Kulüp Desteleri
       const decksBox = $('club-decks-container');
       if (decksBox) {
         const decks = clubObj.decks || [];
         if (decks.length === 0) {
-          decksBox.innerHTML = '<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">Bu kulübe ait henüz deste paylaşılmamış.</div>';
+          decksBox.innerHTML = '<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">Bu kulübe ait henüz deste paylaşılmamış. Yukarıdaki "+ Kulüp Destesi Ekle" butonuyla deste ekleyebilirsiniz.</div>';
         } else {
           let html = '';
           decks.forEach(d => {
@@ -937,24 +1069,16 @@
     // =========================================================================
     // 1v1 ZAMANA KARŞI DÜELLO MOTORU
     // =========================================================================
-    async start1v1MatchAsHost(deckId) {
-      const decks = await this.getLocalDecksSafe();
-      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
-      if (!deck) throw new Error('Seçilen deste bulunamadı.');
+    async start1v1MatchAsHost(deckSelection) {
+      const resolved = await this.getDeckWithCardsBySelection(deckSelection);
+      if (!resolved.words || resolved.words.length < 4) {
+        throw new Error('1v1 kapışma için seçilen destede en az 4 kelime olmalıdır.');
+      }
 
-      const cards = await this.getLocalCardsSafe(deck.id);
-      if (cards.length < 4) throw new Error('1v1 kapışma için destede en az 4 kelime olmalıdır.');
-
-      const words = cards.map(c => ({
-        lemma: c.germanWord || c.front || '',
-        contextMeaning: c.meaningsTr || c.back || '',
-        pos: c.partOfSpeech || c.pos || 'NOUN',
-        sourceSentence: c.example || ''
-      }));
-
+      const words = resolved.words;
       const prof = this.getActiveProfile();
       let pin = 'VS-' + Math.floor(1000 + Math.random() * 9000);
-      const deckTitle = deck.name || deck.title || 'Deste';
+      const deckTitle = resolved.title || 'Deste';
 
       try {
         const res = await this.apiCall('multiplayer/room/create', {
@@ -974,7 +1098,7 @@
 
     async join1v1Match(pin) {
       const cleanPin = (pin || '').trim().toUpperCase();
-      if (!cleanPin) throw new Error('Lütfen geçerli bir davet kodu girin.');
+      if (!cleanPin) throw new Error('Lütfen geçerli bir davet kodu girin (Örn: VS-1234).');
 
       let words = [];
       let deckTitle = 'Zamana Karşı Deste';
@@ -989,15 +1113,8 @@
           words = res.room.words || [];
           deckTitle = res.room.deckTitle || deckTitle;
         }
-      } catch (_) {
-        // Fallback kelimeler
-        const allCards = await this.getLocalCardsSafe();
-        words = allCards.slice(0, 15).map(c => ({
-          lemma: c.germanWord || c.front || '',
-          contextMeaning: c.meaningsTr || c.back || '',
-          pos: c.partOfSpeech || c.pos || 'NOUN',
-          sourceSentence: c.example || ''
-        }));
+      } catch (e) {
+        throw new Error(e.message || 'Oda bulunamadı veya süresi doldu.');
       }
 
       if (words.length < 4) throw new Error('Maç verisine ulaşılamadı.');
@@ -1134,24 +1251,16 @@
     // =========================================================================
     // KAHOOT CANLI GRUP OYUNU MOTORU
     // =========================================================================
-    async createKahootRoom(deckId, duration = 15, count = 10) {
-      const decks = await this.getLocalDecksSafe();
-      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
-      if (!deck) throw new Error('Deste bulunamadı.');
+    async createKahootRoom(deckSelection, duration = 15, count = 10) {
+      const resolved = await this.getDeckWithCardsBySelection(deckSelection);
+      if (!resolved.words || resolved.words.length < 4) {
+        throw new Error('Kahoot için seçilen destede en az 4 kelime olmalıdır.');
+      }
 
-      const cards = await this.getLocalCardsSafe(deck.id);
-      if (cards.length < 4) throw new Error('Kahoot için destede en az 4 kelime olmalıdır.');
-
-      const words = cards.map(c => ({
-        lemma: c.germanWord || c.front || '',
-        contextMeaning: c.meaningsTr || c.back || '',
-        pos: c.partOfSpeech || c.pos || 'NOUN',
-        sourceSentence: c.example || ''
-      }));
-
+      const words = resolved.words;
       const prof = this.getActiveProfile();
       let pin = String(Math.floor(100000 + Math.random() * 900000));
-      const deckTitle = deck.name || deck.title || 'Deste';
+      const deckTitle = resolved.title || 'Deste';
 
       try {
         const res = await this.apiCall('multiplayer/room/create', {
@@ -1159,17 +1268,17 @@
           hostId: prof.id || 'host',
           hostName: prof.username || 'Host',
           deckTitle: deckTitle,
-          words: words.slice(0, count),
-          duration
+          words: words.slice(0, Number(count) || 10),
+          duration: Number(duration) || 15
         });
         if (res.ok && res.room) pin = res.room.pin;
       } catch (_) {}
 
-      this.initKahootView(pin, deckTitle, words.slice(0, count), duration, true);
+      this.initKahootView(pin, deckTitle, words.slice(0, Number(count) || 10), duration, true);
     }
 
     async joinKahootRoom(pin) {
-      const cleanPin = (pin || '').trim();
+      const cleanPin = (pin || '').trim().toUpperCase();
       if (!cleanPin) throw new Error('Lütfen 6 haneli oda PIN kodunu girin.');
 
       let words = [];
@@ -1187,13 +1296,8 @@
           deckTitle = res.room.deckTitle || deckTitle;
           duration = res.room.questionDurationSec || 15;
         }
-      } catch (_) {
-        const allCards = await this.getLocalCardsSafe();
-        words = allCards.slice(0, 10).map(c => ({
-          lemma: c.germanWord || c.front || '',
-          contextMeaning: c.meaningsTr || c.back || '',
-          pos: c.partOfSpeech || c.pos || 'NOUN'
-        }));
+      } catch (e) {
+        throw new Error(e.message || 'Oda bulunamadı veya süresi doldu.');
       }
 
       if (words.length < 4) throw new Error('Oda bulunamadı veya kelime verisi eksik.');
@@ -1382,38 +1486,37 @@
     // =========================================================================
     // ORTAK DESTE DÜZENLEME (İŞBİRLİKÇİ ÇALIŞMA)
     // =========================================================================
-    async initCollabSession(deckId) {
-      const decks = await this.getLocalDecksSafe();
-      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
-      if (!deck) throw new Error('Deste bulunamadı.');
-
-      const cards = await this.getLocalCardsSafe(deck.id);
+    async initCollabSession(deckSelection) {
+      const resolved = await this.getDeckWithCardsBySelection(deckSelection);
       const code = 'COL-' + Math.floor(1000 + Math.random() * 9000);
       const prof = this.getActiveProfile();
-      const deckTitle = deck.name || deck.title || 'Ortak Deste';
+      const deckTitle = resolved.title || 'Ortak Deste';
 
       const collabData = {
         code,
         title: deckTitle,
-        cards: cards.map(c => ({
-          front: c.germanWord || c.front || '',
-          back: c.meaningsTr || c.back || '',
-          pos: c.partOfSpeech || c.pos || 'NOUN',
-          example: c.example || ''
+        cards: (resolved.words || []).map(c => ({
+          front: c.lemma || c.front || '',
+          back: c.contextMeaning || c.back || '',
+          pos: c.pos || 'NOUN',
+          example: c.sourceSentence || c.example || ''
         })),
-        contributors: [prof.username]
+        contributors: [prof.username || 'Kurucu']
       };
 
       try {
-        await this.apiCall('decks/collaborate/sync', { code, action: 'init', title: deckTitle, cards: collabData.cards, author: prof.username });
+        await this.apiCall('decks/collaborate/sync', { code, action: 'init', title: deckTitle, cards: collabData.cards, author: prof.username || 'Kurucu' });
       } catch (_) {}
 
       this.openCollabWorkspace(collabData);
+      if (window.wmApp && window.wmApp.showToast) {
+        window.wmApp.showToast(`İşbirliği oturumu başlatıldı! Kod: ${code}`);
+      }
     }
 
     async joinCollabSession(code) {
       const cleanCode = (code || '').trim().toUpperCase();
-      if (!cleanCode) throw new Error('Lütfen işbirliği kodunu girin.');
+      if (!cleanCode) throw new Error('Lütfen işbirliği kodunu girin (Örn: COL-1234).');
 
       const prof = this.getActiveProfile();
       let collabData = null;
@@ -1421,18 +1524,18 @@
       try {
         const res = await this.apiCall('decks/collaborate/sync', { code: cleanCode, action: 'get', author: prof.username });
         if (res.ok && res.collab) collabData = res.collab;
-      } catch (_) {}
+      } catch (e) {
+        throw new Error(e.message || 'Bu koda ait ortak deste bulunamadı.');
+      }
 
       if (!collabData) {
-        collabData = {
-          code: cleanCode,
-          title: 'Ortak Deste',
-          cards: [],
-          contributors: [prof.username]
-        };
+        throw new Error('Bu koda ait aktif ortak deste bulunamadı.');
       }
 
       this.openCollabWorkspace(collabData);
+      if (window.wmApp && window.wmApp.showToast) {
+        window.wmApp.showToast(`"${collabData.title}" ortak destesine bağlandınız.`);
+      }
     }
 
     openCollabWorkspace(collabObj) {
@@ -1446,6 +1549,7 @@
 
       this.renderCollabCardsList();
       box.classList.remove('hidden');
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     renderCollabCardsList() {
@@ -1454,29 +1558,52 @@
 
       const cards = this.activeCollabSession.cards || [];
       if (cards.length === 0) {
-        list.innerHTML = '<div style="font-size:0.8rem; color:var(--text-muted); padding:8px; text-align:center;">Henüz kart eklenmemiş. Yukarıdaki butondan ekleyin.</div>';
+        list.innerHTML = '<div style="font-size:0.8rem; color:var(--text-muted); padding:8px; text-align:center;">Henüz kart eklenmemiş. "+ Birlikte Kart Ekle" butonuyla kart ekleyebilirsiniz.</div>';
         return;
       }
 
       let html = '';
       cards.forEach((c, idx) => {
         html += `
-          <div style="background:var(--bg-card); padding:8px 12px; border-radius:8px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <span style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">${c.front}</span>
+          <div style="background:var(--bg-card); padding:8px 12px; border-radius:8px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="flex:1;">
+              <span style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">${c.front || c.lemma || ''}</span>
               <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">(${c.pos || 'Nomen'})</span>
+              <div style="font-size:0.82rem; color:var(--text-secondary);">${c.back || c.contextMeaning || ''}</div>
             </div>
-            <div style="font-size:0.84rem; color:var(--text-secondary);">${c.back}</div>
+            <button type="button" class="prof-mini-btn btn-remove-collab-card" data-card-idx="${idx}" style="color:#EF4444; border-color:rgba(239,68,68,0.3);">Sil</button>
           </div>
         `;
       });
       list.innerHTML = html;
+
+      list.querySelectorAll('.btn-remove-collab-card').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const idx = Number(e.currentTarget.getAttribute('data-card-idx'));
+          await this.removeCardFromActiveCollab(idx);
+        });
+      });
+    }
+
+    async removeCardFromActiveCollab(cardIndex) {
+      if (!this.activeCollabSession || !Array.isArray(this.activeCollabSession.cards)) return;
+      this.activeCollabSession.cards.splice(cardIndex, 1);
+      try {
+        await this.apiCall('decks/collaborate/sync', {
+          code: this.activeCollabSession.code,
+          action: 'remove_card',
+          cardIndex,
+          author: this.getActiveProfile().username
+        });
+      } catch (_) {}
+      this.renderCollabCardsList();
     }
 
     async addCardToActiveCollab(front, back, pos, example) {
       if (!this.activeCollabSession) return;
       const card = { front, back, pos, example };
-      this.activeCollabSession.cards.push(card);
+      if (!Array.isArray(this.activeCollabSession.cards)) this.activeCollabSession.cards = [];
+      this.activeCollabSession.cards.unshift(card);
 
       const prof = this.getActiveProfile();
       try {
@@ -1492,7 +1619,7 @@
     }
 
     // =========================================================================
-    // ARKADAŞLIK & LİDERLİK TABLOSU
+    // ARKADAŞLIK, DESTE GÖNDERME & LİDERLİK TABLOSU
     // =========================================================================
     async searchUser(query) {
       if (!this.isCloudConnected()) return [];
@@ -1543,10 +1670,122 @@
     }
 
     async updateDeckPrivacy(newPrivacy) {
-      if (!this.isCloudConnected()) return;
+      const prof = this.getActiveProfile();
+      prof.deck_privacy = newPrivacy;
+      if (!this.isCloudConnected()) {
+        localStorage.setItem(this.localProfileKey, JSON.stringify(prof));
+        return;
+      }
       await this.apiCall('profile/update', { userId: this.user.id, deckPrivacy: newPrivacy });
       this.profile.deck_privacy = newPrivacy;
       localStorage.setItem(this.profileKey, JSON.stringify(this.profile));
+      await this.autoSyncDecksToCloud();
+    }
+
+    async openSendDeckToFriendModal(friendObj) {
+      if (!friendObj) return;
+      this.sendingDeckTargetFriend = friendObj;
+      await this.populateDeckSelects();
+      if ($('send-deck-friend-target-name')) {
+        $('send-deck-friend-target-name').textContent = `Alıcı: ${friendObj.username} (${friendObj.friend_code || ''})`;
+      }
+      $('modal-send-deck-friend')?.classList.remove('hidden');
+    }
+
+    async sendDeckToFriend(friendObj, deckSelection) {
+      if (!this.isCloudConnected()) throw new Error('Arkadaşınıza deste göndermek için lütfen giriş yapın.');
+      const resolved = await this.getDeckWithCardsBySelection(deckSelection);
+      if (!resolved.words || resolved.words.length === 0) {
+        throw new Error('Seçilen destede kelime bulunmuyor.');
+      }
+
+      const prof = this.getActiveProfile();
+      await this.apiCall('decks/inbox/send', {
+        fromUserId: this.user.id,
+        fromUsername: prof.username || 'Arkadaşın',
+        toUserId: friendObj.id,
+        deckTitle: resolved.title,
+        words: resolved.words
+      });
+      return resolved.title;
+    }
+
+    async renderIncomingDeckGifts() {
+      const box = $('social-incoming-decks-box');
+      if (!box) return;
+
+      if (!this.isCloudConnected()) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      let gifts = [];
+      try {
+        const res = await this.apiCall('decks/inbox/get', { userId: this.user.id });
+        gifts = Array.isArray(res.gifts) ? res.gifts : [];
+      } catch (_) {}
+
+      if (gifts.length === 0) {
+        box.classList.add('hidden');
+        return;
+      }
+
+      box.classList.remove('hidden');
+      let html = `<div class="section-subheading" style="margin-bottom:8px; color:var(--brand-blue-hover);">Gelen Deste Paylaşımları (${gifts.length})</div>`;
+      gifts.forEach(g => {
+        const count = g.wordCount || (Array.isArray(g.words) ? g.words.length : 0);
+        html += `
+          <div class="pending-req-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap;">
+            <div style="flex:1; min-width:180px;">
+              <div style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">
+                <span style="color:var(--brand-blue-hover);">${g.fromUsername}</span> sana bir deste gönderdi
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
+                <strong>${g.deckTitle}</strong> · ${count} Kelime
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn-primary-compact btn-accept-deck-gift" data-gift-id="${g.id}" style="padding:5px 10px; font-size:0.76rem; background:#10B981; border-color:#10B981;">Desteyi Ekle</button>
+              <button type="button" class="btn-primary-compact btn-ignore-deck-gift" data-gift-id="${g.id}" style="padding:5px 10px; font-size:0.76rem; background:transparent; color:var(--text-muted); border:1px solid var(--border-subtle);">Görmezden Gel</button>
+            </div>
+          </div>
+        `;
+      });
+      box.innerHTML = html;
+
+      box.querySelectorAll('.btn-accept-deck-gift').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const gid = e.currentTarget.getAttribute('data-gift-id');
+          const giftObj = gifts.find(x => x.id === gid);
+          if (!giftObj) return;
+
+          e.currentTarget.disabled = true;
+          e.currentTarget.textContent = 'Ekleniyor...';
+          try {
+            await this.importDeckToLocal({ title: giftObj.deckTitle, words: giftObj.words });
+            await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+            if (window.wmApp && window.wmApp.showToast) {
+              window.wmApp.showToast(`"${giftObj.deckTitle}" destesi kütüphanenize eklendi.`);
+            }
+            await this.renderIncomingDeckGifts();
+          } catch (err) {
+            alert('Hata: ' + err.message);
+            e.currentTarget.disabled = false;
+            e.currentTarget.textContent = 'Desteyi Ekle';
+          }
+        });
+      });
+
+      box.querySelectorAll('.btn-ignore-deck-gift').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const gid = e.currentTarget.getAttribute('data-gift-id');
+          e.currentTarget.disabled = true;
+          try {
+            await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+            await this.renderIncomingDeckGifts();
+          } catch (_) {}
+        });
+      });
     }
 
     async renderFriendsLeaderboard() {
@@ -1577,8 +1816,9 @@
                 <span class="lb-username">${friend.username}</span>
                 <span class="lb-code">${friend.friend_code}</span>
               </div>
-              <div class="lb-meta-row">
+              <div class="lb-meta-row" style="display:flex; align-items:center; gap:8px; margin-top:4px;">
                 <span class="lb-streak">${friend.streak_days || 0} Gün Seri</span>
+                <button type="button" class="prof-mini-btn btn-send-deck-friend-row" data-friend-id="${friend.id}" style="padding:2px 8px; font-size:0.72rem; color:#10B981; border-color:rgba(16,185,129,0.4);">Deste Gönder</button>
               </div>
             </div>
             <div class="lb-tier-col">
@@ -1589,6 +1829,15 @@
         `;
       });
       container.innerHTML = html;
+
+      container.querySelectorAll('.btn-send-deck-friend-row').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fid = btn.getAttribute('data-friend-id');
+          const friendObj = board.find(f => f.id === fid);
+          if (friendObj) this.openSendDeckToFriendModal(friendObj);
+        });
+      });
 
       container.querySelectorAll('.leaderboard-item').forEach(el => {
         el.addEventListener('click', () => {
@@ -1795,6 +2044,7 @@
         this.user = data.session.user;
         this.profile = data.profile;
         this.updateUI();
+        this.autoSyncDecksToCloud().catch(() => {});
         try { await this.refreshProfileView(); } catch (_) {}
         try { await this.refreshSocialView(); } catch (_) {}
         return true;
@@ -1813,6 +2063,7 @@
         this.user = data.session.user;
         this.profile = data.profile;
         this.updateUI();
+        this.autoSyncDecksToCloud().catch(() => {});
         try { await this.refreshProfileView(); } catch (_) {}
         try { await this.refreshSocialView(); } catch (_) {}
         return data;
@@ -1836,20 +2087,69 @@
 
     async refreshSocialView() {
       this.updateUI();
-      await this.renderFriendsLeaderboard();
+      await this.populateDeckSelects();
       await this.renderPendingRequests();
+      await this.renderIncomingDeckGifts();
+      await this.renderFriendsLeaderboard();
       await this.renderPublicDecks();
       await this.renderClubs();
-      await this.populateDeckSelects();
     }
 
     async populateDeckSelects() {
       const decks = await this.getLocalDecksSafe();
-      const opts = decks.map(d => `<option value="${d.id}">${d.name || d.title || 'Deste'}</option>`).join('');
+      const packs = Array.isArray(window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : [];
 
-      ['arena-1v1-deck-select', 'arena-kahoot-deck-select', 'select-collab-deck', 'select-publish-target-deck'].forEach(id => {
+      let defaultVal = null;
+      const nonEmptyLocal = decks.find(d => (d.cardCount || 0) > 0);
+      if (nonEmptyLocal) {
+        defaultVal = String(nonEmptyLocal.id);
+      } else if (packs.length > 0) {
+        defaultVal = 'pack:' + packs[0].code;
+      } else if (decks.length > 0) {
+        defaultVal = String(decks[0].id);
+      }
+
+      let html = '';
+      if (decks.length > 0) {
+        html += `<optgroup label="Benim Destelerim">`;
+        for (const d of decks) {
+          const count = d.cardCount || 0;
+          const label = d.name || d.title || 'Genel Deste';
+          const sel = String(d.id) === defaultVal ? ' selected' : '';
+          html += `<option value="${d.id}"${sel}>${label} (${count} kelime)</option>`;
+        }
+        html += `</optgroup>`;
+      }
+
+      if (packs.length > 0) {
+        html += `<optgroup label="Hazır Seviye Desteleri (Küratörlü)">`;
+        for (const p of packs) {
+          const val = 'pack:' + p.code;
+          const count = Array.isArray(p.cards) ? p.cards.length : 0;
+          const sel = val === defaultVal ? ' selected' : '';
+          html += `<option value="${val}"${sel}>${p.name} (${count} kelime)</option>`;
+        }
+        html += `</optgroup>`;
+      }
+
+      [
+        'arena-1v1-deck-select',
+        'arena-kahoot-deck-select',
+        'select-collab-deck',
+        'select-publish-target-deck',
+        'select-club-target-deck',
+        'select-send-friend-deck'
+      ].forEach(id => {
         const el = $(id);
-        if (el) el.innerHTML = opts;
+        if (el) {
+          const prevVal = el.value;
+          el.innerHTML = html;
+          if (prevVal && Array.from(el.options).some(o => o.value === prevVal && !o.textContent.includes('(0 kelime)'))) {
+            el.value = prevVal;
+          } else if (defaultVal) {
+            el.value = defaultVal;
+          }
+        }
       });
     }
 
@@ -1869,8 +2169,9 @@
           if (targetEl) targetEl.classList.remove('hidden');
 
           if (targetId === 'pane-social-friends') {
-            this.renderFriendsLeaderboard();
             this.renderPendingRequests();
+            this.renderIncomingDeckGifts();
+            this.renderFriendsLeaderboard();
           } else if (targetId === 'pane-social-public-decks') {
             this.renderPublicDecks();
           } else if (targetId === 'pane-social-clubs') {
@@ -1927,7 +2228,7 @@
       // 6. Deste Gizliliği
       $('profile-deck-privacy-select')?.addEventListener('change', async (e) => {
         await this.updateDeckPrivacy(e.target.value);
-        if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste gizliliği güncellendi.');
+        if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste gizliliği güncellendi ve bulutla eşitlendi.');
       });
 
       // 7. Tüm Desteleri Buluta Senkronize Et Butonu
@@ -1949,6 +2250,7 @@
       // 8. Sosyal Sekme Senkronizasyon Tetikleyicisi
       $('btn-social-sync-trigger')?.addEventListener('click', async () => {
         if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Sosyal veriler güncelleniyor...');
+        await this.autoSyncDecksToCloud();
         await this.refreshSocialView();
       });
 
@@ -1958,8 +2260,8 @@
 
       $('btn-submit-publish-deck')?.addEventListener('click', async () => {
         const select = $('select-publish-target-deck');
-        const vis = $('select-publish-visibility')?.value;
-        const desc = $('input-publish-desc')?.value;
+        const vis = $('select-publish-visibility')?.value || 'public';
+        const desc = $('input-publish-desc')?.value?.trim() || '';
         const deckId = select ? select.value : null;
 
         if (!deckId) {
@@ -1974,6 +2276,7 @@
         try {
           await this.syncLocalDeckToCloud(deckId, vis === 'public', desc);
           $('modal-publish-deck')?.classList.add('hidden');
+          if ($('input-publish-desc')) $('input-publish-desc').value = '';
           if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste başarıyla paylaşıldı!');
           await this.renderPublicDecks();
         } catch (err) {
@@ -2010,19 +2313,25 @@
 
       $('btn-submit-create-club')?.addEventListener('click', async () => {
         const name = $('input-club-name')?.value.trim();
-        const cat = $('select-club-category')?.value;
         const desc = $('input-club-desc')?.value.trim();
         if (!name) {
           alert('Lütfen bir kulüp adı girin.');
           return;
         }
+        const btn = $('btn-submit-create-club');
+        if (btn) btn.disabled = true;
         try {
-          const club = await this.createClub(name, cat, desc);
+          const club = await this.createClub(name, desc);
           $('modal-create-club')?.classList.add('hidden');
+          if ($('input-club-name')) $('input-club-name').value = '';
+          if ($('input-club-desc')) $('input-club-desc').value = '';
           if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`Kulüp kuruldu! Kod: ${club.code}`);
           await this.renderClubs();
+          this.openClubDetailModal(club);
         } catch (err) {
           alert(err.message);
+        } finally {
+          if (btn) btn.disabled = false;
         }
       });
 
@@ -2035,8 +2344,10 @@
         try {
           const club = await this.joinClubByCode(code);
           $('modal-join-club')?.classList.add('hidden');
+          if ($('input-join-club-code')) $('input-join-club-code').value = '';
           if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`"${club.name}" kulübüne katıldınız!`);
           await this.renderClubs();
+          this.openClubDetailModal(club);
         } catch (err) {
           alert(err.message);
         }
@@ -2044,47 +2355,116 @@
 
       $('btn-close-club-detail')?.addEventListener('click', () => $('modal-club-detail')?.classList.add('hidden'));
 
-      // Kulübe Kendi Desteni Ekleme
+      // Kulübe Deste Ekleme Modalı Aç / Kapat & Onayla
       $('btn-add-deck-to-club')?.addEventListener('click', async () => {
         if (!this.viewingClub) return;
-        const decks = await this.getLocalDecksSafe();
-        if (decks.length === 0) {
-          alert('Henüz desteniz yok.');
+        await this.populateDeckSelects();
+        $('modal-add-club-deck')?.classList.remove('hidden');
+      });
+
+      $('btn-close-add-club-deck')?.addEventListener('click', () => {
+        $('modal-add-club-deck')?.classList.add('hidden');
+      });
+
+      $('btn-confirm-add-club-deck')?.addEventListener('click', async () => {
+        if (!this.viewingClub) return;
+        const deckVal = $('select-club-target-deck')?.value;
+        if (!deckVal) {
+          alert('Lütfen bir deste seçin.');
           return;
         }
-        const title = prompt('Kulübe eklenecek destenin adı:\n' + decks.map(d => d.name || d.title).join('\n'));
-        if (!title) return;
-        const selected = decks.find(d => (d.name || d.title).toLowerCase() === title.trim().toLowerCase());
-        if (!selected) {
-          alert('Deste bulunamadı.');
-          return;
-        }
-        const cards = await this.getLocalCardsSafe(selected.id);
-        const words = cards.map(c => ({
-          lemma: c.germanWord || c.front || '',
-          contextMeaning: c.meaningsTr || c.back || '',
-          pos: c.partOfSpeech || c.pos || 'NOUN'
-        }));
+        const btn = $('btn-confirm-add-club-deck');
+        btn.disabled = true;
+        btn.textContent = 'Ekleniyor...';
         try {
-          const deckTitle = selected.name || selected.title;
-          await this.apiCall('clubs/decks/add', {
+          const resolved = await this.getDeckWithCardsBySelection(deckVal);
+          if (!resolved.words || resolved.words.length === 0) {
+            throw new Error('Seçilen destede henüz kelime bulunmuyor.');
+          }
+          const res = await this.apiCall('clubs/decks/add', {
             clubId: this.viewingClub.id,
-            deck: { id: selected.id, title: deckTitle, words },
+            deck: { id: 'cdeck_' + Date.now(), title: resolved.title, words: resolved.words },
             username: this.getActiveProfile().username
           });
-          if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`"${deckTitle}" kulüp havuzuna eklendi.`);
+          if (res.club) {
+            this.viewingClub = res.club;
+          } else if (res.deck) {
+            if (!Array.isArray(this.viewingClub.decks)) this.viewingClub.decks = [];
+            this.viewingClub.decks.push(res.deck);
+          }
+          $('modal-add-club-deck')?.classList.add('hidden');
+          if (window.wmApp && window.wmApp.showToast) {
+            window.wmApp.showToast(`"${resolved.title}" kulüp havuzuna eklendi.`);
+          }
+          this.openClubDetailModal(this.viewingClub);
           await this.renderClubs();
-          $('modal-club-detail')?.classList.add('hidden');
         } catch (err) {
-          alert(err.message);
+          alert('Hata: ' + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Kulüp Havuzuna Ekle';
         }
       });
 
       // Kulüp Deste Kahoot Başlat
-      $('btn-start-club-match')?.addEventListener('click', () => {
+      $('btn-start-club-match')?.addEventListener('click', async () => {
         if (!this.viewingClub) return;
         $('modal-club-detail')?.classList.add('hidden');
-        $('arena-card-kahoot')?.click();
+        // Eğer kulüpte deste varsa ilk kulüp destesiyle doğrudan Kahoot başlat, yoksa Arena sekmesine geç
+        const clubDecks = this.viewingClub.decks || [];
+        if (clubDecks.length > 0 && Array.isArray(clubDecks[0].words) && clubDecks[0].words.length >= 4) {
+          const cd = clubDecks[0];
+          const prof = this.getActiveProfile();
+          let pin = String(Math.floor(100000 + Math.random() * 900000));
+          try {
+            const res = await this.apiCall('multiplayer/room/create', {
+              type: 'kahoot',
+              hostId: prof.id || 'host',
+              hostName: prof.username || 'Host',
+              deckTitle: cd.title,
+              words: cd.words.slice(0, 10),
+              duration: 15
+            });
+            if (res.ok && res.room) pin = res.room.pin;
+          } catch (_) {}
+          this.initKahootView(pin, cd.title, cd.words.slice(0, 10), 15, true);
+        } else {
+          const arenaTabBtn = document.querySelector('.social-subtab-btn[data-target-pane="pane-social-arena"]');
+          arenaTabBtn?.click();
+          $('arena-card-kahoot')?.click();
+        }
+      });
+
+      // Arkadaşa Doğrudan Deste Gönderme Modalı Olayları
+      $('btn-send-deck-from-detail')?.addEventListener('click', () => {
+        if (!this.viewingFriendProfile) return;
+        this.openSendDeckToFriendModal(this.viewingFriendProfile);
+      });
+
+      $('btn-close-send-deck-friend')?.addEventListener('click', () => {
+        $('modal-send-deck-friend')?.classList.add('hidden');
+      });
+
+      $('btn-confirm-send-friend-deck')?.addEventListener('click', async () => {
+        if (!this.sendingDeckTargetFriend) return;
+        const deckVal = $('select-send-friend-deck')?.value;
+        if (!deckVal) return;
+
+        const btn = $('btn-confirm-send-friend-deck');
+        btn.disabled = true;
+        btn.textContent = 'Gönderiliyor...';
+        try {
+          const title = await this.sendDeckToFriend(this.sendingDeckTargetFriend, deckVal);
+          $('modal-send-deck-friend')?.classList.add('hidden');
+          if (window.wmApp && window.wmApp.showToast) {
+            window.wmApp.showToast(`"${title}" destesi ${this.sendingDeckTargetFriend.username} kullanıcısına gönderildi!`);
+          }
+        } catch (err) {
+          alert('Gönderim hatası: ' + err.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Desteyi Gönder';
+        }
       });
 
       // 12. Arena Mod Geçişi (1v1 vs Kahoot)
@@ -2189,11 +2569,25 @@
       // 13. Ortak Deste Çalışması Eylemleri
       $('btn-init-collab-session')?.addEventListener('click', async () => {
         const deckId = $('select-collab-deck')?.value;
-        if (!deckId) return;
+        if (!deckId) {
+          alert('Lütfen bir deste seçin.');
+          return;
+        }
         try {
           await this.initCollabSession(deckId);
         } catch (err) {
           alert(err.message);
+        }
+      });
+
+      $('btn-copy-collab-code')?.addEventListener('click', () => {
+        const code = this.activeCollabSession?.code || $('collab-active-code-badge')?.textContent;
+        if (code && navigator.clipboard) {
+          navigator.clipboard.writeText(code).then(() => {
+            if (window.wmApp && window.wmApp.showToast) {
+              window.wmApp.showToast(`İşbirliği kodu (${code}) panoya kopyalandı.`);
+            }
+          });
         }
       });
 

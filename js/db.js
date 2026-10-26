@@ -481,6 +481,29 @@ class WortMeisterDatabase {
 
 window.wmDB = new WortMeisterDatabase();
 
+// getAllDecks çıktısında hem name hem title alanını garanti et ve değişikliklerde otomatik bulut senkronizasyonunu tetikle
+const _origGetAllDecks = window.wmDB.getAllDecks.bind(window.wmDB);
+window.wmDB.getAllDecks = async () => {
+  const list = await _origGetAllDecks();
+  return list.map((d) => {
+    const label = d.name || d.title || 'Genel Deste';
+    return { ...d, name: label, title: label };
+  });
+};
+
+['createDeck', 'deleteDeck', 'updateDeck', 'addCard', 'updateCard', 'deleteCard'].forEach((fn) => {
+  if (typeof window.wmDB[fn] === 'function') {
+    const orig = window.wmDB[fn].bind(window.wmDB);
+    window.wmDB[fn] = async (...args) => {
+      const res = await orig(...args);
+      if (window.wmSocial && typeof window.wmSocial.scheduleAutoSync === 'function') {
+        window.wmSocial.scheduleAutoSync();
+      }
+      return res;
+    };
+  }
+});
+
 // Geriye dönük uyumluluk ve harici/sosyal modül DAO adaptörleri (decks & cards)
 window.wmDB.decks = {
   getAll: async () => window.wmDB.getAllDecks(),
@@ -500,10 +523,10 @@ window.wmDB.cards = {
   add: async (c) => {
     return window.wmDB.addCard({
       deckId: c.deckId,
-      germanWord: c.lemma || c.front || '',
-      meaningsTr: c.contextMeaning || c.back || '',
-      partOfSpeech: c.pos || 'OTHER',
-      example: c.sourceSentence || c.example || ''
+      germanWord: c.lemma || c.front || c.germanWord || '',
+      meaningsTr: c.contextMeaning || c.back || c.meaningsTr || '',
+      partOfSpeech: c.pos || c.partOfSpeech || 'OTHER',
+      exampleSentence: c.sourceSentence || c.example || c.exampleSentence || ''
     });
   }
 };

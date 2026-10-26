@@ -119,6 +119,11 @@ class WortCoachApp {
     });
   }
 
+  async refreshDecksView() {
+    await this.renderDecksTab();
+    await this.refreshHomeDashboard();
+  }
+
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
       if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -126,7 +131,7 @@ class WortCoachApp {
           regs.forEach((r) => r.update());
         });
       }
-      navigator.serviceWorker.register('./sw.js?v=3.6.0').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=3.6.1').then((reg) => reg.update()).catch(() => {});
     }
   }
 

@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.6.0" />
-  <link rel="stylesheet" href="css/components.css?v=3.6.0" />
+  <link rel="stylesheet" href="css/app.css?v=3.6.1" />
+  <link rel="stylesheet" href="css/components.css?v=3.6.1" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1887,6 +1887,9 @@
           <!-- Gelen Arkadaşlık İstekleri -->
           <div id="social-pending-requests-box" class="pending-requests-card hidden" style="margin-bottom:14px;"></div>
 
+          <!-- Gelen Deste Paylaşımları (Arkadaştan Gelen Desteler) -->
+          <div id="social-incoming-decks-box" class="pending-requests-card hidden" style="margin-bottom:14px; border-color:var(--brand-blue);"></div>
+
           <!-- Arkadaşlarım Liderlik Tablosu (ELO & Lig) -->
           <div class="leaderboard-section">
             <div class="section-subheading" style="display:flex; justify-content:space-between; align-items:center;">
@@ -2034,14 +2037,15 @@
 
           <!-- Aktif Ortak Çalışma Alanı -->
           <div id="collab-active-workspace" class="social-card-box hidden" style="border-color:var(--brand-blue);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                 <span id="collab-active-title" style="font-weight:800; font-size:1rem; color:var(--text-primary);">Ortak Deste</span>
-                <span id="collab-active-code-badge" class="prof-code-badge" style="margin-left:6px;">COL-0000</span>
+                <span id="collab-active-code-badge" class="prof-code-badge">COL-0000</span>
+                <button type="button" id="btn-copy-collab-code" class="prof-mini-btn">Kodu Kopyala</button>
               </div>
               <button type="button" id="btn-add-card-to-collab" class="btn-primary-compact" style="padding:5px 10px; font-size:0.78rem;">+ Birlikte Kart Ekle</button>
             </div>
-            <div id="collab-contributors-row" style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">Katkıda Bulunanlar: Furkan</div>
+            <div id="collab-contributors-row" style="font-size:0.72rem; color:var(--text-muted); margin-bottom:10px;">Katkıda Bulunanlar: -</div>
             <div id="collab-cards-list" style="display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto;"></div>
             <div style="margin-top:10px;">
               <button type="button" id="btn-save-collab-to-local" class="btn-primary-compact" style="width:100%; background:#10B981; border-color:#10B981; font-weight:700;">Bu Desteyi Kendi Kütüphaneme Kaydet</button>
@@ -2072,20 +2076,20 @@
         <span class="nav-label">Kelimeler</span>
       </button>
 
-      <!-- 3. Ana Sayfa (Merkez Hub İkonu) -->
-      <button class="nav-item active" data-target="tab-home" aria-label="Ana Sayfa">
-        <div class="nav-pill">
-          <svg class="svg-icon"><use href="#nav-icon-home"></use></svg>
-        </div>
-        <span class="nav-label">Ana Sayfa</span>
-      </button>
-
-      <!-- 4. Çalış (Alıştırma & Koç İkonu) -->
+      <!-- 3. Çalış (Alıştırma & Koç İkonu) -->
       <button class="nav-item" data-target="tab-games" aria-label="Çalış">
         <div class="nav-pill">
           <svg class="svg-icon"><use href="#nav-icon-study"></use></svg>
         </div>
         <span class="nav-label">Çalış</span>
+      </button>
+
+      <!-- 4. Ana Sayfa (Merkez Hub İkonu) -->
+      <button class="nav-item active" data-target="tab-home" aria-label="Ana Sayfa">
+        <div class="nav-pill">
+          <svg class="svg-icon"><use href="#nav-icon-home"></use></svg>
+        </div>
+        <span class="nav-label">Ana Sayfa</span>
       </button>
 
       <!-- 5. Sosyal (Topluluk & Kulüpler İkonu) -->
@@ -2862,131 +2866,6 @@
   </div>
 
   
-  <!-- ====================================================================
-       MODAL: KULLANICI PROFİLİ, SOSYAL LİG, ZAMANLI İSTATİSTİKLER & AYARLAR
-       ==================================================================== -->
-  <div id="modal-profile-sheet" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="prof-title">
-    <div class="prof-modal-sheet">
-      <div class="prof-modal-header">
-        <div class="prof-header-title-group">
-          <div class="prof-modal-title" id="prof-title">Kullanıcı Profili &amp; Lig</div>
-          <div class="prof-modal-subtitle">ELO, Liderlik Sıralaması ve Pedagojik Analitik</div>
-        </div>
-        <button type="button" id="btn-close-profile-modal" class="prof-close-btn" aria-label="Kapat">
-          <svg class="svg-icon"><use href="#icon-close"></use></svg>
-        </button>
-      </div>
-
-      <!-- Kullanıcı Hero Kartı -->
-      <div class="prof-hero-card">
-        <div class="prof-hero-top">
-          <div>
-            <div class="prof-hero-name" id="prof-username-display">Yükleniyor...</div>
-            <div class="prof-hero-code-wrap">
-              <span id="prof-friend-code-display" class="prof-code-badge">WC#0000</span>
-              <button type="button" id="btn-copy-friend-code" class="prof-mini-btn" title="Kodu Kopyala">Kopyala</button>
-            </div>
-          </div>
-          <div class="prof-hero-tier-group">
-            <span id="prof-tier-badge" class="prof-tier-pill">Bronz</span>
-            <div class="prof-elo-number"><span id="prof-elo-display">1000</span> <small>ELO</small></div>
-            <div class="prof-streak-val" id="prof-streak-display">0 Gün</div>
-          </div>
-        </div>
-        <div class="prof-tier-progress-track">
-          <div id="prof-tier-progress-fill" class="prof-tier-progress-fill" style="width: 20%;"></div>
-        </div>
-        <div id="prof-tier-progress-text" class="prof-tier-subtext">Sonraki lige 200 ELO kaldı</div>
-      </div>
-
-      <!-- Alt Sekmeler: [İstatistikler | Arkadaşlar & Liderlik | Ayarlar] -->
-      <div class="profile-subtab-bar">
-        <button type="button" class="profile-subtab-btn active" data-target-pane="pane-prof-stats">İstatistikler</button>
-        <button type="button" class="profile-subtab-btn" data-target-pane="pane-prof-friends">Arkadaşlar &amp; Sıralama</button>
-        <button type="button" class="profile-subtab-btn" data-target-pane="pane-prof-settings">Ayarlar &amp; Bulut</button>
-      </div>
-
-      <!-- PANE 1: ZAMANA GÖRE FİLTRELENEBİLİR 4 ANA İSTATİSTİK -->
-      <div id="pane-prof-stats" class="profile-pane">
-        <div class="prof-filter-row">
-          <span class="prof-filter-title">Zaman Aralığı:</span>
-          <div class="prof-filter-segments">
-            <button type="button" class="prof-stat-filter-btn" data-range="1d">1 Gün</button>
-            <button type="button" class="prof-stat-filter-btn active" data-range="7d">1 Hafta</button>
-            <button type="button" class="prof-stat-filter-btn" data-range="30d">1 Ay</button>
-            <button type="button" class="prof-stat-filter-btn" data-range="365d">1 Yıl</button>
-            <button type="button" class="prof-stat-filter-btn" data-range="all">Tümü</button>
-          </div>
-        </div>
-
-        <div class="prof-stats-grid">
-          <!-- 1. Artikel Keskinliği (Genus) -->
-          <div class="prof-stat-card">
-            <div class="prof-stat-head">
-              <span class="prof-stat-label">Artikel Keskinliği (Genus)</span>
-              <span class="prof-stat-code">der / die / das</span>
-            </div>
-            <div class="prof-stat-value" id="stat-val-genus">%0</div>
-            <div class="prof-stat-footer" id="stat-sub-genus">0 soru cevaplandı</div>
-          </div>
-
-          <!-- 2. Bağlam Ustası (Kontext) -->
-          <div class="prof-stat-card">
-            <div class="prof-stat-head">
-              <span class="prof-stat-label">Bağlam Ustası (Kontext)</span>
-              <span class="prof-stat-code">Cloze Test</span>
-            </div>
-            <div class="prof-stat-value" id="stat-val-kontext">%0</div>
-            <div class="prof-stat-footer" id="stat-sub-kontext">0 boşluk tamamlandı</div>
-          </div>
-
-          <!-- 3. Çeviklik (Tempo) -->
-          <div class="prof-stat-card">
-            <div class="prof-stat-head">
-              <span class="prof-stat-label">Çeviklik (Tempo)</span>
-              <span class="prof-stat-code">Ortalama Süre</span>
-            </div>
-            <div class="prof-stat-value" id="stat-val-tempo">0.00 sn</div>
-            <div class="prof-stat-footer" id="stat-sub-tempo">0 yanıtın ortalaması</div>
-          </div>
-
-          <!-- 4. Hafıza Direnci (Ausdauer) -->
-          <div class="prof-stat-card">
-            <div class="prof-stat-head">
-              <span class="prof-stat-label">Hafıza Direnci (Ausdauer)</span>
-              <span class="prof-stat-code">SRS Hatırlama</span>
-            </div>
-            <div class="prof-stat-value" id="stat-val-ausdauer">%0</div>
-            <div class="prof-stat-footer" id="stat-sub-ausdauer">0 tekrar kartı</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PANE 2: ARKADAŞLAR & LİDERLİK TABLOSU (LEADERBOARD) -->
-      <div id="pane-prof-friends" class="profile-pane hidden">
-        <!-- Arkadaş Ekleme Arama Kutusu -->
-        <div class="prof-search-box">
-          <input type="text" id="user-search-input" class="form-control" placeholder="Kullanıcı adı veya WC#0000 kodu..." />
-          <button type="button" id="btn-search-user" class="btn-primary-compact">Ara</button>
-        </div>
-        <div id="user-search-results" class="search-results-list"></div>
-
-        <!-- Bekleyen İstekler -->
-        <div id="pending-requests-box" class="pending-requests-card hidden"></div>
-
-        <!-- Liderlik Tablosu -->
-        <div class="leaderboard-section">
-          <div class="section-subheading">Arkadaş Liderlik Tablosu (ELO)</div>
-          <div id="friends-leaderboard-list" class="leaderboard-list"></div>
-        </div>
-      </div>
-
-      <!-- PANE 3: AYARLAR & DESTE GİZLİLİĞİ & BULUT -->
-      <div id="pane-prof-settings" class="profile-pane hidden">
-      </div>
-    </div>
-  </div>
-
   <!-- ARKADAŞ PROFİL DETAY & DESTE İÇE AKTARMA ALT MODALI -->
   <div id="friend-detail-submodal" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="prof-modal-sheet" style="max-height:85vh;">
@@ -3024,7 +2903,7 @@
       </div>
 
       <!-- 4'lü Arkadaş Metrikleri -->
-      <div class="prof-stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom:16px;">
+      <div class="prof-stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom:14px;">
         <div class="prof-stat-card">
           <div class="prof-stat-label">Artikel (Genus)</div>
           <div class="prof-stat-value" id="fstat-genus">%0</div>
@@ -3041,6 +2920,10 @@
           <div class="prof-stat-label">Hafıza (Ausdauer)</div>
           <div class="prof-stat-value" id="fstat-ausdauer">%0</div>
         </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <button type="button" id="btn-send-deck-from-detail" class="btn-primary-compact" style="width:100%; padding:9px; font-weight:700; background:#10B981; border-color:#10B981;">Bu Arkadaşa Deste Gönder</button>
       </div>
 
       <!-- Paylaşılan Desteler & İçe Aktarma -->
@@ -3282,21 +3165,52 @@
         <input type="text" id="input-club-name" class="form-control" placeholder="Örn: Goethe B2 Çalışma Grubu" required maxlength="50" />
       </div>
       <div class="auth-input-group">
-        <label for="select-club-category">Seviye / Kategori</label>
-        <select id="select-club-category" class="dock-select" style="width:100%; padding:8px;">
-          <option value="A1-A2 Başlangıç">A1-A2 Başlangıç</option>
-          <option value="B1-B2 Orta Düzey" selected>B1-B2 Orta Düzey</option>
-          <option value="C1-C2 İleri Düzey">C1-C2 İleri Düzey</option>
-          <option value="Sınav Hazırlığı (Telc/Goethe)">Sınav Hazırlığı (Telc/Goethe)</option>
-          <option value="Tıp & Mesleki Almanca">Tıp &amp; Mesleki Almanca</option>
-        </select>
-      </div>
-      <div class="auth-input-group">
         <label for="input-club-desc">Kulüp Açıklaması</label>
         <textarea id="input-club-desc" class="form-control" rows="2" placeholder="Birlikte kelime desteleri paylaşacak ve yarışacağız..." maxlength="150"></textarea>
       </div>
       <button type="button" id="btn-submit-create-club" class="btn-coach-build-full" style="margin-top:10px;">
         <span>Kulübü Kur &amp; Davet Kodu Al</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: KULÜP HAVUZUNA DESTE EKLEME (modal-add-club-deck) -->
+  <div id="modal-add-club-deck" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:420px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div class="prof-modal-title">Kulübe Deste Ekle</div>
+        <button type="button" id="btn-close-add-club-deck" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="select-club-target-deck">Eklenecek Desteyi Seçin</label>
+        <select id="select-club-target-deck" class="form-control"></select>
+      </div>
+      <button type="button" id="btn-confirm-add-club-deck" class="btn-coach-build-full" style="margin-top:12px;">
+        <span>Kulüp Havuzuna Ekle</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: ARKADAŞA DESTE GÖNDERME (modal-send-deck-friend) -->
+  <div id="modal-send-deck-friend" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="prof-auth-box" style="max-width:420px;">
+      <div class="prof-modal-header" style="margin-bottom:12px;">
+        <div>
+          <div class="prof-modal-title">Arkadaşa Deste Gönder</div>
+          <div class="prof-modal-subtitle" id="send-deck-friend-target-name">Alıcı: Arkadaş</div>
+        </div>
+        <button type="button" id="btn-close-send-deck-friend" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <div class="auth-input-group">
+        <label for="select-send-friend-deck">Gönderilecek Desteyi Seçin</label>
+        <select id="select-send-friend-deck" class="form-control"></select>
+      </div>
+      <button type="button" id="btn-confirm-send-friend-deck" class="btn-coach-build-full" style="margin-top:12px; background:#10B981;">
+        <span>Desteyi Gönder</span>
       </button>
     </div>
   </div>
@@ -3576,24 +3490,24 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.6.0"></script>
-  <script src="js/db.js?v=3.6.0"></script>
-  <script src="js/verbHelper.js?v=3.6.0"></script>
-  <script src="js/grammarEnrichment.js?v=3.6.0"></script>
-  <script src="js/offlineDictionary.js?v=3.6.0"></script>
-  <script src="js/dictionary.js?v=3.6.0"></script>
-  <script src="js/curatedPacks.js?v=3.6.0"></script>
-  <script src="js/seeder.js?v=3.6.0"></script>
-  <script src="js/tts.js?v=3.6.0"></script>
-  <script src="js/pronunciation.js?v=3.6.0"></script>
-  <script src="js/translator.js?v=3.6.0"></script>
-  <script src="js/game.js?v=3.6.0"></script>
-  <script src="js/study.js?v=3.6.0"></script>
-  <script src="js/stats.js?v=3.6.0"></script>
-  <script src="js/coach.js?v=3.6.0"></script>
-  <script src="js/deckBuilder.js?v=3.6.0"></script>
-  <script src="js/social.js?v=3.6.0"></script>
-  <script src="js/app.js?v=3.6.0"></script>
+  <script src="js/config.js?v=3.6.1"></script>
+  <script src="js/db.js?v=3.6.1"></script>
+  <script src="js/verbHelper.js?v=3.6.1"></script>
+  <script src="js/grammarEnrichment.js?v=3.6.1"></script>
+  <script src="js/offlineDictionary.js?v=3.6.1"></script>
+  <script src="js/dictionary.js?v=3.6.1"></script>
+  <script src="js/curatedPacks.js?v=3.6.1"></script>
+  <script src="js/seeder.js?v=3.6.1"></script>
+  <script src="js/tts.js?v=3.6.1"></script>
+  <script src="js/pronunciation.js?v=3.6.1"></script>
+  <script src="js/translator.js?v=3.6.1"></script>
+  <script src="js/game.js?v=3.6.1"></script>
+  <script src="js/study.js?v=3.6.1"></script>
+  <script src="js/stats.js?v=3.6.1"></script>
+  <script src="js/coach.js?v=3.6.1"></script>
+  <script src="js/deckBuilder.js?v=3.6.1"></script>
+  <script src="js/social.js?v=3.6.1"></script>
+  <script src="js/app.js?v=3.6.1"></script>
 </body>
 </html>
 

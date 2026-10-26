@@ -652,34 +652,171 @@ async function handleDatabaseApi(path, body, env, c) {
       const currentUserId = clean(body.currentUserId, 40);
       if (!targetUserId) return json({ ok: true, decks: [] }, 200, c.headers);
 
-      // Kendi desteleri ise direkt ver
-      if (targetUserId === currentUserId) {
-        const dRes = await sbFetch(`/rest/v1/decks?owner_id=eq.${targetUserId}&select=id,title,words_json,created_at`);
-        const decks = await dRes.json().catch(() => []);
-        return json({ ok: true, decks: Array.isArray(decks) ? decks : [] }, 200, c.headers);
-      }
+      // Kendi desteleri değilse gizlilik kontrolü yap
+      if (targetUserId !== currentUserId) {
+        const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${targetUserId}&select=deck_privacy`);
+        const pList = await pRes.json().catch(() => []);
+        const privacy = (Array.isArray(pList) && pList[0]) ? pList[0].deck_privacy : 'friends';
 
-      // Hedef kullanıcının gizlilik ayarını kontrol et
-      const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${targetUserId}&select=deck_privacy`);
-      const pList = await pRes.json().catch(() => []);
-      const privacy = (Array.isArray(pList) && pList[0]) ? pList[0].deck_privacy : 'friends';
+        if (privacy === 'private') {
+          return json({ ok: true, decks: [], privacyNotice: 'Kullanıcı destelerini gizli tutuyor.' }, 200, c.headers);
+        }
 
-      if (privacy === 'private') {
-        return json({ ok: true, decks: [], privacyNotice: 'Kullanıcı destelerini gizli tutuyor.' }, 200, c.headers);
-      }
-
-      if (privacy === 'friends') {
-        // Arkadaşlık kontrolü
-        const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(and(requester_id.eq.${currentUserId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${currentUserId}))&select=id`);
-        const fList = await fRes.json().catch(() => []);
-        if (!Array.isArray(fList) || fList.length === 0) {
-          return json({ ok: true, decks: [], privacyNotice: 'Desteler yalnızca arkadaşlar tarafından görülebilir.' }, 200, c.headers);
+        if (privacy === 'friends') {
+          const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(and(requester_id.eq.${currentUserId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${currentUserId}))&select=id`);
+          const fList = await fRes.json().catch(() => []);
+          if (!Array.isArray(fList) || fList.length === 0) {
+            return json({ ok: true, decks: [], privacyNotice: 'Desteler yalnızca arkadaşlar tarafından görülebilir.' }, 200, c.headers);
+          }
         }
       }
 
       const dRes = await sbFetch(`/rest/v1/decks?owner_id=eq.${targetUserId}&select=id,title,words_json,created_at`);
-      const decks = await dRes.json().catch(() => []);
-      return json({ ok: true, decks: Array.isArray(decks) ? decks : [] }, 200, c.headers);
+      const dbDecks = await dRes.json().catch(() => []);
+      const mergedMap = new Map();
+
+      if (Array.isArray(dbDecks)) {
+        for (const d of dbDecks) {
+          if (d.title === 'Test Deste' || String(d.title || '').includes('?')) continue;
+          const w = Array.isArray(d.words_json) ? d.words_json : [];
+          if (w.length === 0) continue;
+          mergedMap.set((d.title || '').toLowerCase(), {
+            id: d.id,
+            title: d.title,
+            words_json: w,
+            created_at: d.created_at
+          });
+        }
+      }
+
+      if (env.LIMITS) {
+        try {
+          const kvDecksStr = await env.LIMITS.get(`userdecks:${targetUserId}`);
+          if (kvDecksStr) {
+            const kvDecks = JSON.parse(kvDecksStr);
+            if (Array.isArray(kvDecks)) {
+              for (const kd of kvDecks) {
+                const w = Array.isArray(kd.words_json || kd.words) ? (kd.words_json || kd.words) : [];
+                if (w.length === 0 || kd.title === 'Test Deste') continue;
+                const key = (kd.title || '').toLowerCase();
+                if (!mergedMap.has(key) || (mergedMap.get(key).words_json.length < w.length)) {
+                  mergedMap.set(key, {
+                    id: kd.id || 'kv_' + Date.now(),
+                    title: kd.title,
+                    words_json: w,
+                    created_at: kd.created_at || kd.createdAt || new Date().toISOString()
+                  });
+                }
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      return json({ ok: true, decks: Array.from(mergedMap.values()) }, 200, c.headers);
+    }
+
+    // 13b. Kullanıcının Tüm Destelerini Otomatik Buluta Senkronize Et
+    if (path === '/api/decks/sync_all') {
+      const ownerId = clean(body.ownerId, 40);
+      const authorUsername = clean(body.username, 40) || 'Kullanıcı';
+      const deckPrivacy = ['public', 'friends', 'private'].includes(body.deckPrivacy) ? body.deckPrivacy : null;
+      const incomingDecks = Array.isArray(body.decks) ? body.decks : [];
+      if (!ownerId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
+
+      // Profil gizliliğini kontrol et
+      let isPublicProfile = deckPrivacy === 'public';
+      if (!deckPrivacy) {
+        const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${ownerId}&select=deck_privacy,username`);
+        const pList = await pRes.json().catch(() => []);
+        if (Array.isArray(pList) && pList[0]) {
+          isPublicProfile = pList[0].deck_privacy === 'public';
+        }
+      }
+
+      // Mevcut veritabanı destelerini al
+      const exRes = await sbFetch(`/rest/v1/decks?owner_id=eq.${ownerId}&select=id,title`);
+      const exList = await exRes.json().catch(() => []);
+      const exMap = {};
+      if (Array.isArray(exList)) {
+        for (const ed of exList) {
+          if (ed.title === 'Test Deste' || String(ed.title || '').includes('?')) {
+            await sbFetch(`/rest/v1/decks?id=eq.${ed.id}`, { method: 'DELETE' });
+          } else {
+            exMap[(ed.title || '').toLowerCase()] = ed.id;
+          }
+        }
+      }
+
+      const syncedList = [];
+      for (const d of incomingDecks.slice(0, 25)) {
+        const title = clean(d.title || d.name, 80);
+        const words = Array.isArray(d.words) ? d.words : [];
+        if (!title || words.length === 0 || title === 'Test Deste' || title.includes('?')) continue;
+
+        const key = title.toLowerCase();
+        let deckId = exMap[key] || null;
+        if (deckId) {
+          await sbFetch(`/rest/v1/decks?id=eq.${deckId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ words_json: words, updated_at: new Date().toISOString() })
+          });
+        } else {
+          const cRes = await sbFetch('/rest/v1/decks', {
+            method: 'POST',
+            body: JSON.stringify({ owner_id: ownerId, title, words_json: words })
+          });
+          const cData = await cRes.json().catch(() => []);
+          if (Array.isArray(cData) && cData[0]) deckId = cData[0].id;
+        }
+
+        syncedList.push({
+          id: deckId || ('deck_' + ownerId.slice(0, 6) + '_' + key.replace(/\s+/g, '_')),
+          ownerId,
+          title,
+          description: clean(d.description || '', 200),
+          authorUsername,
+          isPublic: isPublicProfile,
+          words,
+          words_json: words,
+          wordCount: words.length,
+          createdAt: d.createdAt || new Date().toISOString()
+        });
+      }
+
+      if (env.LIMITS) {
+        await env.LIMITS.put(`userdecks:${ownerId}`, JSON.stringify(syncedList), { expirationTtl: 86400 * 60 });
+
+        // Herkese açık profilse public deste indeksini güncelle
+        try {
+          const idxStr = await env.LIMITS.get('index:pubdecks');
+          let pubIdx = idxStr ? JSON.parse(idxStr) : [];
+          if (!Array.isArray(pubIdx)) pubIdx = [];
+          pubIdx = pubIdx.filter(x => x.title !== 'Test Deste' && !String(x.title || '').includes('?'));
+
+          if (isPublicProfile) {
+            for (const sd of syncedList) {
+              const existingIdx = pubIdx.findIndex(p => p.ownerId === ownerId && (p.title || '').toLowerCase() === sd.title.toLowerCase());
+              const pubEntry = {
+                id: sd.id,
+                ownerId,
+                title: sd.title,
+                description: sd.description || '',
+                authorUsername,
+                isPublic: true,
+                words: sd.words,
+                wordCount: sd.wordCount,
+                createdAt: sd.createdAt
+              };
+              if (existingIdx >= 0) pubIdx[existingIdx] = pubEntry;
+              else pubIdx.unshift(pubEntry);
+            }
+          }
+          await env.LIMITS.put('index:pubdecks', JSON.stringify(pubIdx.slice(0, 100)), { expirationTtl: 86400 * 60 });
+        } catch (_) {}
+      }
+
+      return json({ ok: true, syncedCount: syncedList.length }, 200, c.headers);
     }
 
     // 14. Deste Kaydet (Ekleme / Güncelleme / Paylaşım)
@@ -719,33 +856,70 @@ async function handleDatabaseApi(path, body, env, c) {
         if (Array.isArray(createdData) && createdData[0]) deckId = createdData[0].id;
       }
 
-      // Herkese açık veya kulüp destesi ise KV üzerinde de hızlı erişim kaydı tut
+      const meta = {
+        id: deckId || 'deck_' + Date.now(),
+        ownerId,
+        title,
+        description,
+        authorUsername,
+        isPublic,
+        words,
+        wordCount: words.length,
+        createdAt: new Date().toISOString()
+      };
+
       if (env.LIMITS) {
-        const meta = {
-          id: deckId || 'deck_' + Date.now(),
-          ownerId,
-          title,
-          description,
-          authorUsername,
-          isPublic,
-          words,
-          wordCount: words.length,
-          createdAt: new Date().toISOString()
-        };
+        // Kullanıcının kişisel KV deste listesini de güncelle
+        try {
+          const uStr = await env.LIMITS.get(`userdecks:${ownerId}`);
+          let uDecks = uStr ? JSON.parse(uStr) : [];
+          if (!Array.isArray(uDecks)) uDecks = [];
+          const uIdx = uDecks.findIndex(d => (d.title || '').toLowerCase() === title.toLowerCase());
+          if (uIdx >= 0) uDecks[uIdx] = { ...meta, words_json: words };
+          else uDecks.push({ ...meta, words_json: words });
+          await env.LIMITS.put(`userdecks:${ownerId}`, JSON.stringify(uDecks), { expirationTtl: 86400 * 60 });
+        } catch (_) {}
+
         if (isPublic) {
-          await env.LIMITS.put(`pubdeck:${meta.id}`, JSON.stringify(meta), { expirationTtl: 86400 * 30 });
+          await env.LIMITS.put(`pubdeck:${meta.id}`, JSON.stringify(meta), { expirationTtl: 86400 * 60 });
+          try {
+            const idxStr = await env.LIMITS.get('index:pubdecks');
+            let pubIdx = idxStr ? JSON.parse(idxStr) : [];
+            if (!Array.isArray(pubIdx)) pubIdx = [];
+            const exIdx = pubIdx.findIndex(p => p.id === meta.id || (p.ownerId === ownerId && (p.title || '').toLowerCase() === title.toLowerCase()));
+            if (exIdx >= 0) pubIdx[exIdx] = meta;
+            else pubIdx.unshift(meta);
+            await env.LIMITS.put('index:pubdecks', JSON.stringify(pubIdx.slice(0, 100)), { expirationTtl: 86400 * 60 });
+          } catch (_) {}
         }
       }
 
-      return json({ ok: true, deckId }, 200, c.headers);
+      return json({ ok: true, deckId: meta.id, deck: meta }, 200, c.headers);
     }
 
     // 14b. Herkese Açık Desteler (Topluluk Kütüphanesi)
     if (path === '/api/decks/public') {
       const search = clean(body.search || '', 40).toLowerCase();
-      let publicDecks = [];
+      const deckMap = new Map();
 
-      // 1. Supabase'den public profillerin destelerini al
+      // 1. Strongly-consistent KV index:pubdecks oku
+      if (env.LIMITS) {
+        try {
+          const idxStr = await env.LIMITS.get('index:pubdecks');
+          if (idxStr) {
+            const idxList = JSON.parse(idxStr);
+            if (Array.isArray(idxList)) {
+              for (const d of idxList) {
+                if (!d || d.title === 'Test Deste' || !Array.isArray(d.words) || d.words.length === 0) continue;
+                const key = `${d.ownerId || 'anon'}_${(d.title || '').toLowerCase()}`;
+                deckMap.set(key, d);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. Supabase'den public profillerin destelerini al
       const pRes = await sbFetch('/rest/v1/profiles?deck_privacy=eq.public&select=id,username');
       const pubProfiles = await pRes.json().catch(() => []);
       const userMap = {};
@@ -753,54 +927,125 @@ async function handleDatabaseApi(path, body, env, c) {
 
       const pubIds = Object.keys(userMap);
       if (pubIds.length > 0) {
-        const dRes = await sbFetch(`/rest/v1/decks?owner_id=in.(${pubIds.join(',')})&select=id,owner_id,title,words_json,created_at&limit=30`);
+        const dRes = await sbFetch(`/rest/v1/decks?owner_id=in.(${pubIds.join(',')})&select=id,owner_id,title,words_json,created_at&limit=50`);
         const dbDecks = await dRes.json().catch(() => []);
         if (Array.isArray(dbDecks)) {
-          publicDecks = dbDecks.map(d => ({
-            id: d.id,
-            ownerId: d.owner_id,
-            title: d.title,
-            authorUsername: userMap[d.owner_id] || 'Topluluk Yazarı',
-            words: d.words_json || [],
-            wordCount: Array.isArray(d.words_json) ? d.words_json.length : 0,
-            createdAt: d.created_at
-          }));
+          for (const d of dbDecks) {
+            if (d.title === 'Test Deste') {
+              await sbFetch(`/rest/v1/decks?id=eq.${d.id}`, { method: 'DELETE' });
+              continue;
+            }
+            const words = Array.isArray(d.words_json) ? d.words_json : [];
+            if (words.length === 0) continue;
+            const key = `${d.owner_id}_${(d.title || '').toLowerCase()}`;
+            if (!deckMap.has(key)) {
+              deckMap.set(key, {
+                id: d.id,
+                ownerId: d.owner_id,
+                title: d.title,
+                description: 'Herkese açık profil destesi',
+                authorUsername: userMap[d.owner_id] || 'Topluluk Yazarı',
+                words,
+                wordCount: words.length,
+                createdAt: d.created_at
+              });
+            }
+          }
         }
       }
 
-      // 2. KV üzerindeki eklenen public desteleri de birleştir
+      // 3. KV üzerindeki eski pubdeck: kayıtlarını da kontrol et
       if (env.LIMITS) {
         try {
           const list = await env.LIMITS.list({ prefix: 'pubdeck:', limit: 40 });
-          for (const key of list.keys) {
-            const valStr = await env.LIMITS.get(key.name);
+          for (const keyObj of list.keys) {
+            const valStr = await env.LIMITS.get(keyObj.name);
             if (valStr) {
               const parsed = JSON.parse(valStr);
-              if (!publicDecks.some(d => d.id === parsed.id)) {
-                publicDecks.push(parsed);
+              if (parsed && parsed.title !== 'Test Deste' && Array.isArray(parsed.words) && parsed.words.length > 0) {
+                const k = `${parsed.ownerId || 'anon'}_${(parsed.title || '').toLowerCase()}`;
+                if (!deckMap.has(k)) deckMap.set(k, parsed);
               }
             }
           }
         } catch (_) {}
       }
 
+      let publicDecks = Array.from(deckMap.values());
+
       // Arama filtresi
       if (search) {
         publicDecks = publicDecks.filter(d => 
           (d.title || '').toLowerCase().includes(search) || 
-          (d.authorUsername || '').toLowerCase().includes(search)
+          (d.authorUsername || '').toLowerCase().includes(search) ||
+          (d.description || '').toLowerCase().includes(search)
         );
       }
 
-      publicDecks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      publicDecks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       return json({ ok: true, decks: publicDecks }, 200, c.headers);
+    }
+
+    // 14b-2. Arkadaşa Doğrudan Deste Gönderme (Gelen Kutusu / Inbox)
+    if (path === '/api/decks/inbox/send') {
+      const fromUserId = clean(body.fromUserId, 40);
+      const fromUsername = clean(body.fromUsername, 40) || 'Arkadaşın';
+      const toUserId = clean(body.toUserId, 40);
+      const deckTitle = clean(body.deckTitle, 80) || 'Paylaşılan Deste';
+      const words = Array.isArray(body.words) ? body.words : [];
+      if (!fromUserId || !toUserId || words.length === 0 || !env.LIMITS) {
+        return json({ error: 'Eksik deste veya alıcı bilgisi.' }, 400, c.headers);
+      }
+
+      const giftObj = {
+        id: 'gift_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        fromUserId,
+        fromUsername,
+        toUserId,
+        deckTitle,
+        words,
+        wordCount: words.length,
+        sentAt: new Date().toISOString()
+      };
+
+      const inboxKey = `inbox:${toUserId}`;
+      const existingStr = await env.LIMITS.get(inboxKey);
+      let inbox = existingStr ? JSON.parse(existingStr) : [];
+      if (!Array.isArray(inbox)) inbox = [];
+      inbox.unshift(giftObj);
+      await env.LIMITS.put(inboxKey, JSON.stringify(inbox.slice(0, 30)), { expirationTtl: 86400 * 30 });
+
+      return json({ ok: true, gift: giftObj }, 200, c.headers);
+    }
+
+    if (path === '/api/decks/inbox/get') {
+      const userId = clean(body.userId, 40);
+      if (!userId || !env.LIMITS) return json({ ok: true, gifts: [] }, 200, c.headers);
+
+      const existingStr = await env.LIMITS.get(`inbox:${userId}`);
+      const inbox = existingStr ? JSON.parse(existingStr) : [];
+      return json({ ok: true, gifts: Array.isArray(inbox) ? inbox : [] }, 200, c.headers);
+    }
+
+    if (path === '/api/decks/inbox/resolve') {
+      const userId = clean(body.userId, 40);
+      const giftId = clean(body.giftId, 60);
+      if (!userId || !giftId || !env.LIMITS) return json({ ok: true }, 200, c.headers);
+
+      const inboxKey = `inbox:${userId}`;
+      const existingStr = await env.LIMITS.get(inboxKey);
+      let inbox = existingStr ? JSON.parse(existingStr) : [];
+      if (Array.isArray(inbox)) {
+        inbox = inbox.filter(g => g.id !== giftId);
+        await env.LIMITS.put(inboxKey, JSON.stringify(inbox), { expirationTtl: 86400 * 30 });
+      }
+      return json({ ok: true, gifts: inbox }, 200, c.headers);
     }
 
     // 14c. Kulüpler / Sınıflar API
     if (path === '/api/clubs/create') {
       const name = clean(body.name, 60);
       const description = clean(body.description, 200) || '';
-      const category = clean(body.category, 30) || 'Genel';
       const ownerId = clean(body.ownerId, 40);
       const ownerUsername = clean(body.ownerUsername, 40) || 'Yönetici';
       if (!name || !ownerId) return json({ error: 'Kulüp adı ve kurucu bilgisi zorunludur.' }, 400, c.headers);
@@ -812,7 +1057,6 @@ async function handleDatabaseApi(path, body, env, c) {
         code: clubCode,
         name,
         description,
-        category,
         ownerId,
         ownerUsername,
         members: [{ id: ownerId, username: ownerUsername, role: 'Kurucu', joinedAt: new Date().toISOString() }],
@@ -823,6 +1067,13 @@ async function handleDatabaseApi(path, body, env, c) {
       if (env.LIMITS) {
         await env.LIMITS.put(`club:${clubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 60 });
         await env.LIMITS.put(`club_code:${clubCode}`, clubId, { expirationTtl: 86400 * 60 });
+        try {
+          const idxStr = await env.LIMITS.get('index:clubs');
+          let clubIds = idxStr ? JSON.parse(idxStr) : [];
+          if (!Array.isArray(clubIds)) clubIds = [];
+          if (!clubIds.includes(clubId)) clubIds.unshift(clubId);
+          await env.LIMITS.put('index:clubs', JSON.stringify(clubIds.slice(0, 100)), { expirationTtl: 86400 * 60 });
+        } catch (_) {}
       }
 
       return json({ ok: true, club: clubObj }, 200, c.headers);
@@ -852,20 +1103,36 @@ async function handleDatabaseApi(path, body, env, c) {
     }
 
     if (path === '/api/clubs/list') {
-      const userId = clean(body.userId, 40);
-      let clubs = [];
+      const clubMap = new Map();
       if (env.LIMITS) {
         try {
+          const idxStr = await env.LIMITS.get('index:clubs');
+          if (idxStr) {
+            const clubIds = JSON.parse(idxStr);
+            if (Array.isArray(clubIds)) {
+              for (const cid of clubIds) {
+                const cStr = await env.LIMITS.get(`club:${cid}`);
+                if (cStr) {
+                  const parsed = JSON.parse(cStr);
+                  clubMap.set(parsed.id, parsed);
+                }
+              }
+            }
+          }
           const list = await env.LIMITS.list({ prefix: 'club:', limit: 50 });
           for (const key of list.keys) {
-            const valStr = await env.LIMITS.get(key.name);
-            if (valStr) {
-              const c = JSON.parse(valStr);
-              clubs.push(c);
+            const cid = key.name.replace('club:', '');
+            if (!clubMap.has(cid)) {
+              const valStr = await env.LIMITS.get(key.name);
+              if (valStr) {
+                const parsed = JSON.parse(valStr);
+                clubMap.set(parsed.id, parsed);
+              }
             }
           }
         } catch (_) {}
       }
+      const clubs = Array.from(clubMap.values()).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       return json({ ok: true, clubs }, 200, c.headers);
     }
 
@@ -891,7 +1158,7 @@ async function handleDatabaseApi(path, body, env, c) {
       clubObj.decks.push(clubDeck);
       await env.LIMITS.put(`club:${clubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 60 });
 
-      return json({ ok: true, deck: clubDeck }, 200, c.headers);
+      return json({ ok: true, deck: clubDeck, club: clubObj }, 200, c.headers);
     }
 
     // 14d. Çok Oyunculu Oda Yönetimi (1v1 Kapışma & Kahoot Grup Oyunu - KV Ultra Hızlı State)
@@ -1001,8 +1268,9 @@ async function handleDatabaseApi(path, body, env, c) {
     // 14e. Ortak Deste Çalışması (İşbirlikçi Kart Ekleme / Düzenleme)
     if (path === '/api/decks/collaborate/sync') {
       const collabCode = clean(body.code, 20).toUpperCase();
-      const action = clean(body.action, 20); // 'get', 'add_card', 'init'
+      const action = clean(body.action, 20); // 'get', 'add_card', 'remove_card', 'update_card', 'init'
       const card = body.card;
+      const cardIndex = typeof body.cardIndex === 'number' ? body.cardIndex : -1;
       const deckTitle = clean(body.title, 80) || 'Ortak Deste';
       const author = clean(body.author, 40) || 'Ortak';
 
@@ -1012,6 +1280,9 @@ async function handleDatabaseApi(path, body, env, c) {
       let collabObj = collabStr ? JSON.parse(collabStr) : null;
 
       if (!collabObj) {
+        if (action === 'get') {
+          return json({ error: 'Bu davet koduna ait aktif bir ortak deste bulunamadı.' }, 404, c.headers);
+        }
         collabObj = {
           code: collabCode,
           title: deckTitle,
@@ -1019,11 +1290,20 @@ async function handleDatabaseApi(path, body, env, c) {
           contributors: [author],
           updatedAt: new Date().toISOString()
         };
+      } else if (action === 'get' && author && !collabObj.contributors.includes(author)) {
+        collabObj.contributors.push(author);
       }
 
       if (action === 'add_card' && card) {
         if (!collabObj.cards) collabObj.cards = [];
         collabObj.cards.push(card);
+        if (!collabObj.contributors.includes(author)) collabObj.contributors.push(author);
+        collabObj.updatedAt = new Date().toISOString();
+      } else if (action === 'remove_card' && cardIndex >= 0 && Array.isArray(collabObj.cards)) {
+        collabObj.cards.splice(cardIndex, 1);
+        collabObj.updatedAt = new Date().toISOString();
+      } else if (action === 'update_card' && cardIndex >= 0 && card && Array.isArray(collabObj.cards) && collabObj.cards[cardIndex]) {
+        collabObj.cards[cardIndex] = { ...collabObj.cards[cardIndex], ...card };
         if (!collabObj.contributors.includes(author)) collabObj.contributors.push(author);
         collabObj.updatedAt = new Date().toISOString();
       }
