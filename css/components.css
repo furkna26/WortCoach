@@ -5336,3 +5336,68 @@
   border-color: var(--brand-blue);
   color: var(--text-primary);
 }
+
+
+/* ===== Coach Prompt Builder & Deste Oluşturma Butonu ===== */
+.coach-prompt-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+.coach-instruction-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+}
+.coach-instruction-textarea {
+  width: 100%;
+  min-height: 64px;
+  max-height: 160px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.coach-instruction-textarea:focus {
+  outline: none;
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+}
+.btn-coach-build-full {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--brand-blue);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.05s ease;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+.btn-coach-build-full:hover:not(:disabled) {
+  background: var(--brand-blue-hover);
+}
+.btn-coach-build-full:active:not(:disabled) {
+  transform: scale(0.99);
+}
+.btn-coach-build-full:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}

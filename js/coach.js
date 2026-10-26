@@ -684,7 +684,10 @@
       renderDeckWords();
     });
     $('coach-instruction')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') buildDeck();
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        buildDeck();
+      }
     });
 
     // 3. Koç Etkileşim & Akademik Çalışma dinleyicileri
