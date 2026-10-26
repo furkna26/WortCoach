@@ -1258,6 +1258,13 @@ class WortCoachApp {
           } else {
             throw new Error('PDF ayrıştırıcı kütüphane henüz yüklenemedi.');
           }
+        } else if (file.type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+          if (uploadStatus) uploadStatus.textContent = 'G?rseldeki Almanca metin okunuyor...';
+          const b64 = await (window.coachHelper ? window.coachHelper.downscaleImage(file) : new Promise((res, rej) => {
+            const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(file);
+          }));
+          const ocr = await window.coachRequest('ocr', { file: { mime: 'image/jpeg', data: b64 } });
+          extractedText = ocr?.text || '';
         } else if (ext === 'docx') {
           if (typeof window.mammoth !== 'undefined') {
             const arrayBuffer = await file.arrayBuffer();
@@ -3345,7 +3352,7 @@ class WortCoachApp {
         btn.type = 'button';
         btn.className = 'game-option-btn';
         btn.innerHTML = `
-          <span class="game-opt-letter">${letters[idx] || (idx + 1)}</span>
+          <span class="game-opt-letter">${letters[idx] ? letters[idx] + '-)' : (idx + 1) + '-)'}</span>
           <span class="game-opt-text">${optText}</span>
         `;
 

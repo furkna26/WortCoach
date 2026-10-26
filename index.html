@@ -567,22 +567,27 @@
         </div>
 
         <div class="coach-switch" role="tablist">
-          <button type="button" class="coach-switch-btn active" data-coach-view="coach">Coach</button>
+          <button type="button" class="coach-switch-btn active" data-coach-view="deck">AI Deste Oluştur</button>
+          <button type="button" class="coach-switch-btn" data-coach-view="coach">Coach</button>
           <button type="button" class="coach-switch-btn" data-coach-view="reader">Akıllı Okuyucu</button>
         </div>
 
         <!-- COACH: Belge / görsel / metin analizi ve yapay zeka destekli deste oluşturma -->
-        <div id="coach-pane" class="coach-pane">
+        <div id="deck-builder-pane" class="coach-pane">
           <div class="coach-card">
             <input type="file" id="coach-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
-            <textarea id="coach-text-input" class="reader-textarea" rows="5" maxlength="30000" placeholder="Metni buraya yapıştırın veya bir görsel, PDF, DOCX ya da TXT dosyası seçin."></textarea>
+            <textarea id="coach-text-input" class="reader-textarea" rows="5" maxlength="35000" placeholder="Almanca bir metin yapıştırın veya bir görsel, PDF, DOCX ya da TXT dosyası yükleyin."></textarea>
             <div id="coach-file-chip" class="coach-file-chip hidden">
               <span id="coach-file-name"></span>
               <button type="button" id="btn-coach-file-remove" aria-label="Dosyayı kaldır">Kaldır</button>
             </div>
-            <div class="coach-actions">
-              <button type="button" id="btn-coach-pick" class="btn-secondary-compact">Dosya Seç</button>
-              <button type="button" id="btn-coach-analyze" class="btn-primary-compact">İncele</button>
+            <div class="coach-box-actions">
+              <button type="button" id="btn-coach-pick" class="btn-coach-large-pick">
+                <span>Dosya Seç</span>
+              </button>
+              <button type="button" id="btn-coach-analyze" class="btn-coach-large-analyze">
+                <span>İncele</span>
+              </button>
             </div>
             <div id="coach-status" class="coach-status hidden"></div>
           </div>
@@ -596,8 +601,10 @@
             <div class="coach-ask-title">Ne yapmak istersin?</div>
             <div id="coach-suggestions" class="coach-suggestions"></div>
             <div class="coach-actions">
-              <input type="text" id="coach-instruction" class="form-control" maxlength="300" placeholder="Örn: Bu metindeki B1 kelimeleri desteye çevir" />
-              <button type="button" id="btn-coach-build" class="btn-primary-compact">Deste Oluştur</button>
+              <input type="text" id="coach-instruction" class="form-control" maxlength="300" placeholder="Örn: Bu metindeki B1 fiilleri desteye ekle" />
+              <button type="button" id="btn-coach-build" class="btn-primary-compact">
+                <span>Deste Oluştur</span>
+              </button>
             </div>
           </div>
 
@@ -612,16 +619,67 @@
           </div>
         </div>
 
-        <!-- GÖRÜNÜM 1: METİN GİRİŞİ & DOSYA YÜKLEME PANELİ -->
+        <!-- COACH: İnteraktif Almanca Koçu, Akademik Metin Çalışması ve Oyun Sistemi -->
+        <div id="coach-interactive-pane" class="coach-pane hidden">
+          <div class="coach-workspace-header">
+            <div class="coach-quick-actions">
+              <button type="button" class="coach-quick-btn" data-action="cloze">Boşluk Doldurma (Cloze)</button>
+              <button type="button" class="coach-quick-btn" data-action="matching">Eşleştirme Oyunu</button>
+              <button type="button" class="coach-quick-btn" data-action="grammar">Dilbilgisi Çalışması</button>
+              <button type="button" class="coach-quick-btn" data-action="academic">Akademik Metin Analizi</button>
+              <button type="button" class="coach-quick-btn" data-action="deck">Desteye Dönüştür</button>
+            </div>
+
+            <div class="coach-context-bar">
+              <input type="file" id="coach-chat-file-input" accept="image/png,image/jpeg,image/webp,.pdf,.docx,.txt" class="hidden" />
+              <button type="button" id="btn-coach-attach-file" class="coach-attach-btn" title="Üzerinde çalışmak için belge veya görsel ekle">
+                <svg class="svg-icon" style="width:15px;height:15px;"><use href="#icon-download"></use></svg>
+                <span>Çalışma Dosyası / Görsel Ekle</span>
+              </button>
+              <div id="coach-chat-file-chip" class="coach-file-chip hidden" style="margin:0; padding:4px 10px; font-size:0.78rem;">
+                <span id="coach-chat-file-name"></span>
+                <button type="button" id="btn-coach-chat-file-remove">Kaldır</button>
+              </div>
+              <div class="coach-level-pill-wrap">
+                <label for="coach-user-level" style="font-size:0.75rem; color:var(--text-muted); font-weight:700;">Seviye:</label>
+                <select id="coach-user-level" class="dock-select" style="font-size:0.78rem; padding:4px 8px;">
+                  <option value="A1">A1</option>
+                  <option value="A2">A2</option>
+                  <option value="B1" selected>B1</option>
+                  <option value="B2">B2</option>
+                  <option value="C1">C1</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="coach-chat-stream" class="coach-chat-stream">
+            <div class="coach-chat-welcome">
+              <h3 style="font-size:1.02rem; font-weight:800; color:var(--text-primary); margin-bottom:6px;">Almanca Koçunuz Hazır</h3>
+              <p style="font-size:0.86rem; color:var(--text-secondary); line-height:1.5; margin:0;">
+                Dilbilgisi kurallarını sorabilir, belgeleriniz üzerinde akademik çalışabilir veya yukarıdaki butonlarla anında interaktif boşluk doldurma, eşleştirme ve dilbilgisi oyunları başlatabilirsiniz.
+              </p>
+            </div>
+          </div>
+
+          <div class="coach-chat-input-bar">
+            <textarea id="coach-chat-input" class="form-control" rows="2" maxlength="1500" placeholder="Koç'a bir soru sorun veya metin üzerinde alıştırma isteyin..."></textarea>
+            <button type="button" id="btn-coach-chat-send" class="btn-primary-compact coach-send-btn">
+              <span>Gönder</span>
+            </button>
+          </div>
+        </div>
+
+<!-- GÖRÜNÜM 1: METİN GİRİŞİ & DOSYA YÜKLEME PANELİ -->
         <div id="reader-setup-pane" class="reader-setup-pane hidden">
           <!-- Dosya İçe Aktarım Kartı (PDF, DOCX, TXT) -->
           <div class="reader-upload-card" id="reader-drop-zone">
-            <input type="file" id="reader-file-input" accept=".pdf,.docx,.txt" class="hidden" />
+            <input type="file" id="reader-file-input" accept=".pdf,.docx,.txt,image/png,image/jpeg,image/webp" class="hidden" />
             <div class="upload-icon-circle">
               <svg class="svg-icon"><use href="#icon-download"></use></svg>
             </div>
             <div class="upload-text-group">
-              <div class="upload-main-text">Belge Yükle (PDF, DOCX, TXT)</div>
+              <div class="upload-main-text">Belge veya Görsel Yükle (PDF, DOCX, TXT, Resim)</div>
               <div class="upload-sub-text">Dosyayı buraya sürükleyin veya cihazınızdan seçin</div>
             </div>
             <button type="button" class="btn-select-file" id="btn-trigger-file-input">
@@ -2010,7 +2068,7 @@
   <script src="js/game.js?v=3.0.0"></script>
   <script src="js/study.js?v=3.0.0"></script>
   <script src="js/stats.js?v=3.0.0"></script>
-  <script src="js/coach.js?v=3.2.0"></script>
+  <script src="js/coach.js?v=3.4.0"></script>
   <script src="js/app.js?v=3.0.0"></script>
 </body>
 </html>
