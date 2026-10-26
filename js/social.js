@@ -418,18 +418,90 @@
     }
 
     // =========================================================================
+    // YEREL VERİTABANI GÜVENLİ ERİŞİM KÖPRÜSÜ (SAFE DAO ADAPTERS)
+    // =========================================================================
+    async getLocalDecksSafe() {
+      if (!window.wmDB) return [];
+      try {
+        if (typeof window.wmDB.getAllDecks === 'function') {
+          return await window.wmDB.getAllDecks();
+        }
+        if (window.wmDB.decks && typeof window.wmDB.decks.getAll === 'function') {
+          return await window.wmDB.decks.getAll();
+        }
+      } catch (e) {
+        console.warn('Yerel desteler okunamadı:', e.message);
+      }
+      return [];
+    }
+
+    async getLocalCardsSafe(deckId = null) {
+      if (!window.wmDB) return [];
+      let all = [];
+      try {
+        if (typeof window.wmDB.getAllCards === 'function') {
+          all = await window.wmDB.getAllCards();
+        } else if (window.wmDB.cards && typeof window.wmDB.cards.getAll === 'function') {
+          all = await window.wmDB.cards.getAll();
+        }
+      } catch (e) {
+        console.warn('Yerel kartlar okunamadı:', e.message);
+      }
+      if (deckId !== null && deckId !== undefined) {
+        return all.filter(c => Number(c.deckId) === Number(deckId));
+      }
+      return all;
+    }
+
+    async addLocalDeckSafe(title) {
+      if (!window.wmDB) return null;
+      try {
+        if (typeof window.wmDB.createDeck === 'function') {
+          return await window.wmDB.createDeck(title);
+        }
+        if (window.wmDB.decks && typeof window.wmDB.decks.add === 'function') {
+          return await window.wmDB.decks.add({ title, name: title });
+        }
+      } catch (e) {
+        console.warn('Yerel deste oluşturulamadı:', e.message);
+      }
+      return null;
+    }
+
+    async addLocalCardSafe(card) {
+      if (!window.wmDB) return null;
+      try {
+        if (typeof window.wmDB.addCard === 'function') {
+          return await window.wmDB.addCard({
+            deckId: Number(card.deckId) || 1,
+            germanWord: card.lemma || card.front || '',
+            meaningsTr: card.contextMeaning || card.back || '',
+            partOfSpeech: card.pos || 'OTHER',
+            example: card.sourceSentence || card.example || ''
+          });
+        }
+        if (window.wmDB.cards && typeof window.wmDB.cards.add === 'function') {
+          return await window.wmDB.cards.add(card);
+        }
+      } catch (e) {
+        console.warn('Yerel kart eklenemedi:', e.message);
+      }
+      return null;
+    }
+
+    // =========================================================================
     // DESTE SENKRONİZASYONU & PAYLAŞIMI ("PAYLAŞILAN DESTELERİ GÖREMİYORUM" ÇÖZÜMÜ)
     // =========================================================================
     async syncLocalDeckToCloud(deckId, isPublic = false, description = '') {
-      if (!window.wmDB) throw new Error('Veritabanı hazır değil.');
-      const deck = await window.wmDB.decks.get(deckId);
+      const decks = await this.getLocalDecksSafe();
+      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
       if (!deck) throw new Error('Deste bulunamadı.');
 
-      const cards = await window.wmDB.cards.getByDeck(deckId);
+      const cards = await this.getLocalCardsSafe(deck.id);
       const words = cards.map(c => ({
-        lemma: c.front || '',
-        contextMeaning: c.back || '',
-        pos: c.pos || 'NOUN',
+        lemma: c.germanWord || c.front || '',
+        contextMeaning: c.meaningsTr || c.back || '',
+        pos: c.partOfSpeech || c.pos || 'NOUN',
         sourceSentence: c.example || c.contextSentence || ''
       }));
 
@@ -440,7 +512,7 @@
       const payload = {
         ownerId,
         authorUsername,
-        title: deck.title,
+        title: deck.name || deck.title || 'Deste',
         description,
         isPublic: !!isPublic,
         words
@@ -458,7 +530,7 @@
         const localPubDeck = {
           id: 'pub_' + Date.now(),
           ownerId,
-          title: deck.title,
+          title: deck.name || deck.title || 'Deste',
           authorUsername,
           description,
           isPublic: !!isPublic,
@@ -473,8 +545,7 @@
     }
 
     async syncAllDecksToCloud() {
-      if (!window.wmDB) return;
-      const decks = await window.wmDB.decks.getAll();
+      const decks = await this.getLocalDecksSafe();
       let count = 0;
       for (const d of decks) {
         try {
@@ -498,31 +569,18 @@
     }
 
     async importDeckToLocal(cloudDeck) {
-      if (!window.wmDB) throw new Error('Yerel veritabanı hazır değil.');
-      const title = cloudDeck.title || 'İçe Aktarılan Deste';
-      const deckId = 'deck_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-      
-      await window.wmDB.decks.add({
-        id: deckId,
-        title: title,
-        color: '#2563EB',
-        icon: 'book',
-        createdAt: new Date().toISOString()
-      });
+      const title = cloudDeck.title || cloudDeck.name || 'İçe Aktarılan Deste';
+      const createdDeck = await this.addLocalDeckSafe(title);
+      const newDeckId = (createdDeck && createdDeck.id) ? createdDeck.id : 1;
 
       const words = cloudDeck.words_json || cloudDeck.words || [];
       for (const w of words) {
-        await window.wmDB.cards.add({
-          id: 'card_' + Math.random().toString(36).slice(2, 9),
-          deckId: deckId,
-          front: w.lemma || w.front || '',
-          back: w.contextMeaning || w.back || '',
-          pos: w.pos || 'NOUN',
-          interval: 1,
-          repetition: 0,
-          easeFactor: 2.5,
-          dueDate: new Date().toISOString(),
-          example: w.sourceSentence || w.example || ''
+        await this.addLocalCardSafe({
+          deckId: newDeckId,
+          lemma: w.lemma || w.front || w.germanWord || '',
+          contextMeaning: w.contextMeaning || w.back || w.meaningsTr || '',
+          pos: w.pos || w.partOfSpeech || 'NOUN',
+          sourceSentence: w.sourceSentence || w.example || ''
         });
       }
 
@@ -677,9 +735,9 @@
       const modal = $('modal-publish-deck');
       if (!modal) return;
       const select = $('select-publish-target-deck');
-      if (select && window.wmDB) {
-        const decks = await window.wmDB.decks.getAll();
-        select.innerHTML = decks.map(d => `<option value="${d.id}">${d.title}</option>`).join('');
+      if (select) {
+        const decks = await this.getLocalDecksSafe();
+        select.innerHTML = decks.map(d => `<option value="${d.id}">${d.name || d.title}</option>`).join('');
       }
       modal.classList.remove('hidden');
     }
@@ -880,29 +938,30 @@
     // 1v1 ZAMANA KARŞI DÜELLO MOTORU
     // =========================================================================
     async start1v1MatchAsHost(deckId) {
-      if (!window.wmDB) return;
-      const deck = await window.wmDB.decks.get(deckId);
+      const decks = await this.getLocalDecksSafe();
+      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
       if (!deck) throw new Error('Seçilen deste bulunamadı.');
 
-      const cards = await window.wmDB.cards.getByDeck(deckId);
+      const cards = await this.getLocalCardsSafe(deck.id);
       if (cards.length < 4) throw new Error('1v1 kapışma için destede en az 4 kelime olmalıdır.');
 
       const words = cards.map(c => ({
-        lemma: c.front,
-        contextMeaning: c.back,
-        pos: c.pos || 'NOUN',
+        lemma: c.germanWord || c.front || '',
+        contextMeaning: c.meaningsTr || c.back || '',
+        pos: c.partOfSpeech || c.pos || 'NOUN',
         sourceSentence: c.example || ''
       }));
 
       const prof = this.getActiveProfile();
       let pin = 'VS-' + Math.floor(1000 + Math.random() * 9000);
+      const deckTitle = deck.name || deck.title || 'Deste';
 
       try {
         const res = await this.apiCall('multiplayer/room/create', {
           type: '1v1',
           hostId: prof.id || 'host',
           hostName: prof.username || 'Host',
-          deckTitle: deck.title,
+          deckTitle: deckTitle,
           words,
           duration: 60
         });
@@ -910,7 +969,7 @@
       } catch (_) {}
 
       // Yerel maçı başlat
-      this.init1v1GameView(pin, deck.title, words);
+      this.init1v1GameView(pin, deckTitle, words);
     }
 
     async join1v1Match(pin) {
@@ -932,10 +991,13 @@
         }
       } catch (_) {
         // Fallback kelimeler
-        if (window.wmDB) {
-          const allCards = await window.wmDB.cards.getAll();
-          words = allCards.slice(0, 15).map(c => ({ lemma: c.front, contextMeaning: c.back, pos: c.pos, sourceSentence: c.example }));
-        }
+        const allCards = await this.getLocalCardsSafe();
+        words = allCards.slice(0, 15).map(c => ({
+          lemma: c.germanWord || c.front || '',
+          contextMeaning: c.meaningsTr || c.back || '',
+          pos: c.partOfSpeech || c.pos || 'NOUN',
+          sourceSentence: c.example || ''
+        }));
       }
 
       if (words.length < 4) throw new Error('Maç verisine ulaşılamadı.');
@@ -1073,36 +1135,37 @@
     // KAHOOT CANLI GRUP OYUNU MOTORU
     // =========================================================================
     async createKahootRoom(deckId, duration = 15, count = 10) {
-      if (!window.wmDB) return;
-      const deck = await window.wmDB.decks.get(deckId);
+      const decks = await this.getLocalDecksSafe();
+      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
       if (!deck) throw new Error('Deste bulunamadı.');
 
-      const cards = await window.wmDB.cards.getByDeck(deckId);
+      const cards = await this.getLocalCardsSafe(deck.id);
       if (cards.length < 4) throw new Error('Kahoot için destede en az 4 kelime olmalıdır.');
 
       const words = cards.map(c => ({
-        lemma: c.front,
-        contextMeaning: c.back,
-        pos: c.pos || 'NOUN',
+        lemma: c.germanWord || c.front || '',
+        contextMeaning: c.meaningsTr || c.back || '',
+        pos: c.partOfSpeech || c.pos || 'NOUN',
         sourceSentence: c.example || ''
       }));
 
       const prof = this.getActiveProfile();
       let pin = String(Math.floor(100000 + Math.random() * 900000));
+      const deckTitle = deck.name || deck.title || 'Deste';
 
       try {
         const res = await this.apiCall('multiplayer/room/create', {
           type: 'kahoot',
           hostId: prof.id || 'host',
           hostName: prof.username || 'Host',
-          deckTitle: deck.title,
+          deckTitle: deckTitle,
           words: words.slice(0, count),
           duration
         });
         if (res.ok && res.room) pin = res.room.pin;
       } catch (_) {}
 
-      this.initKahootView(pin, deck.title, words.slice(0, count), duration, true);
+      this.initKahootView(pin, deckTitle, words.slice(0, count), duration, true);
     }
 
     async joinKahootRoom(pin) {
@@ -1125,10 +1188,12 @@
           duration = res.room.questionDurationSec || 15;
         }
       } catch (_) {
-        if (window.wmDB) {
-          const allCards = await window.wmDB.cards.getAll();
-          words = allCards.slice(0, 10).map(c => ({ lemma: c.front, contextMeaning: c.back, pos: c.pos }));
-        }
+        const allCards = await this.getLocalCardsSafe();
+        words = allCards.slice(0, 10).map(c => ({
+          lemma: c.germanWord || c.front || '',
+          contextMeaning: c.meaningsTr || c.back || '',
+          pos: c.partOfSpeech || c.pos || 'NOUN'
+        }));
       }
 
       if (words.length < 4) throw new Error('Oda bulunamadı veya kelime verisi eksik.');
@@ -1318,23 +1383,29 @@
     // ORTAK DESTE DÜZENLEME (İŞBİRLİKÇİ ÇALIŞMA)
     // =========================================================================
     async initCollabSession(deckId) {
-      if (!window.wmDB) return;
-      const deck = await window.wmDB.decks.get(deckId);
+      const decks = await this.getLocalDecksSafe();
+      const deck = decks.find(d => Number(d.id) === Number(deckId) || String(d.id) === String(deckId));
       if (!deck) throw new Error('Deste bulunamadı.');
 
-      const cards = await window.wmDB.cards.getByDeck(deckId);
+      const cards = await this.getLocalCardsSafe(deck.id);
       const code = 'COL-' + Math.floor(1000 + Math.random() * 9000);
       const prof = this.getActiveProfile();
+      const deckTitle = deck.name || deck.title || 'Ortak Deste';
 
       const collabData = {
         code,
-        title: deck.title,
-        cards: cards.map(c => ({ front: c.front, back: c.back, pos: c.pos, example: c.example })),
+        title: deckTitle,
+        cards: cards.map(c => ({
+          front: c.germanWord || c.front || '',
+          back: c.meaningsTr || c.back || '',
+          pos: c.partOfSpeech || c.pos || 'NOUN',
+          example: c.example || ''
+        })),
         contributors: [prof.username]
       };
 
       try {
-        await this.apiCall('decks/collaborate/sync', { code, action: 'init', title: deck.title, cards: collabData.cards, author: prof.username });
+        await this.apiCall('decks/collaborate/sync', { code, action: 'init', title: deckTitle, cards: collabData.cards, author: prof.username });
       } catch (_) {}
 
       this.openCollabWorkspace(collabData);
@@ -1724,8 +1795,8 @@
         this.user = data.session.user;
         this.profile = data.profile;
         this.updateUI();
-        await this.refreshProfileView();
-        await this.refreshSocialView();
+        try { await this.refreshProfileView(); } catch (_) {}
+        try { await this.refreshSocialView(); } catch (_) {}
         return true;
       }
       throw new Error(data.error || 'Kayıt işlemi başarısız.');
@@ -1742,8 +1813,8 @@
         this.user = data.session.user;
         this.profile = data.profile;
         this.updateUI();
-        await this.refreshProfileView();
-        await this.refreshSocialView();
+        try { await this.refreshProfileView(); } catch (_) {}
+        try { await this.refreshSocialView(); } catch (_) {}
         return data;
       }
       throw new Error(data.error || 'Giriş yapılamadı.');
@@ -1773,9 +1844,8 @@
     }
 
     async populateDeckSelects() {
-      if (!window.wmDB) return;
-      const decks = await window.wmDB.decks.getAll();
-      const opts = decks.map(d => `<option value="${d.id}">${d.title}</option>`).join('');
+      const decks = await this.getLocalDecksSafe();
+      const opts = decks.map(d => `<option value="${d.id}">${d.name || d.title || 'Deste'}</option>`).join('');
 
       ['arena-1v1-deck-select', 'arena-kahoot-deck-select', 'select-collab-deck', 'select-publish-target-deck'].forEach(id => {
         const el = $(id);
@@ -1976,28 +2046,33 @@
 
       // Kulübe Kendi Desteni Ekleme
       $('btn-add-deck-to-club')?.addEventListener('click', async () => {
-        if (!this.viewingClub || !window.wmDB) return;
-        const decks = await window.wmDB.decks.getAll();
+        if (!this.viewingClub) return;
+        const decks = await this.getLocalDecksSafe();
         if (decks.length === 0) {
           alert('Henüz desteniz yok.');
           return;
         }
-        const title = prompt('Kulübe eklenecek destenin adı:\n' + decks.map(d => d.title).join('\n'));
+        const title = prompt('Kulübe eklenecek destenin adı:\n' + decks.map(d => d.name || d.title).join('\n'));
         if (!title) return;
-        const selected = decks.find(d => d.title.toLowerCase() === title.trim().toLowerCase());
+        const selected = decks.find(d => (d.name || d.title).toLowerCase() === title.trim().toLowerCase());
         if (!selected) {
           alert('Deste bulunamadı.');
           return;
         }
-        const cards = await window.wmDB.cards.getByDeck(selected.id);
-        const words = cards.map(c => ({ lemma: c.front, contextMeaning: c.back, pos: c.pos }));
+        const cards = await this.getLocalCardsSafe(selected.id);
+        const words = cards.map(c => ({
+          lemma: c.germanWord || c.front || '',
+          contextMeaning: c.meaningsTr || c.back || '',
+          pos: c.partOfSpeech || c.pos || 'NOUN'
+        }));
         try {
+          const deckTitle = selected.name || selected.title;
           await this.apiCall('clubs/decks/add', {
             clubId: this.viewingClub.id,
-            deck: { id: selected.id, title: selected.title, words },
+            deck: { id: selected.id, title: deckTitle, words },
             username: this.getActiveProfile().username
           });
-          if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`"${selected.title}" kulüp havuzuna eklendi.`);
+          if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`"${deckTitle}" kulüp havuzuna eklendi.`);
           await this.renderClubs();
           $('modal-club-detail')?.classList.add('hidden');
         } catch (err) {

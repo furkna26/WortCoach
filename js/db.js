@@ -480,3 +480,30 @@ class WortMeisterDatabase {
 }
 
 window.wmDB = new WortMeisterDatabase();
+
+// Geriye dönük uyumluluk ve harici/sosyal modül DAO adaptörleri (decks & cards)
+window.wmDB.decks = {
+  getAll: async () => window.wmDB.getAllDecks(),
+  get: async (id) => {
+    const all = await window.wmDB.getAllDecks();
+    return all.find((d) => Number(d.id) === Number(id)) || null;
+  },
+  add: async (d) => window.wmDB.createDeck(d.name || d.title || 'Yeni Deste')
+};
+
+window.wmDB.cards = {
+  getAll: async () => window.wmDB.getAllCards(),
+  getByDeck: async (deckId) => {
+    const all = await window.wmDB.getAllCards();
+    return all.filter((c) => Number(c.deckId) === Number(deckId));
+  },
+  add: async (c) => {
+    return window.wmDB.addCard({
+      deckId: c.deckId,
+      germanWord: c.lemma || c.front || '',
+      meaningsTr: c.contextMeaning || c.back || '',
+      partOfSpeech: c.pos || 'OTHER',
+      example: c.sourceSentence || c.example || ''
+    });
+  }
+};
