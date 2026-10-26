@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr" data-theme="dark" data-theme="dark" class="theme-dark">
 <head>
   <meta charset="UTF-8" />
@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.5.0" />
-  <link rel="stylesheet" href="css/components.css?v=3.5.0" />
+  <link rel="stylesheet" href="css/app.css?v=3.5.2" />
+  <link rel="stylesheet" href="css/components.css?v=3.5.2" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1095,12 +1095,19 @@
       </section>
 
       <!-- ====================================================================
-           TAB: COACH (tab-reader) — SADECE VE SADECE CHAT EKRANI
+           TAB: COACH (tab-coach) — SADECE VE SADECE CHAT EKRANI
            ==================================================================== -->
-      <section id="tab-reader" class="tab-view">
+      <section id="tab-coach" class="tab-view">
         <div class="coach-chat-app-container">
 
-
+          <!-- Geri Dön Butonu -->
+          <div class="coach-chat-top-nav" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+            <button type="button" id="btn-coach-back-to-games" class="prof-auth-link-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <span>Pratik &amp; Oyunlara Dön</span>
+            </button>
+            <div style="font-size:0.82rem; font-weight:800; color:var(--text-secondary);">Almanca Dil Koçu</div>
+          </div>
 
           <!-- Sohbet Mesaj Akışı -->
           <div id="coach-chat-stream" class="coach-chat-stream"></div>
@@ -1122,6 +1129,119 @@
             <button type="button" id="btn-coach-chat-send" class="coach-chat-send-icon-btn" title="Gönder" aria-label="Gönder">
               <svg class="svg-icon" style="width:18px;height:18px;"><use href="#icon-send"></use></svg>
             </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB: AKILLI OKUMA (tab-reader) — Tam Ekran & Belge İçe Aktarımı
+           ==================================================================== -->
+      <section id="tab-reader" class="tab-view">
+        <!-- GÖRÜNÜM 1: METİN GİRİŞİ & DOSYA YÜKLEME PANELİ -->
+        <div id="reader-setup-pane" class="reader-setup-pane">
+          <!-- Geri Dön Butonu -->
+          <div class="coach-chat-top-nav" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <button type="button" id="btn-reader-back-to-games" class="prof-auth-link-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              <span>Pratik &amp; Oyunlara Dön</span>
+            </button>
+            <div style="font-size:0.82rem; font-weight:800; color:var(--text-secondary);">Akıllı Okuma &amp; Belge İnceleme</div>
+          </div>
+
+          <!-- Dosya İçe Aktarım Kartı (PDF, DOCX, TXT) -->
+          <div class="reader-upload-card" id="reader-drop-zone">
+            <input type="file" id="reader-file-input" accept=".pdf,.docx,.txt,image/png,image/jpeg,image/webp" class="hidden" />
+            <div class="upload-icon-circle">
+              <svg class="svg-icon"><use href="#icon-download"></use></svg>
+            </div>
+            <div class="upload-text-group">
+              <div class="upload-main-text">Belge veya Görsel Yükle (PDF, DOCX, TXT, Resim)</div>
+              <div class="upload-sub-text">Dosyayı buraya sürükleyin veya cihazınızdan seçin</div>
+            </div>
+            <button type="button" class="btn-select-file" id="btn-trigger-file-input">
+              <span>Dosya Seç</span>
+            </button>
+          </div>
+          <div id="reader-upload-status" class="reader-upload-status hidden"></div>
+
+          <!-- Metin Giriş Kartı -->
+          <div class="reader-text-input-wrap">
+            <textarea
+              id="reader-input-text"
+              class="reader-textarea"
+              placeholder="Almanca bir metin, haber veya makale yapıştırın veya yukarıdan PDF/DOCX belgesi yükleyin..."
+              rows="6"
+            ></textarea>
+            <div class="reader-parse-btn-row">
+              <select id="reader-sample-select" class="reader-select" title="Hazır Örnek Metinler">
+                <option value="">Örnek Metin Seçin...</option>
+                <option value="sample_a1">Der Alltag in Berlin (A1)</option>
+                <option value="sample_a2">Ein Wochenende in München (A2)</option>
+                <option value="sample_b1">Klimawandel und Zukunft (B1)</option>
+                <option value="sample_b2">Berufliches Bewerbungsgespräch (B2)</option>
+              </select>
+              <div class="reader-parse-actions-subrow">
+                <button type="button" id="btn-reader-clear" class="btn-secondary-compact" title="Temizle">
+                  <span>Temizle</span>
+                </button>
+                <button type="button" id="btn-reader-parse" class="btn-primary-compact">
+                  <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-check"></use></svg>
+                  <span>Metni Ayrıştır ve Oku</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GÖRÜNÜM 2: TAM EKRAN ODAKLI OKUMA SAYFASI (FULLSCREEN READING VIEW) -->
+        <div id="reader-fullscreen-view" class="reader-fullscreen-view hidden">
+          <!-- Çok Sade Üst Bar (Minimalist Reader Bar) -->
+          <div class="reader-fs-topbar">
+            <button type="button" id="btn-reader-back-setup" class="btn-fs-icon-action" title="Geri" aria-label="Geri">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="reader-topbar-center">
+              <span class="reader-mode-title">Okuma Modu</span>
+              <span id="reader-word-count-badge" class="reader-word-count-badge"></span>
+            </div>
+            <button type="button" id="btn-toggle-reader-dock" class="btn-fs-icon-action" title="Kontrolleri Aç / Kapat" aria-label="Kontroller">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+            </button>
+          </div>
+
+          <!-- Okuma Tuvali (Distraction-Free Reading Canvas) -->
+          <div class="reader-fs-body">
+            <div id="reader-display-pane" class="reader-fs-canvas"></div>
+          </div>
+
+          <!-- Alt Yüzen Okuma & Ses Çubuğu (Floating Bottom Dock) -->
+          <div id="reader-floating-dock" class="reader-floating-dock">
+            <div class="dock-group font-group">
+              <button type="button" id="btn-reader-font-dec" class="dock-btn-compact" title="Yazıyı Küçült">A-</button>
+              <button type="button" id="btn-reader-font-inc" class="dock-btn-compact" title="Yazıyı Büyüt">A+</button>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <div class="dock-group">
+              <select id="reader-fs-speed-select" class="dock-select" title="Okuma Hızı">
+                <option value="0.75">0.75x</option>
+                <option value="0.90" selected>0.90x</option>
+                <option value="1.0">1.0x</option>
+                <option value="1.15">1.15x</option>
+              </select>
+            </div>
+
+            <div class="dock-divider"></div>
+
+            <div class="dock-group audio-group">
+              <button type="button" id="btn-reader-play-all" class="dock-action-btn dock-btn-play dock-icon-only" title="Dinle" aria-label="Dinle">
+                <svg class="svg-icon" style="width:18px; height:18px;"><use href="#icon-volume"></use></svg>
+              </button>
+              <button type="button" id="btn-reader-stop" class="dock-action-btn dock-btn-stop dock-icon-only" title="Durdur" aria-label="Durdur">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -1396,7 +1516,7 @@
           <div class="game-card featured-game-card" id="btn-open-smart-reader-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
               <div class="game-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">
-                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#nav-icon-home"></use></svg>
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-school"></use></svg>
               </div>
               <span class="badge" style="background:rgba(139, 92, 246, 0.15); border:1px solid rgba(139, 92, 246, 0.35); color:#A78BFA; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">METİN &amp; BELGE OKUYUCU</span>
             </div>
@@ -2896,24 +3016,24 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.5.0"></script>
-  <script src="js/db.js?v=3.5.0"></script>
-  <script src="js/verbHelper.js?v=3.5.0"></script>
-  <script src="js/grammarEnrichment.js?v=3.5.0"></script>
-  <script src="js/offlineDictionary.js?v=3.5.0"></script>
-  <script src="js/dictionary.js?v=3.5.0"></script>
-  <script src="js/curatedPacks.js?v=3.5.0"></script>
-  <script src="js/seeder.js?v=3.5.0"></script>
-  <script src="js/tts.js?v=3.5.0"></script>
-  <script src="js/pronunciation.js?v=3.5.0"></script>
-  <script src="js/translator.js?v=3.5.0"></script>
-  <script src="js/game.js?v=3.5.0"></script>
-  <script src="js/study.js?v=3.5.0"></script>
-  <script src="js/stats.js?v=3.5.0"></script>
-  <script src="js/coach.js?v=3.5.0"></script>
-  <script src="js/deckBuilder.js?v=3.5.0"></script>
-  <script src="js/social.js?v=3.5.0"></script>
-  <script src="js/app.js?v=3.5.0"></script>
+  <script src="js/config.js?v=3.5.2"></script>
+  <script src="js/db.js?v=3.5.2"></script>
+  <script src="js/verbHelper.js?v=3.5.2"></script>
+  <script src="js/grammarEnrichment.js?v=3.5.2"></script>
+  <script src="js/offlineDictionary.js?v=3.5.2"></script>
+  <script src="js/dictionary.js?v=3.5.2"></script>
+  <script src="js/curatedPacks.js?v=3.5.2"></script>
+  <script src="js/seeder.js?v=3.5.2"></script>
+  <script src="js/tts.js?v=3.5.2"></script>
+  <script src="js/pronunciation.js?v=3.5.2"></script>
+  <script src="js/translator.js?v=3.5.2"></script>
+  <script src="js/game.js?v=3.5.2"></script>
+  <script src="js/study.js?v=3.5.2"></script>
+  <script src="js/stats.js?v=3.5.2"></script>
+  <script src="js/coach.js?v=3.5.2"></script>
+  <script src="js/deckBuilder.js?v=3.5.2"></script>
+  <script src="js/social.js?v=3.5.2"></script>
+  <script src="js/app.js?v=3.5.2"></script>
 </body>
 </html>
 

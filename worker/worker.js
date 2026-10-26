@@ -696,43 +696,64 @@ async function handleDatabaseApi(path, body, env, c) {
       return json({ ok: true }, 200, c.headers);
     }
 
-    // 15. Hızlı, Sınırsız ve Akıllı Çeviri Motoru (Gemini Flash + Fallback)
+    // 15. Otomatik Dil Tespiti ile Akıllı Çok Dilli Sözlük Motoru (Gemini Flash)
     if (path === '/api/translate') {
       const text = clean(body.q || body.text, 2000);
-      const sl = clean(body.sl, 10) || 'auto';
-      const tl = clean(body.tl, 10) || 'de';
-      if (!text) return json({ ok: true, translation: '' }, 200, c.headers);
+      if (!text) return json({ ok: true, translation: '', germanWord: '' }, 200, c.headers);
 
-      // 1. Gemini Flash Çevirisi (0 kota sınırı, tam doğruluk)
       if (env.GEMINI_KEY) {
         try {
-          const sys = `Sen üst düzey bir iki dilli sözlük ve çeviri motorusun. Sana verilen metni ${tl === 'de' ? 'Almanca' : 'Türkçe'} diline çevir. İsim ise Almancada artikelini (der/die/das) ekle. Yalnızca JSON { "translation": "..." } formatında yanıt ver.`;
+          const sys = `Sen uzman bir Alman dilbilimci (Germanist) ve üç dilli (Almanca, Türkçe, İngilizce) akıllı sözlük motorusun.
+Sana gönderilen arama teriminin dilini OTOMATİK tespit et (de, tr, en veya other).
+- 'germanWord': Bu terimin Almanca sözlük karşılığı (Örn: 'vergi' -> 'Steuer', 'ayna' -> 'Spiegel', 'mirror' -> 'Spiegel', 'tax' -> 'Steuer', 'araba' -> 'Auto', 'car' -> 'Auto', 'Hund' -> 'Hund'). Başında artikel yazma, sadece kelimeyi yaz. İsim ise ilk harfini büyük, fiil/sıfatsa küçük yap.
+- 'article': İsim ise mutlaka 'der', 'die' veya 'das'. İsim değilse boş string ''.
+- 'pluralForm': İsim ise çoğul hali (Örn: 'die Steuern', 'die Spiegel', 'die Autos').
+- 'partOfSpeech': 'NOUN', 'VERB', 'ADJECTIVE', 'OTHER'.
+- 'meaningTr': Kelimenin Türkçe karşılığı (Örn: 'Vergi', 'Ayna', 'Araba').
+- 'meaningEn': Kelimenin İngilizce karşılığı (Örn: 'Tax', 'Mirror', 'Car').
+- 'detectedLang': Girdinin tespit edilen dili ('de', 'tr', 'en', 'other').
+- 'translation': İsimse artikel + kelime (Örn: 'die Steuer', 'der Spiegel', 'das Auto'), fiilse mastar (Örn: 'gehen').
+Emoji veya sohbet metni yazma, yalnızca istenen JSON nesnesini döndür.`;
+
           const schema = {
             type: 'OBJECT',
-            properties: { translation: { type: 'STRING' } },
-            required: ['translation']
+            properties: {
+              detectedLang: { type: 'STRING', enum: ['de', 'tr', 'en', 'other'] },
+              germanWord: { type: 'STRING' },
+              article: { type: 'STRING' },
+              pluralForm: { type: 'STRING' },
+              partOfSpeech: { type: 'STRING', enum: ['NOUN', 'VERB', 'ADJECTIVE', 'OTHER'] },
+              meaningTr: { type: 'STRING' },
+              meaningEn: { type: 'STRING' },
+              translation: { type: 'STRING' }
+            },
+            required: ['detectedLang', 'germanWord', 'partOfSpeech', 'meaningTr', 'meaningEn']
           };
-          const out = await callGemini(env, sys, schema, [{ text }], 300);
-          if (out && out.translation) {
-            return json({ ok: true, translation: out.translation.trim() }, 200, c.headers);
+
+          const out = await callGemini(env, sys, schema, [{ text }], 350);
+          if (out && out.germanWord) {
+            let art = clean(out.article, 5).toLowerCase();
+            if (!['der', 'die', 'das'].includes(art)) art = '';
+            let gWord = clean(out.germanWord, 60).replace(/^(der|die|das)s+/i, '');
+            if (out.partOfSpeech === 'NOUN') gWord = gWord.charAt(0).toUpperCase() + gWord.slice(1);
+            else gWord = gWord.toLowerCase();
+
+            return json({
+              ok: true,
+              detectedLang: out.detectedLang || 'auto',
+              germanWord: gWord,
+              article: art,
+              pluralForm: clean(out.pluralForm, 60),
+              partOfSpeech: out.partOfSpeech || 'NOUN',
+              meaningTr: clean(out.meaningTr, 100),
+              meaningEn: clean(out.meaningEn, 100),
+              translation: art ? `${art} ${gWord}` : gWord
+            }, 200, c.headers);
           }
         } catch (_) {}
       }
 
-      // 2. MyMemory Fallback
-      try {
-        const pair = `${sl === 'auto' ? 'tr' : sl}|${tl}`;
-        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
-        const res = await fetch(mmUrl, { signal: AbortSignal.timeout(5000) });
-        const data = await res.json();
-        let translation = data?.responseData?.translatedText || '';
-        if (translation && !translation.includes('MYMEMORY WARNING')) {
-          translation = translation.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-          return json({ ok: true, translation }, 200, c.headers);
-        }
-      } catch (_) {}
-
-      return json({ ok: false, translation: '' }, 200, c.headers);
+      return json({ ok: false, translation: '', germanWord: '' }, 200, c.headers);
     }
 
     return json({ error: 'Geçersiz API uç noktası.' }, 404, c.headers);

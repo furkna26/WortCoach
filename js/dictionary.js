@@ -774,22 +774,17 @@ class DictionaryService {
     const raw = word.trim();
     const lower = raw.toLowerCase();
 
-    // 1. Kesin Almanca belirteçleri
+    // 1. Kesin Almanca belirteçleri (ß veya artikel veya sich)
     if (/[ß]/.test(raw)) return true;
-    if (/^(der|die|das)\s+/i.test(raw)) return true;
+    if (/^(der|die|das|ein|eine)\s+/i.test(raw)) return true;
     if (/^sich\s+/i.test(raw)) return true;
 
-    // 2. Doğrulanmış çekirdek sözlük kontrolü
+    // 2. Doğrulanmış yerel/çekirdek sözlük kontrolü
     if (this.findOfflineEntry(lower)) return true;
+    if (typeof window !== 'undefined' && window.OfflineDictionary && typeof window.OfflineDictionary.search === 'function') {
+      if (window.OfflineDictionary.search(lower)) return true;
+    }
 
-    // 3. Bilinen Almanca morfolojik sonekler
-    if (/(ung|heit|keit|schaft|ion|tät|chen|lein|ismus|ment|enz|anz|ur|ig|lich|isch|bar|sam|haft)$/i.test(lower)) {
-      return true;
-    }
-    // 4. Bilinen Almanca önekler (en az 5 harf)
-    if (/^(ge|ver|be|er|ent|emp|zer|miss|vor|nach|auf|aus|an|ab|mit|ein|zu|durch|über|unter)/i.test(lower) && lower.length >= 5) {
-      return true;
-    }
     return false;
   }
 
@@ -1101,14 +1096,17 @@ class DictionaryService {
 
   static async translateWordToGerman(cleanText, signal) {
     if (!cleanText) return null;
-    // 1. Worker Proxy (Trke -> Almanca)
+    // 1. WortCoach Akıllı Çok Dilli Sözlük Motoru (Otomatik Dil Tespiti)
     try {
       const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: cleanText, sl: 'tr', tl: 'de' }),
+        body: JSON.stringify({ q: cleanText, sl: 'auto', tl: 'de' }),
         signal
       }).then(r => r.json()).catch(() => null);
+      if (pRes && pRes.ok && pRes.germanWord) {
+        return pRes;
+      }
       if (pRes && pRes.translation && pRes.translation.toLowerCase() !== cleanText.toLowerCase()) {
         return pRes.translation;
       }
@@ -1368,22 +1366,63 @@ class DictionaryService {
       }
     }
 
-    // 6. DİĞER DİLLERDEN GİRİŞ: Otomatik olarak Almancaya çevir ve Almanca kart oluştur
-    // (User Req: "Arama fonksiyonu diğer dillerden bir input aldığında otomatik almancaya çevirsin aratsın")
-    const translated = await this.translateWordToGerman(trimmed, signal);
-    if (translated && translated.toLowerCase() !== lower) {
-      return this.buildEntryFromTranslation(translated, trimmed, 'auto', signal);
-    }
+    // 6. DİĞER DİLLERDEN VEYA YERELDE BULUNAMAYAN GİRİŞ:
+    // Akıllı Çok Dilli Sözlük Motoru (Otomatik Dil Tespiti: Türkçe, İngilizce, Almanca)
+    const cloudEntry = await this.translateWordToGerman(trimmed, signal);
+    if (cloudEntry) {
+      if (typeof cloudEntry === 'object' && cloudEntry.germanWord) {
+        let finalWord = cloudEntry.germanWord;
+        let finalArt = cloudEntry.article || '';
+        let finalPos = cloudEntry.partOfSpeech || 'NOUN';
+        if (finalPos === 'NOUN') {
+          finalWord = finalWord.charAt(0).toUpperCase() + finalWord.slice(1);
+          if (!finalArt && typeof window !== 'undefined' && window.GermanNounHelper) {
+            const nh = window.GermanNounHelper.analyze(finalWord);
+            if (nh && nh.article) finalArt = nh.article;
+          }
+        }
+        const isTrInput = cloudEntry.detectedLang === 'tr';
+        const isEnInput = cloudEntry.detectedLang === 'en';
+        const capTrimmed = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 
-    // 7. Kelime Almanca bir deyim veya kalıp olabilir mi? (Almanca -> Türkçe dene)
-    const trMean = await this.translateGermanToTr(trimmed, signal);
-    if (trMean && trMean.toLowerCase() !== lower) {
-      const entry = this.synthesizeInstantEntry(trimmed);
-      entry.meaningsTr = trMean;
-      const enMean = await this.translateGermanToEn(trimmed, signal);
-      if (enMean) entry.meaningsEn = enMean;
-      entry.resolvedFromQuery = trimmed;
-      return entry;
+        let finalTr = cloudEntry.meaningTr || '';
+        if (isTrInput || !finalTr || finalTr.toLowerCase() === finalWord.toLowerCase()) {
+          finalTr = isTrInput ? capTrimmed : (finalTr || capTrimmed);
+        }
+
+        let finalEn = cloudEntry.meaningEn || '';
+        if (isEnInput || !finalEn) {
+          finalEn = isEnInput ? capTrimmed : (finalEn || 'Translation');
+        }
+
+        return {
+          germanWord: finalWord,
+          targetLanguage: 'de',
+          partOfSpeech: finalPos,
+          article: finalArt,
+          pluralForm: cloudEntry.pluralForm || '',
+          meaningsTr: finalTr,
+          meaningsEn: finalEn,
+          exampleSentence: '',
+          examples: [],
+          praesens: '',
+          praeteritum: '',
+          partizipZwei: '',
+          hilfsverb: 'hat',
+          isSeparable: false,
+          separablePrefix: '',
+          regularity: '',
+          imperativ: '',
+          isReflexive: false,
+          reflexiveType: null,
+          cefr: 'B1',
+          isSynthesized: true,
+          resolvedFromQuery: trimmed
+        };
+      }
+      if (typeof cloudEntry === 'string' && cloudEntry.toLowerCase() !== lower) {
+        return this.buildEntryFromTranslation(cloudEntry, trimmed, 'auto', signal);
+      }
     }
 
     // Hiçbir kaynakta bulunamadı -> null

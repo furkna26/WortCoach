@@ -234,7 +234,8 @@ class WortCoachApp {
     return {
       'tab-home': '/sozluk',
       'tab-translate': '/ceviri',
-      'tab-reader': '/coach',
+      'tab-coach': '/coach',
+      'tab-reader': '/okuyucu',
       'tab-profile': '/profil',
       'tab-games': '/oyunlar',
       'tab-decks': '/desteler',
@@ -248,8 +249,9 @@ class WortCoachApp {
       '/': 'tab-home',
       '/sozluk': 'tab-home',
       '/ceviri': 'tab-translate',
-      '/coach': 'tab-reader',
+      '/coach': 'tab-coach',
       '/okuyucu': 'tab-reader',
+      '/reader': 'tab-reader',
       '/profil': 'tab-profile',
       '/oyunlar': 'tab-games',
       '/desteler': 'tab-decks',
@@ -2660,14 +2662,14 @@ class WortCoachApp {
     cards.forEach((card) => {
       card.addEventListener('click', () => {
         if (card.id === 'btn-open-coach-card') {
-          this.switchTab('tab-reader');
+          this.switchTab('tab-coach');
           return;
         }
         if (card.id === 'btn-open-smart-reader-card') {
-          // Akıllı okuyucu dosya seçimi
-          const fileInput = document.getElementById('coach-chat-file-input') || document.getElementById('reader-file-input');
-          if (fileInput) fileInput.click();
           this.switchTab('tab-reader');
+          return;
+        }
+        if (card.id === 'btn-open-deck-builder-card') {
           return;
         }
         const gameType = card.getAttribute('data-game-type') || 'MIXED';
@@ -2676,6 +2678,10 @@ class WortCoachApp {
     });
 
     document.getElementById('btn-coach-back-to-games')?.addEventListener('click', () => {
+      this.switchTab('tab-games');
+    });
+
+    document.getElementById('btn-reader-back-to-games')?.addEventListener('click', () => {
       this.switchTab('tab-games');
     });
 
