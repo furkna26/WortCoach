@@ -69,7 +69,8 @@ Bu durumda exercise.type değerini 'NONE' yap ve suggestedPrompts olarak yalnız
    - 'GRAMMAR': Fiil çekimi, artikel (der/die/das), sıfat çekimi veya edat sorusu, 4 seçenek ve doğru indeks.
    - 'DECK': Kullanıcı metinden deste üretilmesini istediğinde sözlüğe uyumlu 5-15 kelimelik liste ({ lemma, pos, cefr, contextMeaning, sourceSentence }).
    - 'NONE': Alıştırma gerektirmeyen standart açıklama veya reddetme yanıtı.
-4. KESİNLİKLE emoji kullanma. Ciddi, akademik, pedagojik ve kurumsal bir üslup kullan.`;
+4. Kullanıcı alıştırma sonucunu (doğru veya yanlış cevapladığını) bildirdiğinde, cevabın reply kısmında bunu pedagojik olarak değerlendir: Doğru bildiyse tebrik et ve kuralı kısaca özetle; yanlış yaptıysa seçtiği seçeneğin neden yanlış olduğunu ve doğru kullanımın dilbilgisi kuralını (artikel, hal, çekim vb.) sade bir dille açıklayarak kullanıcıya rehberlik et.
+5. KESİNLİKLE emoji kullanma. Ciddi, akademik, pedagojik ve kurumsal bir üslup kullan.`;
 
 // ---------- Schemas ----------
 const DECK_SCHEMA = {

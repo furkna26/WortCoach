@@ -141,6 +141,7 @@
         $('prof-tier-badge').style.color = tier.color;
       }
       if ($('prof-streak-count')) $('prof-streak-count').textContent = prof.streak_days || 0;
+      if ($('prof-streak-display')) $('prof-streak-display').textContent = (prof.streak_days || 0) + ' Gün Seri';
 
       // Sonraki lig ilerlemesi
       const nextTierIndex = RANK_TIERS.findIndex(t => t.name === tier.name) + 1;
@@ -150,26 +151,35 @@
         if ($('prof-tier-progress-text')) {
           $('prof-tier-progress-text').textContent = `${nextTier.name} ligine ${Math.max(0, diff)} ELO kaldı`;
         }
+        if ($('prof-tier-progress-fill')) {
+          const currentTier = tier;
+          const range = nextTier.min - currentTier.min;
+          const prog = prof.elo - currentTier.min;
+          const pct = Math.max(5, Math.min(100, Math.round((prog / (range || 1)) * 100)));
+          $('prof-tier-progress-fill').style.width = pct + '%';
+        }
       } else {
         if ($('prof-tier-progress-text')) $('prof-tier-progress-text').textContent = 'En üst ligdesiniz (Grossmeister)';
+        if ($('prof-tier-progress-fill')) $('prof-tier-progress-fill').style.width = '100%';
       }
 
       // Deste gizliliği seçimi
-      if ($('sel-deck-privacy')) {
-        $('sel-deck-privacy').value = prof.deck_privacy || 'friends';
+      const privSelect = $('profile-deck-privacy-select') || $('sel-deck-privacy');
+      if (privSelect) {
+        privSelect.value = prof.deck_privacy || 'friends';
       }
 
-      // Giriş / Çıkış buton durumu
-      const authBtn = $('btn-prof-auth-action');
-      if (authBtn) {
+      // Giriş / Çıkış buton durumu (hem btn-profile-auth-trigger hem btn-prof-auth-action desteklenir)
+      const authBtns = [$('btn-profile-auth-trigger'), $('btn-prof-auth-action')].filter(Boolean);
+      authBtns.forEach(btn => {
         if (this.isCloudConnected()) {
-          authBtn.textContent = 'Çıkış Yap';
-          authBtn.className = 'prof-auth-link-btn prof-auth-danger';
+          btn.textContent = 'Çıkış Yap';
+          btn.className = 'prof-auth-link-btn prof-auth-danger';
         } else {
-          authBtn.textContent = 'Giriş / Kayıt';
-          authBtn.className = 'prof-auth-link-btn';
+          btn.textContent = 'Giriş Yap / Kaydol';
+          btn.className = 'prof-auth-link-btn';
         }
-      }
+      });
     }
 
     // Dinamik ELO Hesaplama
@@ -355,18 +365,30 @@
     async renderStatsCards(userId, range) {
       const stats = await this.getAggregatedStats(userId, range);
 
-      if ($('stat-val-artikel')) $('stat-val-artikel').textContent = '%' + stats.artikelAcc;
+      // Artikel Keskinliği (Genus)
+      const valArt = $('stat-val-genus') || $('stat-val-artikel');
+      if (valArt) valArt.textContent = '%' + stats.artikelAcc;
       if ($('stat-bar-artikel')) $('stat-bar-artikel').style.width = stats.artikelAcc + '%';
+      if ($('stat-sub-genus')) $('stat-sub-genus').textContent = (stats.totalQuestions || 0) + ' soru incelendi';
 
-      if ($('stat-val-cloze')) $('stat-val-cloze').textContent = '%' + stats.clozeAcc;
+      // Bağlam Ustası (Kontext / Cloze)
+      const valCloze = $('stat-val-kontext') || $('stat-val-cloze');
+      if (valCloze) valCloze.textContent = '%' + stats.clozeAcc;
       if ($('stat-bar-cloze')) $('stat-bar-cloze').style.width = stats.clozeAcc + '%';
+      if ($('stat-sub-kontext')) $('stat-sub-kontext').textContent = (stats.totalQuestions || 0) + ' alıştırma çözüldü';
 
-      if ($('stat-val-tempo')) $('stat-val-tempo').textContent = stats.agilitySec + 's';
+      // Çeviklik (Tempo)
+      const valTempo = $('stat-val-tempo');
+      if (valTempo) valTempo.textContent = stats.agilitySec + ' sn';
       const tempoPct = Math.max(10, Math.min(100, Math.round((1 - parseFloat(stats.agilitySec) / 5) * 100)));
       if ($('stat-bar-tempo')) $('stat-bar-tempo').style.width = (stats.totalQuestions > 0 ? tempoPct : 0) + '%';
+      if ($('stat-sub-tempo')) $('stat-sub-tempo').textContent = stats.totalQuestions > 0 ? `${stats.totalQuestions} yanıtın ortalaması` : 'Henüz veri yok';
 
-      if ($('stat-val-review')) $('stat-val-review').textContent = '%' + stats.retentionRate;
+      // Hafıza Direnci (Ausdauer / Retention)
+      const valRev = $('stat-val-ausdauer') || $('stat-val-review');
+      if (valRev) valRev.textContent = '%' + stats.retentionRate;
       if ($('stat-bar-review')) $('stat-bar-review').style.width = stats.retentionRate + '%';
+      if ($('stat-sub-ausdauer')) $('stat-sub-ausdauer').textContent = (stats.totalQuestions || 0) + ' tekrar kartı';
     }
 
     // Arkadaş Arama
@@ -576,7 +598,7 @@
 
     // UI: Arkadaş Arama İşlemi
     async handleUserSearch() {
-      const input = $('input-search-user');
+      const input = $('user-search-input') || $('input-search-user');
       const resultsContainer = $('user-search-results');
       if (!input || !resultsContainer) return;
 
@@ -763,61 +785,53 @@
     }
 
     attachEventListeners() {
-      // Header ve Profil Butonları
-      $('btn-open-profile')?.addEventListener('click', () => {
-        if (window.wmApp && window.wmApp.switchTab) {
-          window.wmApp.switchTab('tab-profile');
-        }
-        this.refreshProfileView();
-      });
-
-      $('btn-close-profile-modal')?.addEventListener('click', () => {
-        $('modal-profile-sheet')?.classList.add('hidden');
-      });
-
-      // Zaman Filtresi Butonları (1G | 1H | 1A | 1Y | Tümü)
-      document.querySelectorAll('.time-filter-btn').forEach(btn => {
+      // 1. Profil Sekmesi Alt Panelleri ([İstatistiklerim] | [Sosyal & Arkadaşlar])
+      document.querySelectorAll('.profile-subtab-btn[data-target-pane]').forEach(btn => {
         btn.addEventListener('click', (e) => {
-          document.querySelectorAll('.time-filter-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.profile-subtab-btn[data-target-pane]').forEach(b => b.classList.remove('active'));
           e.currentTarget.classList.add('active');
-          const range = e.currentTarget.getAttribute('data-range');
+          const targetId = e.currentTarget.getAttribute('data-target-pane');
+          
+          document.querySelectorAll('#tab-profile .profile-pane').forEach(p => p.classList.add('hidden'));
+          const targetEl = $(targetId);
+          if (targetEl) targetEl.classList.remove('hidden');
+
+          if (targetId === 'pane-prof-friends') {
+            this.renderFriendsLeaderboard();
+            this.renderPendingRequests();
+          }
+        });
+      });
+
+      // 2. Zaman Filtresi Butonları (1G | 1H | 1A | 1Y | Tümü)
+      document.querySelectorAll('.prof-stat-filter-btn, .time-filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.prof-stat-filter-btn, .time-filter-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          const range = e.currentTarget.getAttribute('data-range') || '7d';
           this.currentFilterRange = range;
           const prof = this.getActiveProfile();
           this.renderStatsCards(prof.id, range);
         });
       });
 
-      // Arkadaş Detay Modalı Kapatma
-      $('btn-close-friend-detail')?.addEventListener('click', () => {
-        $('friend-detail-submodal')?.classList.add('hidden');
-      });
-
-      // Arkadaş Detay Zaman Filtresi
-      document.querySelectorAll('.friend-time-filter-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          document.querySelectorAll('.friend-time-filter-btn').forEach(b => b.classList.remove('active'));
-          e.currentTarget.classList.add('active');
-          const range = e.currentTarget.getAttribute('data-range');
-          this.friendFilterRange = range;
-          if (this.viewingFriendProfile) {
-            this.renderFriendStats(this.viewingFriendProfile.id, range);
-          }
-        });
-      });
-
-      // Kullanıcı Arama
+      // 3. Kullanıcı Arama (Hem user-search-input hem input-search-user)
       $('btn-search-user')?.addEventListener('click', () => this.handleUserSearch());
+      $('user-search-input')?.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') this.handleUserSearch();
+      });
       $('input-search-user')?.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') this.handleUserSearch();
       });
 
-      // Deste Gizliliği Değişimi
-      $('sel-deck-privacy')?.addEventListener('change', async (e) => {
+      // 4. Deste Gizliliği Seçimi (Hem profile-deck-privacy-select hem sel-deck-privacy)
+      const privSelect = $('profile-deck-privacy-select') || $('sel-deck-privacy');
+      privSelect?.addEventListener('change', async (e) => {
         await this.updateDeckPrivacy(e.target.value);
         if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Deste gizliliği güncellendi.');
       });
 
-      // Arkadaş Kodu Kopyalama
+      // 5. Arkadaş Kodu Kopyalama
       $('btn-copy-friend-code')?.addEventListener('click', () => {
         const prof = this.getActiveProfile();
         if (navigator.clipboard && prof.friend_code) {
@@ -827,22 +841,27 @@
         }
       });
 
-      // Auth Action (Giriş / Çıkış)
-      $('btn-prof-auth-action')?.addEventListener('click', () => {
-        if (this.user) {
-          if (confirm('Oturumu kapatmak istediğinize emin misiniz?')) {
-            this.signOut();
+      // 6. Giriş Yap / Kaydol / Çıkış Butonu
+      const authTriggers = [$('btn-profile-auth-trigger'), $('btn-prof-auth-action')].filter(Boolean);
+      authTriggers.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (this.user) {
+            if (confirm('Oturumu kapatmak istediğinize emin misiniz?')) {
+              this.signOut();
+            }
+          } else {
+            const authModal = $('modal-auth') || $('modal-auth-sheet');
+            authModal?.classList.remove('hidden');
           }
-        } else {
-          $('modal-auth-sheet')?.classList.remove('hidden');
-        }
+        });
       });
 
       $('btn-close-auth-modal')?.addEventListener('click', () => {
+        $('modal-auth')?.classList.add('hidden');
         $('modal-auth-sheet')?.classList.add('hidden');
       });
 
-      // Auth Subtab Switch [Giriş Yap] | [Kayıt Ol]
+      // 7. Auth Sekme Geçişi ([Giriş Yap] | [Kayıt Ol])
       $('tab-btn-auth-login')?.addEventListener('click', () => {
         $('tab-btn-auth-login').classList.add('active');
         $('tab-btn-auth-register').classList.remove('active');
@@ -857,7 +876,7 @@
         $('form-auth-login').classList.add('hidden');
       });
 
-      // Giriş Formu Submit
+      // 8. Giriş Formu Gönderimi
       $('btn-submit-login')?.addEventListener('click', async () => {
         const u = $('auth-login-username')?.value;
         const p = $('auth-login-password')?.value;
@@ -868,8 +887,10 @@
           $('btn-submit-login').disabled = true;
           $('btn-submit-login').textContent = 'Giriş Yapılıyor...';
           await this.signInWithUsername(u, p);
+          $('modal-auth')?.classList.add('hidden');
           $('modal-auth-sheet')?.classList.add('hidden');
           if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Başarıyla giriş yapıldı.');
+          await this.refreshProfileView();
         } catch (err) {
           if (errEl) {
             errEl.textContent = err.message;
@@ -881,7 +902,7 @@
         }
       });
 
-      // Kayıt Formu Submit
+      // 9. Kayıt Formu Gönderimi
       $('btn-submit-register')?.addEventListener('click', async () => {
         const u = $('auth-reg-username')?.value;
         const p = $('auth-reg-password')?.value;
@@ -893,8 +914,10 @@
           $('btn-submit-register').disabled = true;
           $('btn-submit-register').textContent = 'Kayıt Yapılıyor...';
           await this.signUpWithUsername(u, p, pc);
+          $('modal-auth')?.classList.add('hidden');
           $('modal-auth-sheet')?.classList.add('hidden');
           if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Hesabınız oluşturuldu ve giriş yapıldı.');
+          await this.refreshProfileView();
         } catch (err) {
           if (errEl) {
             errEl.textContent = err.message;
@@ -906,7 +929,25 @@
         }
       });
 
-      // Lig Terfi Modalı Kapatma
+      // 10. Arkadaş Detay Modalı Kapatma
+      $('btn-close-friend-detail')?.addEventListener('click', () => {
+        $('friend-detail-submodal')?.classList.add('hidden');
+      });
+
+      // 11. Arkadaş Detay Zaman Filtresi
+      document.querySelectorAll('.friend-time-filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.friend-time-filter-btn').forEach(b => b.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          const range = e.currentTarget.getAttribute('data-range');
+          this.friendFilterRange = range;
+          if (this.viewingFriendProfile) {
+            this.renderFriendStats(this.viewingFriendProfile.id, range);
+          }
+        });
+      });
+
+      // 12. Lig Terfi Modalı Kapatma
       $('btn-close-rank-promo')?.addEventListener('click', () => {
         $('modal-rank-promo')?.classList.add('hidden');
       });

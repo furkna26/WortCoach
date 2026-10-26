@@ -602,6 +602,10 @@
     </symbol>
 
     <!-- 3. Oyunlar İkonu (Oyun Kolu / Gamepad) -->
+        <symbol id="nav-icon-study" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+      <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+    </symbol>
     <symbol id="nav-icon-games" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="6" width="20" height="12" rx="4"></rect>
       <line x1="6" y1="12" x2="10" y2="12"></line>
@@ -945,14 +949,14 @@
             <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; width:100%;">
               <div style="display:flex; align-items:center; gap:14px;">
                 <div style="width:44px; height:44px; border-radius:12px; background:var(--accent-primary-soft); border:1px solid rgba(59,130,246,0.35); display:flex; align-items:center; justify-content:center; color:var(--accent-primary);">
-                  <svg class="svg-icon" style="width:22px; height:22px;"><use href="#nav-icon-games"></use></svg>
+                  <svg class="svg-icon" style="width:22px; height:22px;"><use href="#nav-icon-study"></use></svg>
                 </div>
                 <div>
-                  <div style="font-size:1.02rem; font-weight:800; color:var(--text-primary);">Kelime Oyunları</div>
+                  <div style="font-size:1.02rem; font-weight:800; color:var(--text-primary);">Çalış &amp; Pratik</div>
                   <div style="font-size:0.80rem; color:var(--text-secondary); margin-top:2px;">Kablo eşleştirme, artikel testleri ve interaktif quizler </div>
                 </div>
               </div>
-              <span class="featured-badge" style="position:static;">OYNA</span>
+              <span class="featured-badge" style="position:static;">BAŞLA</span>
             </div>
           </div>
 
@@ -1378,31 +1382,7 @@
         </div>
 
         <div id="subview-games-content" class="games-subview-panel">
-          <!-- 1. Coach (Almanca Dil Koçu - Saf Chat) -->
-          <div class="game-card featured-game-card" id="btn-open-coach-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
-            <div class="game-card-top">
-              <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
-                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-bookmark"></use></svg>
-              </div>
-              <span class="badge" style="background:var(--accent-primary-soft); border:1px solid rgba(59,130,246,0.35); color:var(--brand-blue-hover); font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DİL KOÇU</span>
-            </div>
-            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Coach (Almanca Dil Koçu)</div>
-            <div class="game-card-desc">Soru sorun, dilbilgisi kurallarını öğrenin, çalışma belgelerinizi ve görsellerinizi yükleyerek anında pratik ve analiz yapın.</div>
-          </div>
-
-          <!-- 2. Koç ile Deste Oluşturma (AI Deste Motoru) -->
-          <div class="game-card featured-game-card" id="btn-open-deck-builder-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
-            <div class="game-card-top">
-              <div class="game-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
-                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#nav-icon-decks"></use></svg>
-              </div>
-              <span class="badge" style="background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); color:#FBBF24; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DESTE MOTORU</span>
-            </div>
-            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Koç ile Deste Oluşturma</div>
-            <div class="game-card-desc">Metin, kitap sayfası, görsel veya PDF yükleyin; yapay zeka seviyeye göre kelimeleri ayıklayıp otomatik deste oluştursun.</div>
-          </div>
-
-          <!-- 2. Telaffuz Koçu (Aussprache-Trainer) -->
+          <!-- Telaffuz Koçu (Aussprache-Trainer) -->
           <div class="game-card featured-game-card" id="btn-open-pron-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
               <div class="game-icon-box" style="background: var(--accent-emerald-soft); color: var(--accent-emerald);">
@@ -1414,7 +1394,7 @@
             <div class="game-card-desc">Standart ses tanımanın kaçırdığı fonemleri (ch, sch, sp/st, z, ä/ö/ü) hece hece analiz edin ve telaffuz skorunuzu görün.</div>
           </div>
 
-          <!-- 3. Akıllı Okuma (Belge & Metin Okuyucu) -->
+          <!-- Akıllı Okuma (Belge & Metin Okuyucu) -->
           <div class="game-card featured-game-card" id="btn-open-smart-reader-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
               <div class="game-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">
@@ -1424,6 +1404,30 @@
             </div>
             <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Akıllı Okuma</div>
             <div class="game-card-desc">PDF, DOCX veya görsel yükleyin, kelimelerin üzerine tıklayarak anlık sözlük anlamını ve telaffuzunu görün.</div>
+          </div>
+
+          <!-- Koç ile Deste Oluşturma (AI Deste Motoru) -->
+          <div class="game-card featured-game-card" id="btn-open-deck-builder-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#nav-icon-decks"></use></svg>
+              </div>
+              <span class="badge" style="background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); color:#FBBF24; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DESTE MOTORU</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Koç ile Deste Oluşturma</div>
+            <div class="game-card-desc">Metin, kitap sayfası, görsel veya PDF yükleyin; yapay zeka seviyeye göre kelimeleri ayıklayıp otomatik deste oluştursun.</div>
+          </div>
+
+          <!-- Coach (Almanca Dil Koçu - Saf Chat) -->
+          <div class="game-card featured-game-card" id="btn-open-coach-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-bookmark"></use></svg>
+              </div>
+              <span class="badge" style="background:var(--accent-primary-soft); border:1px solid rgba(59,130,246,0.35); color:var(--brand-blue-hover); font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DİL KOÇU</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Coach (Almanca Dil Koçu)</div>
+            <div class="game-card-desc">Soru sorun, dilbilgisi kurallarını öğrenin, çalışma belgelerinizi ve görsellerinizi yükleyerek anında pratik ve analiz yapın.</div>
           </div>
 
           <!-- 4. Kablo ile Anlam Eşleştirme -->
@@ -1772,11 +1776,11 @@
       </button>
 
       <!-- 6. Oyunlar (Gamepad İkonu) -->
-      <button class="nav-item" data-target="tab-games" aria-label="Oyunlar">
+      <button class="nav-item" data-target="tab-games" aria-label="Çalış">
         <div class="nav-pill">
-          <svg class="svg-icon"><use href="#nav-icon-games"></use></svg>
+          <svg class="svg-icon"><use href="#nav-icon-study"></use></svg>
         </div>
-        <span class="nav-label">Oyunlar</span>
+        <span class="nav-label">Çalış</span>
       </button>
     
       <!-- 7. Profil (Kullanıcı İkonu) -->
@@ -2870,6 +2874,25 @@
         <button type="button" id="btn-deck-builder-save" class="btn-coach-build-full">
           <span>Desteyi Kütüphaneme Kaydet</span>
         </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- MODAL: KOÇ OYUN & ALIŞTIRMA TAM EKRAN OYNATICI (modal-coach-exercise-player) -->
+  <div id="modal-coach-exercise-player" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="cep-title">
+    <div class="modal-sheet" style="max-width:560px; max-height:88vh; display:flex; flex-direction:column; padding:22px; overflow-y:auto; border-radius:24px; background:var(--bg-surface); border:1px solid var(--border-medium); box-shadow:0 12px 36px rgba(0,0,0,0.45);">
+      <div class="modal-header" style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span id="cep-badge" class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-weight:800; font-size:0.75rem; padding:4px 10px; border-radius:8px;">Alıştırma</span>
+          <h3 id="cep-title" style="font-size:1.15rem; font-weight:900; margin:0; color:var(--text-primary);">Pratik Çalışması</h3>
+        </div>
+        <button id="btn-close-coach-exercise" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div id="cep-body" style="display:flex; flex-direction:column; gap:16px;">
+        <!-- Dinamik İçerik (Cloze / Grammar / Matching / Deck) -->
       </div>
     </div>
   </div>

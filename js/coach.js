@@ -113,88 +113,203 @@
   // =========================================================================
   // İNTERAKTİF ALIŞTIRMALAR (CLOZE, MATCHING, GRAMMAR, DECK)
   // =========================================================================
+  const TYPE_NAMES = {
+    CLOZE: 'Boşluk Doldurma',
+    MATCHING: 'Eşleştirme Oyunu',
+    GRAMMAR: 'Dilbilgisi Çalışması',
+    DECK: 'Deste Önerisi',
+  };
+
   function renderInteractiveExercise(exercise, container) {
     if (!exercise || exercise.type === 'NONE') return;
 
     const card = document.createElement('div');
     card.className = 'coach-exercise-card';
+    card.style.cursor = 'pointer';
+    card.style.background = 'var(--bg-elevated)';
+    card.style.border = '1px solid var(--border-medium)';
+    card.style.borderRadius = '16px';
+    card.style.padding = '14px 16px';
+    card.style.marginTop = '8px';
 
     const head = document.createElement('div');
     head.className = 'coach-exercise-head';
+    head.style.display = 'flex';
+    head.style.alignItems = 'center';
+    head.style.gap = '8px';
+    head.style.marginBottom = '6px';
+
     const typeBadge = document.createElement('span');
     typeBadge.className = 'coach-exercise-badge';
-
-    const TYPE_NAMES = {
-      CLOZE: 'Boşluk Doldurma',
-      MATCHING: 'Eşleştirme Oyunu',
-      GRAMMAR: 'Dilbilgisi Çalışması',
-      DECK: 'Deste Önerisi',
-    };
+    typeBadge.style.background = 'var(--accent-primary-soft)';
+    typeBadge.style.color = 'var(--brand-blue-hover)';
+    typeBadge.style.fontSize = '0.74rem';
+    typeBadge.style.fontWeight = '800';
+    typeBadge.style.padding = '3px 8px';
+    typeBadge.style.borderRadius = '6px';
     typeBadge.textContent = TYPE_NAMES[exercise.type] || 'Alıştırma';
+
     const titleText = document.createElement('span');
     titleText.className = 'coach-exercise-title';
-    titleText.textContent = exercise.title || exercise.instruction || 'Pratik';
+    titleText.style.fontWeight = '800';
+    titleText.style.fontSize = '0.94rem';
+    titleText.textContent = exercise.title || exercise.instruction || 'Pratik Çalışması';
     head.append(typeBadge, titleText);
     card.appendChild(head);
 
-    // 1. CLOZE veya GRAMMAR
+    if (exercise.sentence) {
+      const sentSnippet = document.createElement('div');
+      sentSnippet.style.fontSize = '0.9rem';
+      sentSnippet.style.color = 'var(--text-secondary)';
+      sentSnippet.style.margin = '4px 0 8px';
+      sentSnippet.innerHTML = exercise.sentence.replace('___', '<strong style="color:var(--brand-blue); text-decoration:underline;">______</strong>');
+      card.appendChild(sentSnippet);
+    }
+
+    const startBtn = document.createElement('button');
+    startBtn.type = 'button';
+    startBtn.className = 'btn-coach-build-full';
+    startBtn.style.padding = '9px 14px';
+    startBtn.style.fontSize = '0.86rem';
+    startBtn.style.marginTop = '6px';
+    startBtn.innerHTML = '<svg class="svg-icon" style="width:15px;height:15px;"><use href="#icon-bolt"></use></svg><span>Alıştırmayı Başlat / Testi Çöz</span>';
+    
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openExercisePlayerModal(exercise);
+    });
+    card.addEventListener('click', () => openExercisePlayerModal(exercise));
+
+    card.appendChild(startBtn);
+    container.appendChild(card);
+  }
+
+  // TAM EKRAN OYUN & TEST POPUP'I
+  function openExercisePlayerModal(exercise) {
+    const modal = $('modal-coach-exercise-player');
+    const badgeEl = $('cep-badge');
+    const titleEl = $('cep-title');
+    const bodyEl = $('cep-body');
+    if (!modal || !bodyEl) return;
+
+    if (badgeEl) badgeEl.textContent = TYPE_NAMES[exercise.type] || 'Alıştırma';
+    if (titleEl) titleEl.textContent = exercise.title || exercise.instruction || 'Pratik Çalışması';
+    bodyEl.innerHTML = '';
+
+    // 1. CLOZE veya GRAMMAR TESTİ
     if ((exercise.type === 'CLOZE' || exercise.type === 'GRAMMAR') && Array.isArray(exercise.options)) {
       if (exercise.sentence) {
         const sentEl = document.createElement('div');
-        sentEl.className = 'coach-exercise-sentence';
-        sentEl.innerHTML = exercise.sentence.replace('___', '<span class="coach-cloze-blank">______</span>');
-        card.appendChild(sentEl);
+        sentEl.style.padding = '18px';
+        sentEl.style.background = 'var(--bg-elevated)';
+        sentEl.style.border = '1px solid var(--border-medium)';
+        sentEl.style.borderRadius = '14px';
+        sentEl.style.fontSize = '1.08rem';
+        sentEl.style.fontWeight = '700';
+        sentEl.style.lineHeight = '1.55';
+        sentEl.style.color = 'var(--text-primary)';
+        sentEl.innerHTML = exercise.sentence.replace('___', '<span style="display:inline-block; min-width:80px; padding:2px 8px; border-bottom:3px solid var(--brand-blue); color:var(--brand-blue); text-align:center;">______</span>');
+        bodyEl.appendChild(sentEl);
       }
 
       const grid = document.createElement('div');
-      grid.className = 'coach-quiz-grid';
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
+      grid.style.gap = '10px';
 
       let answered = false;
+      const startTime = Date.now();
+
       exercise.options.forEach((optText, idx) => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'coach-quiz-option-btn';
+        btn.style.padding = '14px 16px';
+        btn.style.fontSize = '0.96rem';
         const letter = LETTERS[idx] ? `${LETTERS[idx]}-)` : `${idx + 1}-)`;
-        btn.innerHTML = `<span class="coach-opt-letter">${letter}</span><span class="coach-opt-label">${optText}</span>`;
+        btn.innerHTML = `<span class="coach-opt-letter" style="font-weight:900;">${letter}</span><span class="coach-opt-label" style="font-weight:700;">${optText}</span>`;
 
         btn.addEventListener('click', () => {
           if (answered) return;
           answered = true;
           const isCorrect = idx === exercise.correctIndex;
+          const respTime = Date.now() - startTime;
+          const chosenOpt = optText;
+          const correctOpt = exercise.options[exercise.correctIndex] || '';
+
           const allBtns = grid.querySelectorAll('.coach-quiz-option-btn');
           allBtns.forEach((b, bIdx) => {
             b.disabled = true;
-            if (bIdx === exercise.correctIndex) b.classList.add('correct');
-            else if (bIdx === idx && !isCorrect) b.classList.add('wrong');
+            if (bIdx === exercise.correctIndex) {
+              b.classList.add('correct');
+              b.style.background = 'rgba(16, 185, 129, 0.2)';
+              b.style.borderColor = '#10B981';
+            } else if (bIdx === idx && !isCorrect) {
+              b.classList.add('wrong');
+              b.style.background = 'rgba(239, 68, 68, 0.2)';
+              b.style.borderColor = '#EF4444';
+            }
           });
 
-          // Supabase Cloze / Kontext Stat Hook
+          // Supabase Aktivite & ELO Kaydı
           if (window.wmSocial && window.wmSocial.recordActivity) {
             window.wmSocial.recordActivity({
               type: 'cloze',
               isCorrect,
-              responseTimeMs: 2500,
+              responseTimeMs: respTime,
               comboCount: 0,
               isHardWord: false
             });
           }
 
-          if (exercise.explanation) {
-            const expEl = document.createElement('div');
-            expEl.className = `coach-explanation-box ${isCorrect ? 'correct' : 'wrong'}`;
-            expEl.textContent = `${isCorrect ? 'Doğru!' : 'Yanlış.'} ${exercise.explanation}`;
-            card.appendChild(expEl);
-          }
+          // Açıklama & Sonuç Kutusu
+          const resultBox = document.createElement('div');
+          resultBox.className = `coach-explanation-box ${isCorrect ? 'correct' : 'wrong'}`;
+          resultBox.style.padding = '14px';
+          resultBox.style.borderRadius = '12px';
+          resultBox.style.marginTop = '12px';
+          resultBox.innerHTML = `
+            <div style="font-weight:900; font-size:1rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+              <span>${isCorrect ? 'Tebrikler! Doğru Cevap (+12 ELO)' : 'Yanlış Cevap (-10 ELO)'}</span>
+            </div>
+            <div style="font-size:0.88rem; line-height:1.5;">${exercise.explanation || (isCorrect ? 'Dilbilgisi kuralını doğru uyguladınız.' : `Doğru seçenek: ${correctOpt}`)}</div>
+          `;
+          bodyEl.appendChild(resultBox);
+
+          // Koç'a Bildir ve Açıklama İste Butonu
+          const notifyCoachBtn = document.createElement('button');
+          notifyCoachBtn.type = 'button';
+          notifyCoachBtn.className = 'btn-coach-build-full';
+          notifyCoachBtn.style.marginTop = '14px';
+          notifyCoachBtn.innerHTML = '<svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-send"></use></svg><span>Sonucu Koç\'a Gönder &amp; Değerlendirme Al</span>';
+
+          notifyCoachBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            let feedbackMsg = '';
+            if (isCorrect) {
+              feedbackMsg = `Hazırladığın alıştırmayı çözdüm! Soru: "${exercise.sentence || exercise.title}" Cevabım: "${chosenOpt}" idi ve DOĞRU bildim. Bu konu hakkında kısa bir değerlendirme veya pekiştirici kural paylaşır mısın?`;
+            } else {
+              feedbackMsg = `Hazırladığın alıştırmayı çözdüm. Soru: "${exercise.sentence || exercise.title}" Ben "${chosenOpt}" seçeneğini işaretledim ancak YANLIŞ çıktı (doğru cevap "${correctOpt}" imiş). Neden bu cevabın yanlış olduğunu ve kuralını bana açıklar mısın?`;
+            }
+            sendCoachMessage(feedbackMsg, 'EXERCISE_FEEDBACK');
+          });
+
+          bodyEl.appendChild(notifyCoachBtn);
         });
+
         grid.appendChild(btn);
       });
-      card.appendChild(grid);
+
+      bodyEl.appendChild(grid);
     }
 
-    // 2. MATCHING (Eşleştirme)
+    // 2. EŞLEŞTİRME OYUNU
     if (exercise.type === 'MATCHING' && Array.isArray(exercise.pairs) && exercise.pairs.length > 0) {
       const matchWrap = document.createElement('div');
       matchWrap.className = 'coach-matching-arena';
+      matchWrap.style.display = 'grid';
+      matchWrap.style.gridTemplateColumns = '1fr 1fr';
+      matchWrap.style.gap = '14px';
 
       let selectedDeBtn = null;
       let matchedCount = 0;
@@ -202,8 +317,15 @@
 
       const deCol = document.createElement('div');
       deCol.className = 'coach-matching-col';
+      deCol.style.display = 'flex';
+      deCol.style.flexDirection = 'column';
+      deCol.style.gap = '8px';
+
       const trCol = document.createElement('div');
       trCol.className = 'coach-matching-col';
+      trCol.style.display = 'flex';
+      trCol.style.flexDirection = 'column';
+      trCol.style.gap = '8px';
 
       const deList = exercise.pairs.map((p, i) => ({ text: p.de, id: i }));
       const trList = exercise.pairs.map((p, i) => ({ text: p.tr, id: i })).sort(() => Math.random() - 0.5);
@@ -212,6 +334,9 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'coach-match-btn';
+        b.style.padding = '12px 14px';
+        b.style.borderRadius = '10px';
+        b.style.fontWeight = '700';
         b.textContent = item.text;
         b.dataset.pairId = String(item.id);
         b.addEventListener('click', () => {
@@ -227,6 +352,9 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'coach-match-btn';
+        b.style.padding = '12px 14px';
+        b.style.borderRadius = '10px';
+        b.style.fontWeight = '700';
         b.textContent = item.text;
         b.dataset.pairId = String(item.id);
         b.addEventListener('click', () => {
@@ -234,79 +362,119 @@
           if (selectedDeBtn.dataset.pairId === b.dataset.pairId) {
             selectedDeBtn.classList.remove('selected');
             selectedDeBtn.classList.add('matched');
+            selectedDeBtn.style.background = 'rgba(16,185,129,0.2)';
+            selectedDeBtn.style.borderColor = '#10B981';
             b.classList.add('matched');
+            b.style.background = 'rgba(16,185,129,0.2)';
+            b.style.borderColor = '#10B981';
             selectedDeBtn = null;
             matchedCount++;
+
             if (matchedCount === totalPairs) {
               const winBox = document.createElement('div');
               winBox.className = 'coach-explanation-box correct';
-              winBox.textContent = 'Harika! Tüm eşleştirmeleri doğru tamamladınız.';
-              card.appendChild(winBox);
+              winBox.style.padding = '14px';
+              winBox.style.borderRadius = '12px';
+              winBox.style.marginTop = '14px';
+              winBox.innerHTML = '<strong>Tebrikler!</strong> Tüm kelimeleri başarıyla eşleştirdiniz.';
+              bodyEl.appendChild(winBox);
+
+              if (window.wmSocial && window.wmSocial.recordActivity) {
+                window.wmSocial.recordActivity({ type: 'cloze', isCorrect: true, responseTimeMs: 4000 });
+              }
+
+              const doneBtn = document.createElement('button');
+              doneBtn.type = 'button';
+              doneBtn.className = 'btn-coach-build-full';
+              doneBtn.style.marginTop = '12px';
+              doneBtn.innerHTML = '<span>Koç\'a Bildir &amp; Devam Et</span>';
+              doneBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                sendCoachMessage(`Hazırladığın eşleştirme oyunundaki tüm kelimeleri (${totalPairs} çift) eksiksiz eşleştirdim! Bir sonraki konuya geçelim mi?`, 'EXERCISE_FEEDBACK');
+              });
+              bodyEl.appendChild(doneBtn);
             }
           } else {
             b.classList.add('wrong');
-            setTimeout(() => b.classList.remove('wrong'), 600);
+            b.style.borderColor = '#EF4444';
+            setTimeout(() => {
+              b.classList.remove('wrong');
+              b.style.borderColor = '';
+            }, 600);
           }
         });
         trCol.appendChild(b);
       });
 
       matchWrap.append(deCol, trCol);
-      card.appendChild(matchWrap);
+      bodyEl.appendChild(matchWrap);
     }
 
     // 3. DECK ÖNERİSİ
     if (exercise.type === 'DECK' && Array.isArray(exercise.words) && exercise.words.length > 0) {
-      const deckPreview = document.createElement('div');
-      deckPreview.className = 'coach-deck-preview-box';
-      const countLabel = document.createElement('div');
-      countLabel.style.fontSize = '0.78rem';
-      countLabel.style.color = 'var(--text-secondary)';
-      countLabel.style.marginBottom = '8px';
-      countLabel.textContent = `${exercise.words.length} kelimelik deste önerisi hazırlandı:`;
-      deckPreview.appendChild(countLabel);
+      const listWrap = document.createElement('div');
+      listWrap.style.display = 'flex';
+      listWrap.style.flexDirection = 'column';
+      listWrap.style.gap = '8px';
+      listWrap.style.maxHeight = '320px';
+      listWrap.style.overflowY = 'auto';
 
-      const saveDeckBtn = document.createElement('button');
-      saveDeckBtn.type = 'button';
-      saveDeckBtn.className = 'btn-coach-build-full';
-      saveDeckBtn.style.padding = '8px 14px';
-      saveDeckBtn.style.fontSize = '0.84rem';
-      saveDeckBtn.innerHTML = '<span>Bu Kelimeleri Destelerime Kaydet</span>';
-      saveDeckBtn.addEventListener('click', async () => {
-        saveDeckBtn.disabled = true;
-        saveDeckBtn.innerHTML = '<span>Kaydediliyor...</span>';
+      exercise.words.forEach(w => {
+        const row = document.createElement('div');
+        row.style.padding = '8px 12px';
+        row.style.background = 'var(--bg-elevated)';
+        row.style.borderRadius = '8px';
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.innerHTML = `<span style="font-weight:800;">${w.lemma}</span><span style="color:var(--text-secondary); font-size:0.85rem;">${w.contextMeaning}</span>`;
+        listWrap.appendChild(row);
+      });
+
+      bodyEl.appendChild(listWrap);
+
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'btn-coach-build-full';
+      saveBtn.style.marginTop = '12px';
+      saveBtn.innerHTML = '<span>Desteyi Kütüphaneme Kaydet</span>';
+      saveBtn.addEventListener('click', async () => {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>Kaydediliyor...</span>';
         try {
           const deckId = 'coach_deck_' + Date.now();
-          await window.wmDB.addDeck({
+          await window.wmDB.decks.add({
             id: deckId,
-            name: exercise.title || 'Koç Destesi',
+            title: exercise.title || 'Koç Destesi',
             color: '#2563EB',
             icon: 'book',
-            isDefault: false
+            createdAt: new Date().toISOString()
           });
           for (const w of exercise.words) {
-            await window.wmDB.addCard({
-              deckId,
-              word: w.lemma,
-              meaning: w.contextMeaning || '',
+            await window.wmDB.cards.add({
+              id: 'card_' + Math.random().toString(36).slice(2, 9),
+              deckId: deckId,
+              front: w.lemma,
+              back: w.contextMeaning || '',
               partOfSpeech: w.pos || 'NOUN',
               exampleSentence: w.sourceSentence || '',
-              srsStage: 0
+              interval: 1,
+              repetition: 0,
+              easeFactor: 2.5,
+              dueDate: new Date().toISOString()
             });
           }
-          saveDeckBtn.innerHTML = '<span>Desteye Kaydedildi</span>';
+          saveBtn.innerHTML = '<span>Desteye Kaydedildi</span>';
           toast(`"${exercise.title || 'Koç Destesi'}" destelerinize eklendi.`);
-        } catch (err) {
-          saveDeckBtn.disabled = false;
-          saveDeckBtn.innerHTML = '<span>Kaydet</span>';
-          toast('Kayıt başarısız: ' + err.message);
+          setTimeout(() => modal.classList.add('hidden'), 1000);
+        } catch (e) {
+          saveBtn.disabled = false;
+          toast('Kayıt hatası: ' + e.message);
         }
       });
-      deckPreview.appendChild(saveDeckBtn);
-      card.appendChild(deckPreview);
+      bodyEl.appendChild(saveBtn);
     }
 
-    container.appendChild(card);
+    modal.classList.remove('hidden');
   }
 
   // =========================================================================
@@ -435,6 +603,11 @@
     // 4. Kağıt Uçak Gönder Butonu
     $('btn-coach-chat-send')?.addEventListener('click', () => {
       sendCoachMessage();
+    });
+
+    // 4.1 Oyun & Alıştırma Modalı Kapatma
+    $('btn-close-coach-exercise')?.addEventListener('click', () => {
+      $('modal-coach-exercise-player')?.classList.add('hidden');
     });
 
     // 5. İlk Karşılama Mesajı (Eğer akış boşsa)
