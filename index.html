@@ -1100,6 +1100,16 @@
            ==================================================================== -->
       <section id="tab-reader" class="tab-view">
         <div class="coach-chat-app-container">
+
+          <!-- Geri Dön Butonu -->
+          <div class="coach-chat-top-nav" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+            <button type="button" id="btn-coach-back-to-games" class="prof-auth-link-btn" style="display:inline-flex; align-items:center; gap:6px; font-size:0.85rem;">
+              <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-arrow-left"></use></svg>
+              <span>Pratik &amp; Oyunlara Dön</span>
+            </button>
+            <div style="font-size:0.82rem; font-weight:800; color:var(--text-secondary);">Almanca Dil Koçu</div>
+          </div>
+
           <!-- Sohbet Mesaj Akışı -->
           <div id="coach-chat-stream" class="coach-chat-stream"></div>
 
@@ -1405,19 +1415,43 @@
         </div>
 
         <div id="subview-games-content" class="games-subview-panel">
-          <!-- Featured Game 1: Telaffuz Koçu (Aussprache-Trainer) -->
-          <div class="game-card featured-game-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+          <!-- 1. Coach (Almanca Dil Koçu - Saf Chat) -->
+          <div class="game-card featured-game-card" id="btn-open-coach-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-bookmark"></use></svg>
+              </div>
+              <span class="badge" style="background:var(--accent-primary-soft); border:1px solid rgba(59,130,246,0.35); color:var(--brand-blue-hover); font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DİL KOÇU</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Coach (Almanca Dil Koçu)</div>
+            <div class="game-card-desc">Soru sorun, dilbilgisi kurallarını öğrenin, çalışma belgelerinizi ve görsellerinizi yükleyerek anında pratik ve analiz yapın.</div>
+          </div>
+
+          <!-- 2. Telaffuz Koçu (Aussprache-Trainer) -->
+          <div class="game-card featured-game-card" id="btn-open-pron-card" data-game-type="PRONUNCIATION_TRAINER" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
               <div class="game-icon-box" style="background: var(--accent-emerald-soft); color: var(--accent-emerald);">
                 <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-waveform"></use></svg>
               </div>
               <span class="badge" style="background:var(--accent-emerald-soft); border:1px solid rgba(16,185,129,0.35); color:var(--accent-emerald); font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AKUSTİK FONETİK KOÇ</span>
             </div>
-            <div class="game-card-title" style="font-size: 1.15rem; font-weight: 900;">Telaffuz Koçu (Aussprache-Trainer)</div>
-            <div class="game-card-desc">Standart ses tanımanın kaçırdığı ince fonemleri (ch [ç/x], sch, sp/st, z [ts], ä/ö/ü ve ünlü uzunlukları) hece hece analiz edin ve gerçek doğruluk oranınızı görün!</div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Telaffuz Koçu</div>
+            <div class="game-card-desc">Standart ses tanımanın kaçırdığı fonemleri (ch, sch, sp/st, z, ä/ö/ü) hece hece analiz edin ve telaffuz skorunuzu görün.</div>
           </div>
 
-          <!-- Featured Game 2: Kablo ile Anlam Eşleştirme -->
+          <!-- 3. Akıllı Okuma (Belge & Metin Okuyucu) -->
+          <div class="game-card featured-game-card" id="btn-open-smart-reader-card" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#nav-icon-home"></use></svg>
+              </div>
+              <span class="badge" style="background:rgba(139, 92, 246, 0.15); border:1px solid rgba(139, 92, 246, 0.35); color:#A78BFA; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">METİN &amp; BELGE OKUYUCU</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Akıllı Okuma</div>
+            <div class="game-card-desc">PDF, DOCX veya görsel yükleyin, kelimelerin üzerine tıklayarak anlık sözlük anlamını ve telaffuzunu görün.</div>
+          </div>
+
+          <!-- 4. Kablo ile Anlam Eşleştirme -->
           <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
               <div class="game-icon-box" style="background: var(--accent-primary-soft); color: var(--accent-primary);">
@@ -1425,7 +1459,7 @@
               </div>
               <svg class="svg-icon game-chevron"><use href="#icon-arrow-right"></use></svg>
             </div>
-            <div class="game-card-title" style="font-size: 1.15rem; font-weight: 900;">Kablo ile Anlam Eşleştirme</div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Kablo ile Anlam Eşleştirme</div>
             <div class="game-card-desc">Almanca kelimeleri renkli elektrik kablolarıyla Türkçe anlamlarına bağlayın! İstediğiniz destelerden kelime seçebilirsiniz.</div>
           </div>
 
@@ -1744,13 +1778,7 @@
         <span class="nav-label">Çeviri</span>
       </button>
 
-      <!-- 3. Okuyucu (Okuma İkonu) -->
-      <button class="nav-item" data-target="tab-reader" aria-label="Coach">
-        <div class="nav-pill">
-          <svg class="svg-icon"><use href="#icon-bookmark"></use></svg>
-        </div>
-        <span class="nav-label">Coach</span>
-      </button>
+      
 
       <!-- 4. Desteler (Deste İkonu) -->
       <button class="nav-item" data-target="tab-decks" aria-label="Desteler">
