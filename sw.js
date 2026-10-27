@@ -4,7 +4,7 @@
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v3.6.4';
+const CACHE_NAME = 'wortcoach-v3.7.0';
 
 const CORE_ASSETS = [
   './',

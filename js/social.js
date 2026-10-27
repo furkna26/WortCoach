@@ -112,6 +112,7 @@
 
       this.updateUI();
       this.attachEventListeners();
+      this.initNotificationSystem();
       setTimeout(() => {
         this.populateDeckSelects().catch(() => {});
         if (this.isCloudConnected()) {
@@ -1092,6 +1093,39 @@
       }
     }
 
+    async getMyClubDecksForSelect() {
+      const result = [];
+      try {
+        const clubs = await this.getClubsList();
+        const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
+        for (const c of clubs) {
+          const isMember = c.ownerId === myId || (Array.isArray(c.members) && c.members.some(m => m.id === myId));
+          if (isMember && Array.isArray(c.decks) && c.decks.length > 0) {
+            for (const d of c.decks) {
+              result.push({
+                clubId: c.id,
+                clubName: c.name || 'Kulüp',
+                deckId: d.id,
+                deckTitle: d.title || 'Deste'
+              });
+            }
+          }
+        }
+      } catch (_) {}
+      return result;
+    }
+
+    async addCardToClubDeck(clubId, deckId, cardData) {
+      const prof = this.getActiveProfile();
+      return await this.apiCall('clubs/decks/add_card', {
+        clubId,
+        deckId,
+        card: cardData,
+        username: prof.username,
+        userId: prof.id || this.user?.id
+      });
+    }
+
     openClubDetailModal(clubObj) {
       this.viewingClub = clubObj;
       const modal = $('modal-club-detail');
@@ -1616,44 +1650,86 @@
       if (startBtn) startBtn.classList.toggle('hidden', !isHost);
       if (waitMsg) waitMsg.classList.toggle('hidden', !!isHost);
 
+      this.kahootCurrentPhase = 'lobby';
       this.showKahootPhase('lobby');
       this.renderKahootLobbyPlayers();
       modal.classList.remove('hidden');
 
-      // 2 Saniyelik Kahoot Lobi Polling'i
+      // 1.8 Saniyelik Canlı Senkronizasyon & Polling Döngüsü
       this.kahootPollTimer = setInterval(async () => {
         try {
           const res = await this.apiCall('multiplayer/room/state', { pin });
           if (res.ok && res.room) {
             const updated = res.room;
-            const prevCount = this.kahootState.players.length;
-            this.kahootState.players = updated.players || [];
 
-            if (this.kahootState.players.length > prevCount) {
-              const lastPlayer = this.kahootState.players[this.kahootState.players.length - 1];
-              if (lastPlayer && lastPlayer.id !== prof.id && window.wmApp && window.wmApp.showToast) {
-                window.wmApp.showToast(`${lastPlayer.name} odaya katıldı.`);
-              }
+            if (updated.status === 'closed') {
+              this.closeKahootRoomCleanly('Müsabaka odası kurucu tarafından kapatıldı.');
+              return;
             }
 
-            this.renderKahootLobbyPlayers();
+            if (this.kahootCurrentPhase === 'lobby') {
+              const prevCount = this.kahootState.players.length;
+              this.kahootState.players = updated.players || [];
 
-            if (!this.kahootState.isHost && updated.status === 'active') {
-              clearInterval(this.kahootPollTimer);
-              this.kahootPollTimer = null;
-              this.startKahootQuestion();
+              if (this.kahootState.players.length > prevCount) {
+                const lastPlayer = this.kahootState.players[this.kahootState.players.length - 1];
+                if (lastPlayer && lastPlayer.id !== prof.id && window.wmApp && window.wmApp.showToast) {
+                  window.wmApp.showToast(`${lastPlayer.name} odaya katıldı.`);
+                }
+              }
+
+              this.renderKahootLobbyPlayers();
+
+              if (!this.kahootState.isHost && updated.status === 'active') {
+                this.startKahootQuestion();
+              }
+            } else {
+              // Oyun ve ara sıralama senkronizasyonu
+              if (Array.isArray(updated.players)) {
+                updated.players.forEach(p => {
+                  this.kahootState.scores[p.name] = p.score || 0;
+                });
+              }
+
+              // Misafir oyuncu için soru senkronizasyonu
+              if (!this.kahootState.isHost && typeof updated.currentQuestionIndex === 'number') {
+                if (updated.currentQuestionIndex > this.kahootState.currentIndex) {
+                  this.kahootState.currentIndex = updated.currentQuestionIndex;
+                  this.startKahootQuestion();
+                } else if (updated.status === 'finished' || updated.currentQuestionIndex >= this.kahootState.words.length) {
+                  this.finishKahootGame();
+                }
+              }
             }
           }
         } catch (_) {}
-      }, 2000);
+      }, 1800);
     }
 
     showKahootPhase(phaseName) {
       // 'lobby', 'question', 'intermediate', 'podium'
+      this.kahootCurrentPhase = phaseName;
       ['lobby', 'question', 'intermediate', 'podium'].forEach(p => {
         const el = $(`kahoot-phase-${p}`);
         if (el) el.classList.toggle('hidden', p !== phaseName);
       });
+
+      if (phaseName === 'intermediate') {
+        const nextBtn = $('btn-kahoot-next-question');
+        if (nextBtn) {
+          if (!this.kahootState?.isHost) {
+            nextBtn.disabled = true;
+            nextBtn.style.opacity = '0.6';
+            nextBtn.style.cursor = 'not-allowed';
+            nextBtn.textContent = 'Host Sonraki Soruya Geçiyor...';
+          } else {
+            nextBtn.disabled = false;
+            nextBtn.style.opacity = '1';
+            nextBtn.style.cursor = 'pointer';
+            nextBtn.textContent = 'Sonraki Soru';
+          }
+        }
+      }
     }
 
     renderKahootLobbyPlayers() {
@@ -1673,13 +1749,28 @@
         `;
       });
       chipList.innerHTML = html;
-      if ($('kahoot-player-count')) $('kahoot-player-count').textContent = this.kahootState.players.length;
+      const count = this.kahootState.players.length;
+      if ($('kahoot-player-count')) $('kahoot-player-count').textContent = count;
+
+      // Host İçin Katılımcı Bekleme Koruması
+      const startBtn = $('btn-start-kahoot-match');
+      if (startBtn && this.kahootState.isHost) {
+        if (count < 2) {
+          startBtn.disabled = true;
+          startBtn.style.opacity = '0.55';
+          startBtn.style.cursor = 'not-allowed';
+          startBtn.textContent = 'En Az 1 Katılımcı Bekleniyor...';
+        } else {
+          startBtn.disabled = false;
+          startBtn.style.opacity = '1';
+          startBtn.style.cursor = 'pointer';
+          startBtn.textContent = `Müsabakayı Başlat (${count} Oyuncu Hazır)`;
+        }
+      }
     }
 
     async launchKahootGameByHost() {
       if (!this.kahootState.isHost) return;
-      if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
-      this.kahootPollTimer = null;
 
       try {
         await this.apiCall('multiplayer/room/start', {
@@ -1802,6 +1893,16 @@
       }
     }
 
+    closeKahootRoomCleanly(noticeMsg = null) {
+      if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
+      if (this.kahootState?.timerId) clearInterval(this.kahootState.timerId);
+      this.kahootPollTimer = null;
+      $('modal-arena-kahoot-game')?.classList.add('hidden');
+      if (noticeMsg && window.wmApp && window.wmApp.showToast) {
+        window.wmApp.showToast(noticeMsg);
+      }
+    }
+
     async finishKahootGame() {
       if (this.kahootState.timerId) clearInterval(this.kahootState.timerId);
       this.showKahootPhase('podium');
@@ -1872,8 +1973,11 @@
         btn.addEventListener('click', async (e) => {
           const targetId = e.currentTarget.getAttribute('data-user-id');
           const targetName = e.currentTarget.getAttribute('data-username');
-          e.currentTarget.disabled = true;
-          e.currentTarget.textContent = 'Gönderildi';
+          const btn = e.currentTarget;
+          if (btn.dataset.locked === '1') return;
+          btn.dataset.locked = '1';
+          btn.disabled = true;
+          btn.textContent = 'Gönderiliyor...';
 
           try {
             await this.apiCall('multiplayer/invite/send', {
@@ -1884,11 +1988,18 @@
               type: matchType,
               deckTitle
             });
+            btn.textContent = 'Gönderildi';
             if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast(`${targetName} kullanıcısına maç daveti gönderildi.`);
           } catch (err) {
             alert('Davet gönderilemedi: ' + err.message);
-            e.currentTarget.disabled = false;
-            e.currentTarget.textContent = 'Davet Et';
+          } finally {
+            setTimeout(() => {
+              if (btn) {
+                btn.dataset.locked = '0';
+                btn.disabled = false;
+                btn.textContent = 'Davet Et';
+              }
+            }, 4000);
           }
         });
       });
@@ -2625,6 +2736,111 @@
     // =========================================================================
     // OLAY YAKALAYICILARI (EVENT LISTENERS)
     // =========================================================================
+    // =========================================================================
+    // BİLDİRİM SİSTEMİ (WEB NOTIFICATION & CANLI INBOX POLLING)
+    // =========================================================================
+    initNotificationSystem() {
+      // Tarayıcı Bildirim İzni İsteme (Kullanıcı etkileşiminde)
+      if ('Notification' in window && Notification.permission === 'default') {
+        const askPerm = () => {
+          Notification.requestPermission().catch(() => {});
+          document.removeEventListener('click', askPerm);
+        };
+        document.addEventListener('click', askPerm, { once: true });
+      }
+
+      // Tekrar Kartları Hatırlatıcısı (Günde 1 kez veya açılışta due kart kontrolü)
+      setTimeout(() => {
+        this.checkDueCardsReminder().catch(() => {});
+      }, 3000);
+
+      // Canlı Gelen Kutusu & Davet Polling'i (3.5 Saniyede bir anlık kontrol)
+      this.startLiveInboxPolling();
+    }
+
+    sendPushNotification(title, body) {
+      try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(title, {
+            body,
+            icon: 'icons/icon-192.svg',
+            badge: 'icons/icon-192.svg'
+          });
+        }
+      } catch (_) {}
+    }
+
+    async checkDueCardsReminder() {
+      if (!window.wmDB || typeof window.wmDB.getDueCards !== 'function') return;
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const lastRemindDate = localStorage.getItem('wm_last_due_reminder_date');
+        if (lastRemindDate === todayStr) return; // Bugün zaten hatırlatıldı
+
+        const dueCards = await window.wmDB.getDueCards('all');
+        const count = Array.isArray(dueCards) ? dueCards.length : 0;
+        if (count >= 3) {
+          localStorage.setItem('wm_last_due_reminder_date', todayStr);
+          this.sendPushNotification(
+            'WortCoach — Günün Kelime Tekrarı',
+            `Bugün tekrar bekleyen ${count} kelime kartınız var! Serinizi korumak için pratik yapın.`
+          );
+          if (window.wmApp && window.wmApp.showToast) {
+            window.wmApp.showToast(`Günün tekrarı: ${count} kart tekrar edilmeye hazır.`);
+          }
+        }
+      } catch (_) {}
+    }
+
+    startLiveInboxPolling() {
+      if (this.inboxPollTimer) clearInterval(this.inboxPollTimer);
+      this.knownInboxItemIds = new Set();
+      this.isFirstInboxCheck = true;
+
+      this.inboxPollTimer = setInterval(async () => {
+        if (!this.isCloudConnected()) return;
+        try {
+          const res = await this.apiCall('decks/inbox/get', { userId: this.user.id });
+          const items = Array.isArray(res.gifts) ? res.gifts : [];
+
+          // İlk kontrolde mevcutları bilinen olarak işaretle
+          if (this.isFirstInboxCheck) {
+            items.forEach(item => this.knownInboxItemIds.add(item.id));
+            this.isFirstInboxCheck = false;
+            return;
+          }
+
+          // Yeni gelen öğeleri tespit et
+          let hasNew = false;
+          for (const item of items) {
+            if (!this.knownInboxItemIds.has(item.id)) {
+              this.knownInboxItemIds.add(item.id);
+              hasNew = true;
+
+              if (item.type === 'match_invite') {
+                const matchName = item.matchType === 'kahoot' ? 'Rekabet Müsabakasına' : 'Düelloya';
+                const msg = `${item.fromUsername} seni ${matchName} davet etti! (PIN: ${item.pin})`;
+                this.sendPushNotification('WortCoach — Rekabet Daveti', msg);
+                if (window.wmApp && window.wmApp.showToast) {
+                  window.wmApp.showToast(msg);
+                }
+              } else {
+                const msg = `${item.fromUsername} sana "${item.deckTitle}" kelime destesini gönderdi.`;
+                this.sendPushNotification('WortCoach — Yeni Deste Hediyesi', msg);
+                if (window.wmApp && window.wmApp.showToast) {
+                  window.wmApp.showToast(msg);
+                }
+              }
+            }
+          }
+
+          if (hasNew) {
+            await this.renderIncomingDeckGifts();
+          }
+        } catch (_) {}
+      }, 3500);
+    }
+
     attachEventListeners() {
       // 1. Sosyal Alt Sekme Geçişleri (Pills: Arkadaşlar, Açık Desteler, Kulüpler, Arena, Ortak Çalışma)
       document.querySelectorAll('.social-subtab-btn[data-target-pane]').forEach(btn => {
@@ -3061,12 +3277,26 @@
         this.launchKahootGameByHost();
       });
 
-      $('btn-close-kahoot-game')?.addEventListener('click', () => {
-        if (confirm('Kahoot oyunundan ayrılmak istediğinize emin misiniz?')) {
+      $('btn-close-kahoot-game')?.addEventListener('click', async () => {
+        if (confirm('Müsabakadan ayrılmak istediğinize emin misiniz?')) {
+          const pin = this.kahootState?.pin;
+          const isHost = this.kahootState?.isHost;
+          const myId = this.getActiveProfile().id;
+
           if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
           if (this.kahootState?.timerId) clearInterval(this.kahootState.timerId);
           this.kahootPollTimer = null;
           $('modal-arena-kahoot-game')?.classList.add('hidden');
+
+          if (pin) {
+            try {
+              if (isHost) {
+                await this.apiCall('multiplayer/room/close', { pin, hostId: myId });
+              } else {
+                await this.apiCall('multiplayer/room/leave', { pin, playerId: myId });
+              }
+            } catch (_) {}
+          }
         }
       });
 
@@ -3079,8 +3309,16 @@
         });
       });
 
-      $('btn-kahoot-next-question')?.addEventListener('click', () => {
+      $('btn-kahoot-next-question')?.addEventListener('click', async () => {
+        if (!this.kahootState?.isHost) return;
         this.kahootState.currentIndex += 1;
+        try {
+          await this.apiCall('multiplayer/room/next_question', {
+            pin: this.kahootState.pin,
+            hostId: this.getActiveProfile().id,
+            questionIndex: this.kahootState.currentIndex
+          });
+        } catch (_) {}
         this.startKahootQuestion();
       });
 

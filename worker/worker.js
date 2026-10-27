@@ -1038,6 +1038,14 @@ async function handleDatabaseApi(path, body, env, c) {
         return json({ error: 'Eksik deste veya alıcı bilgisi.' }, 400, c.headers);
       }
 
+      // Spam Koruması: Aynı kullanıcıdan 4 saniye içinde ardışık deste gönderim engeli
+      const spamKey = `spam_deck:${fromUserId}:${toUserId}`;
+      const isSpam = await env.LIMITS.get(spamKey);
+      if (isSpam) {
+        return json({ error: 'Lütfen ardışık deste göndermeden önce birkaç saniye bekleyin.' }, 429, c.headers);
+      }
+      await env.LIMITS.put(spamKey, '1', { expirationTtl: 4 });
+
       const giftObj = {
         id: 'gift_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         fromUserId,
@@ -1064,8 +1072,49 @@ async function handleDatabaseApi(path, body, env, c) {
       if (!userId || !env.LIMITS) return json({ ok: true, gifts: [] }, 200, c.headers);
 
       const existingStr = await env.LIMITS.get(`inbox:${userId}`);
-      const inbox = existingStr ? JSON.parse(existingStr) : [];
-      return json({ ok: true, gifts: Array.isArray(inbox) ? inbox : [] }, 200, c.headers);
+      let inbox = existingStr ? JSON.parse(existingStr) : [];
+      if (!Array.isArray(inbox)) inbox = [];
+
+      const now = Date.now();
+      const validItems = [];
+      let inboxChanged = false;
+
+      for (const item of inbox) {
+        if (item.type === 'match_invite') {
+          // Maç davetleri: 15 dakikalık zaman aşımı (900.000 ms)
+          const sentTime = item.sentAt ? new Date(item.sentAt).getTime() : 0;
+          if (now - sentTime > 900000) {
+            inboxChanged = true;
+            continue; // Zaman aşımına uğramış davet silinir
+          }
+          // Oda durumunu kontrol et: Kapalıysa sil
+          if (item.pin) {
+            let rStr = await env.LIMITS.get(`room:${item.pin}`);
+            if (!rStr && !item.pin.startsWith('VS-')) rStr = await env.LIMITS.get(`room:VS-${item.pin}`);
+            if (!rStr) {
+              inboxChanged = true;
+              continue; // Oda bulunamadı, sil
+            }
+            try {
+              const rObj = JSON.parse(rStr);
+              if (rObj.status === 'closed' || rObj.status === 'finished') {
+                inboxChanged = true;
+                continue; // Oda kapalı veya bitmiş, daveti iptal et
+              }
+            } catch (_) {}
+          }
+          validItems.push(item);
+        } else {
+          // Gönderilen Desteler (deck_gift) KESİNLİKLE zaman aşımına uğramaz!
+          validItems.push(item);
+        }
+      }
+
+      if (inboxChanged) {
+        await env.LIMITS.put(`inbox:${userId}`, JSON.stringify(validItems.slice(0, 30)), { expirationTtl: 86400 * 30 });
+      }
+
+      return json({ ok: true, gifts: validItems }, 200, c.headers);
     }
 
     if (path === '/api/decks/inbox/resolve') {
@@ -1398,16 +1447,24 @@ async function handleDatabaseApi(path, body, env, c) {
       const fromUsername = clean(body.fromUsername, 40) || 'Arkadaşın';
       const toUserId = clean(body.toUserId, 40);
       const pin = clean(body.pin, 20).toUpperCase();
-      const type = clean(body.type, 20) || '1v1';
-      const deckTitle = clean(body.deckTitle, 80) || 'Deste Kapışması';
+      const type = clean(body.type, 20) || 'kahoot';
+      const deckTitle = clean(body.deckTitle, 80) || 'Rekabet Kapışması';
       if (!fromUserId || !toUserId || !pin || !env.LIMITS) {
         return json({ error: 'Eksik davet bilgisi.' }, 400, c.headers);
       }
 
+      // Spam Koruması: Aynı kullanıcıdan 4 saniye içinde ardışık maç daveti engeli
+      const spamKey = `spam_inv:${fromUserId}:${toUserId}`;
+      const isSpam = await env.LIMITS.get(spamKey);
+      if (isSpam) {
+        return json({ error: 'Lütfen ardışık davet göndermeden önce birkaç saniye bekleyin.' }, 429, c.headers);
+      }
+      await env.LIMITS.put(spamKey, '1', { expirationTtl: 4 });
+
       const inviteObj = {
         id: 'inv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         type: 'match_invite',
-        matchType: type, // '1v1' veya 'kahoot'
+        matchType: type, // 'kahoot' / 'rekabet'
         fromUserId,
         fromUsername,
         toUserId,
@@ -1421,7 +1478,7 @@ async function handleDatabaseApi(path, body, env, c) {
       let inbox = existingStr ? JSON.parse(existingStr) : [];
       if (!Array.isArray(inbox)) inbox = [];
       inbox.unshift(inviteObj);
-      await env.LIMITS.put(inboxKey, JSON.stringify(inbox.slice(0, 30)), { expirationTtl: 86400 * 2 }); // 2 gün geçerli
+      await env.LIMITS.put(inboxKey, JSON.stringify(inbox.slice(0, 30)), { expirationTtl: 86400 * 2 });
 
       return json({ ok: true, invite: inviteObj }, 200, c.headers);
     }
@@ -1442,6 +1499,67 @@ async function handleDatabaseApi(path, body, env, c) {
       await env.LIMITS.put(`room:${pin}`, JSON.stringify(room), { expirationTtl: 7200 });
 
       return json({ ok: true, room }, 200, c.headers);
+    }
+
+    if (path === '/api/multiplayer/room/next_question') {
+      const pin = clean(body.pin, 20).toUpperCase();
+      const hostId = clean(body.hostId, 40);
+      const nextIndex = Number(body.questionIndex);
+      if (!pin || !env.LIMITS) return json({ error: 'PIN eksik.' }, 400, c.headers);
+
+      const roomStr = await env.LIMITS.get(`room:${pin}`);
+      if (!roomStr) return json({ error: 'Oda bulunamadı.' }, 404, c.headers);
+
+      const room = JSON.parse(roomStr);
+      if (room.hostId !== hostId) return json({ error: 'Yalnızca oda kurucusu sonraki soruya geçebilir.' }, 403, c.headers);
+
+      room.currentQuestionIndex = typeof nextIndex === 'number' && !isNaN(nextIndex) ? nextIndex : (room.currentQuestionIndex + 1);
+      await env.LIMITS.put(`room:${pin}`, JSON.stringify(room), { expirationTtl: 7200 });
+
+      return json({ ok: true, room }, 200, c.headers);
+    }
+
+    if (path === '/api/multiplayer/room/close') {
+      const pin = clean(body.pin, 20).toUpperCase();
+      const hostId = clean(body.hostId, 40);
+      if (!pin || !env.LIMITS) return json({ ok: true }, 200, c.headers);
+
+      let roomStr = await env.LIMITS.get(`room:${pin}`);
+      if (!roomStr && !pin.startsWith('VS-')) roomStr = await env.LIMITS.get(`room:VS-${pin}`);
+      if (!roomStr && pin.startsWith('VS-')) roomStr = await env.LIMITS.get(`room:${pin.replace('VS-', '')}`);
+
+      if (roomStr) {
+        const room = JSON.parse(roomStr);
+        room.status = 'closed';
+        room.closedAt = new Date().toISOString();
+        // 5 dakika boyunca 'closed' statüsü KV'de tutulur, böylece diğer katılımcıların döngüsü anında yakalar
+        await env.LIMITS.put(`room:${pin}`, JSON.stringify(room), { expirationTtl: 300 });
+        if (!pin.startsWith('VS-')) {
+          await env.LIMITS.put(`room:VS-${pin}`, JSON.stringify(room), { expirationTtl: 300 });
+        }
+      }
+
+      return json({ ok: true, status: 'closed' }, 200, c.headers);
+    }
+
+    if (path === '/api/clubs/decks/add_card') {
+      const clubId = clean(body.clubId, 50);
+      const deckId = clean(body.deckId, 60);
+      const card = body.card;
+      if (!clubId || !deckId || !card || !env.LIMITS) return json({ error: 'Geçersiz parametreler.' }, 400, c.headers);
+
+      const clubStr = await env.LIMITS.get(`club:${clubId}`);
+      if (!clubStr) return json({ error: 'Kulüp bulunamadı.' }, 404, c.headers);
+
+      const clubObj = JSON.parse(clubStr);
+      if (!Array.isArray(clubObj.decks)) clubObj.decks = [];
+      const targetDeck = clubObj.decks.find(d => String(d.id) === String(deckId));
+      if (!targetDeck) return json({ error: 'Kulüp destesi bulunamadı.' }, 404, c.headers);
+
+      if (!Array.isArray(targetDeck.words)) targetDeck.words = [];
+      targetDeck.words.push(card);
+      await env.LIMITS.put(`club:${clubId}`, JSON.stringify(clubObj), { expirationTtl: 86400 * 90 });
+      return json({ ok: true, deck: targetDeck, club: clubObj }, 200, c.headers);
     }
 
     if (path === '/api/multiplayer/room/submit_score') {

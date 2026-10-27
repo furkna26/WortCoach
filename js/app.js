@@ -315,18 +315,64 @@ class WortCoachApp {
     }
   }
 
+  closeTopmostOpenModal() {
+    // Açık tüm modalları DOM sıralamasına göre tespit et
+    const openModals = Array.from(document.querySelectorAll('.modal-backdrop:not(.hidden), .prof-modal-backdrop:not(.hidden)'));
+    if (openModals.length > 0) {
+      // En son açılan / en üstteki modalı kapat
+      const topModal = openModals[openModals.length - 1];
+      topModal.classList.add('hidden');
+      if (topModal.id === 'modal-game-quiz' || topModal.id === 'modal-cable-game') {
+        if (this.gameTimerInterval) {
+          clearInterval(this.gameTimerInterval);
+          this.gameTimerInterval = null;
+        }
+      }
+      return true; // Modal kapatıldı
+    }
+    return false; // Açık modal yok
+  }
+
   async initRouter() {
     window.addEventListener('popstate', async () => {
+      // 1. Mobil / Tarayıcı Geri Tuşu: Eğer açık bir modal varsa önce modalı kapat, sekmeyi değiştirme!
+      if (this.closeTopmostOpenModal()) {
+        return;
+      }
+      // 2. Açık modal yoksa normal sekme / rota yönlendirmesini çalıştır
       await this.handleCurrentRoute();
     });
 
-    // İlk yüklemede URL'yi kontrol et (F5 yenilemede mevcut ekranı koru)
+    // İlk yüklemede (F5 yenilemede kullanıcının bulunduğu sekmede kalmasını sağla)
     if (!window.location.hash || window.location.hash === '#' || window.location.hash === '#/') {
-      // Pathname üzerinden doğrudan gelindiyse (/sozluk, /oyunlar vb.) onu yakala
-      const pathPart = window.location.pathname.replace(/^\/WortCoach/i, '').replace(/\/index\.html$/i, '') || '/sozluk';
-      const initialRoute = pathPart === '/' ? '/sozluk' : pathPart;
+      let savedTab = 'tab-home';
+      try {
+        savedTab = localStorage.getItem('wm_active_tab') || 'tab-home';
+      } catch (_) {}
+      const tabToRoute = this.getTabToRouteMap();
+      const initialRoute = tabToRoute[savedTab] || '/sozluk';
       this.pushRoute(initialRoute, {}, true);
     }
+    // Evrensel Modal Back-Stack Observer: Herhangi bir modal açıldığında history kaydı oluştur
+    try {
+      const modalObserver = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+          if (m.type === 'attributes' && m.attributeName === 'class') {
+            const target = m.target;
+            if ((target.classList.contains('modal-backdrop') || target.classList.contains('prof-modal-backdrop')) && !target.classList.contains('hidden')) {
+              try {
+                window.history.pushState({ modalId: target.id }, '', window.location.hash);
+              } catch (_) {}
+            }
+          }
+        }
+      });
+
+      document.querySelectorAll('.modal-backdrop, .prof-modal-backdrop').forEach((el) => {
+        modalObserver.observe(el, { attributes: true, attributeFilter: ['class'] });
+      });
+    } catch (_) {}
+
     await this.handleCurrentRoute();
   }
 
@@ -439,6 +485,9 @@ class WortCoachApp {
     }
 
     this.activeTabId = tabId;
+    try {
+      localStorage.setItem('wm_active_tab', tabId);
+    } catch (_) {}
     document.querySelectorAll('.tab-view').forEach((sec) => sec.classList.remove('active'));
     document.querySelectorAll('.bottom-nav .nav-item').forEach((btn) => {
       btn.classList.toggle('active', btn.getAttribute('data-target') === tabId);
@@ -4215,6 +4264,27 @@ class WortCoachApp {
       }
 
       const selectedDeckVal = document.getElementById('card-deck-select')?.value;
+      if (selectedDeckVal && selectedDeckVal.startsWith('club_deck:')) {
+        const parts = selectedDeckVal.split(':');
+        const clubId = parts[1];
+        const deckId = parts[2];
+        const fullWord = finalArticle ? `${finalArticle} ${finalWord}` : finalWord;
+        const mean = document.getElementById('card-meaning-tr')?.value || document.getElementById('card-meaning-en')?.value || '';
+        const ex = document.getElementById('card-example-input')?.value || '';
+
+        if (window.wmSocial && window.wmSocial.addCardToClubDeck) {
+          await window.wmSocial.addCardToClubDeck(clubId, deckId, {
+            lemma: fullWord,
+            contextMeaning: mean,
+            pos,
+            sourceSentence: ex
+          });
+        }
+        modal.classList.add('hidden');
+        this.showToast(`"${fullWord}" kulüp ortak destesine eklendi.`);
+        return;
+      }
+
       if (selectedDeckVal === 'collab:active' && window.wmSocial && window.wmSocial.activeCollabSession) {
         const fullWord = finalArticle ? `${finalArticle} ${finalWord}` : finalWord;
         const mean = document.getElementById('card-meaning-tr')?.value || document.getElementById('card-meaning-en')?.value || '';
@@ -4276,7 +4346,26 @@ class WortCoachApp {
       collabOptHtml = `<option value="collab:active" selected>[Ortak Deste] ${window.wmSocial.activeCollabSession.title} (${window.wmSocial.activeCollabSession.code})</option>`;
     }
 
-    select.innerHTML = collabOptHtml + decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
+    // Kulüp Ortak Desteleri: Kullanıcının üye olduğu kulüplerin desteleri
+    let clubDecksOptHtml = '';
+    if (window.wmSocial && typeof window.wmSocial.getMyClubDecksForSelect === 'function') {
+      try {
+        const clubDecks = await window.wmSocial.getMyClubDecksForSelect();
+        if (clubDecks.length > 0) {
+          clubDecksOptHtml += '<optgroup label="Kulüp Ortak Desteleri">';
+          for (const cd of clubDecks) {
+            clubDecksOptHtml += `<option value="club_deck:${cd.clubId}:${cd.deckId}">${cd.deckTitle} (${cd.clubName.toUpperCase()} ORTAK DESTESİ)</option>`;
+          }
+          clubDecksOptHtml += '</optgroup>';
+        }
+      } catch (_) {}
+    }
+
+    let localDecksHtml = '<optgroup label="Kişisel Destelerim">';
+    localDecksHtml += decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
+    localDecksHtml += '</optgroup>';
+
+    select.innerHTML = collabOptHtml + clubDecksOptHtml + localDecksHtml;
   }
 
   async openAddCardModal() {
@@ -5188,34 +5277,31 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Akıllı Scroll Dinleyicisi: Aşağı kaydırırken WortCoach üst barını gizle, yukarı kaydırırken göster
 (function initHeaderScrollHide() {
-  let lastScrollY = window.scrollY || 0;
+  let lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
   let ticking = false;
 
   const onScroll = () => {
-    const currentScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || (document.scrollingElement ? document.scrollingElement.scrollTop : 0) || 0;
     const header = document.querySelector('.app-header');
     if (header) {
-      if (currentScrollY > 30 && currentScrollY > lastScrollY + 5) {
+      if (currentScrollY > 35 && currentScrollY > lastScrollY + 4) {
         header.classList.add('header-hidden');
-      } else if (currentScrollY < lastScrollY - 5 || currentScrollY <= 15) {
+      } else if (currentScrollY < lastScrollY - 4 || currentScrollY <= 15) {
         header.classList.remove('header-hidden');
       }
     }
-    lastScrollY = currentScrollY;
+    lastScrollY = Math.max(0, currentScrollY);
     ticking = false;
   };
 
-  window.addEventListener('scroll', () => {
+  const scheduleTick = () => {
     if (!ticking) {
       window.requestAnimationFrame(onScroll);
       ticking = true;
     }
-  }, { passive: true });
+  };
 
-  document.addEventListener('touchmove', () => {
-    if (!ticking) {
-      window.requestAnimationFrame(onScroll);
-      ticking = true;
-    }
-  }, { passive: true });
+  window.addEventListener('scroll', scheduleTick, { passive: true });
+  document.addEventListener('scroll', scheduleTick, { passive: true });
+  document.addEventListener('touchmove', scheduleTick, { passive: true });
 })();

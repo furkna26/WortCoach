@@ -185,15 +185,51 @@
   }
 
   // TAM EKRAN OYUN & TEST POPUP'I
-  function openExercisePlayerModal(exercise) {
+  function openExercisePlayerModal(rawExercise) {
     const modal = $('modal-coach-exercise-player');
     const badgeEl = $('cep-badge');
     const titleEl = $('cep-title');
     const bodyEl = $('cep-body');
-    if (!modal || !bodyEl) return;
+    if (!modal || !bodyEl || !rawExercise) return;
+
+    // Normalizasyon & Format Güvencesi (Yapay zeka format sapmalarını tolere et)
+    const rawType = String(rawExercise.type || '').toUpperCase();
+    let type = rawType;
+    if (['CLOZE', 'GAP_FILL', 'FILL_IN_THE_BLANK', 'FILL_BLANK'].includes(rawType)) type = 'CLOZE';
+    else if (['GRAMMAR', 'QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) type = 'GRAMMAR';
+    else if (['MATCHING', 'MATCH', 'PAIRS'].includes(rawType)) type = 'MATCHING';
+    else if (['DECK', 'CARDS', 'VOCAB'].includes(rawType)) type = 'DECK';
+    else type = 'GRAMMAR';
+
+    const options = Array.isArray(rawExercise.options) ? rawExercise.options : (Array.isArray(rawExercise.choices) ? rawExercise.choices : (Array.isArray(rawExercise.answers) ? rawExercise.answers : []));
+    const sentence = rawExercise.sentence || rawExercise.question || rawExercise.text || '';
+    const pairs = Array.isArray(rawExercise.pairs) ? rawExercise.pairs : (Array.isArray(rawExercise.matchingPairs) ? rawExercise.matchingPairs : []);
+    const words = Array.isArray(rawExercise.words) ? rawExercise.words : (Array.isArray(rawExercise.cards) ? rawExercise.cards : []);
+    const correctIndex = typeof rawExercise.correctIndex === 'number' ? rawExercise.correctIndex : (typeof rawExercise.answerIndex === 'number' ? rawExercise.answerIndex : 0);
+
+    const exercise = {
+      ...rawExercise,
+      type,
+      options,
+      sentence,
+      pairs,
+      words,
+      correctIndex,
+      title: rawExercise.title || rawExercise.instruction || (type === 'CLOZE' ? 'Boşluk Doldurma Alıştırması' : 'Dilbilgisi Çalışması')
+    };
+
+    // Boş popup koruması: Soru, şık veya eşleştirme yoksa boş pencere açılmasını engelle
+    const hasClozeContent = (type === 'CLOZE' || type === 'GRAMMAR') && (options.length > 0 || sentence);
+    const hasMatchingContent = type === 'MATCHING' && pairs.length > 0;
+    const hasDeckContent = type === 'DECK' && words.length > 0;
+
+    if (!hasClozeContent && !hasMatchingContent && !hasDeckContent) {
+      toast('Alıştırma içeriği eksik oluşturuldu. Lütfen koçtan yeni bir alıştırma isteyiniz.');
+      return;
+    }
 
     if (badgeEl) badgeEl.textContent = TYPE_NAMES[exercise.type] || 'Alıştırma';
-    if (titleEl) titleEl.textContent = exercise.title || exercise.instruction || 'Pratik Çalışması';
+    if (titleEl) titleEl.textContent = exercise.title;
     bodyEl.innerHTML = '';
 
     // 1. CLOZE veya GRAMMAR TESTİ
@@ -577,6 +613,14 @@
     // 3. Yazdıkça Genişleyen Chatbox (Auto-expanding textarea)
     const chatInput = $('coach-chat-input');
     if (chatInput) {
+      // Mobil klavye açılınca bottom nav'ı sakla
+      chatInput.addEventListener('focus', () => {
+        document.body.classList.add('coach-chat-focused');
+      });
+      chatInput.addEventListener('blur', () => {
+        document.body.classList.remove('coach-chat-focused');
+      });
+
       chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
         chatInput.style.height = Math.min(160, chatInput.scrollHeight) + 'px';
