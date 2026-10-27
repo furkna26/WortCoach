@@ -321,7 +321,30 @@ class WortCoachApp {
     if (openModals.length > 0) {
       // En son açılan / en üstteki modalı kapat
       const topModal = openModals[openModals.length - 1];
+
+      // Rekabet / Kahoot Oyunundayken Yanlışlıkla Geri Tuşuna Basma Koruması
+      if (topModal.id === 'modal-arena-kahoot-game') {
+        const isGameInProgress = window.wmSocial && window.wmSocial.kahootState && window.wmSocial.kahootCurrentPhase !== 'podium';
+        if (isGameInProgress) {
+          const leave = confirm('Müsabakadan ayrılmak istediğinize emin misiniz? Devam eden oyun sonlanacaktır.');
+          if (!leave) {
+            try {
+              window.history.pushState({ modalId: 'modal-arena-kahoot-game' }, '', window.location.hash);
+            } catch (_) {}
+            return true; // Kullanıcı iptal etti, modal açık kalır
+          }
+          if (window.wmSocial && window.wmSocial.closeKahootRoomCleanly) {
+            window.wmSocial.closeKahootRoomCleanly();
+          }
+          document.body.classList.remove('arena-game-active');
+          return true;
+        }
+      }
+
       topModal.classList.add('hidden');
+      if (topModal.id === 'modal-arena-kahoot-game') {
+        document.body.classList.remove('arena-game-active');
+      }
       if (topModal.id === 'modal-game-quiz' || topModal.id === 'modal-cable-game') {
         if (this.gameTimerInterval) {
           clearInterval(this.gameTimerInterval);
@@ -334,6 +357,15 @@ class WortCoachApp {
   }
 
   async initRouter() {
+    // Rekabet Odasındayken Kazara Sayfa Yenileme / Çıkma Koruması
+    window.addEventListener('beforeunload', (e) => {
+      if (window.wmSocial && window.wmSocial.kahootState && window.wmSocial.kahootCurrentPhase !== 'podium') {
+        e.preventDefault();
+        e.returnValue = 'Müsabakadan ayrılmak istediğinize emin misiniz?';
+        return e.returnValue;
+      }
+    });
+
     window.addEventListener('popstate', async () => {
       // 1. Mobil / Tarayıcı Geri Tuşu: Eğer açık bir modal varsa önce modalı kapat, sekmeyi değiştirme!
       if (this.closeTopmostOpenModal()) {
@@ -5287,7 +5319,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const getHeader = () => document.querySelector('.app-header');
 
+  const isGameOrModalActive = () => {
+    return document.body.classList.contains('arena-game-active') ||
+           document.body.classList.contains('has-active-game') ||
+           document.body.classList.contains('tab-coach-active') ||
+           document.body.classList.contains('reader-active-mode') ||
+           document.querySelector('#modal-game-arena:not(.hidden)') ||
+           document.querySelector('#modal-arena-kahoot-game:not(.hidden)');
+  };
+
   const hideHeader = () => {
+    if (isGameOrModalActive()) return;
     const h = getHeader();
     if (h) h.classList.add('header-hidden');
   };

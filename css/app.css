@@ -127,6 +127,7 @@ html,
 body {
   width: 100%;
   min-height: 100%;
+  overscroll-behavior-y: contain;
   background-color: var(--bg-main);
   color: var(--text-primary);
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
@@ -148,34 +149,45 @@ body {
   position: relative;
 }
 
-/* Üst Header Bar */
+/* Üst Header Bar (Fixed & Pürüzsüz Scroll-to-Hide) */
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 40;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 54px;
+  box-sizing: border-box;
+  z-index: 90;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background-color: var(--bg-nav);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border-subtle);
-  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
   will-change: transform;
 }
 
 .app-header.header-hidden {
   transform: translateY(-100%) !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
   pointer-events: none !important;
 }
 
-/* Mobil Klavye Açıldığında, Coach Odaklandığında veya Coach Sekmesindeyken Bottom Nav Tamamen Gizlenir */
+/* Oyun, Arena ve Tam Ekran Modlarda Header & Nav Koruması */
+body.arena-game-active .app-header,
+body.has-active-game .app-header {
+  display: none !important;
+}
+
+/* Mobil Klavye Açıldığında, Coach Odaklandığında, Arena Oyununda veya Coach Sekmesindeyken Bottom Nav Tamamen Gizlenir */
 body.keyboard-open .bottom-nav,
 body.coach-chat-focused .bottom-nav,
-body.tab-coach-active .bottom-nav {
+body.tab-coach-active .bottom-nav,
+body.arena-game-active .bottom-nav,
+body.has-active-game .bottom-nav {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -233,7 +245,7 @@ body.reader-active-mode #tab-reader {
 /* Ana İçerik Alanı — Mobil Safe Area & Alt Navigasyon Boşluğu */
 .app-content {
   flex: 1;
-  padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px));
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 16px calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 .tab-view {

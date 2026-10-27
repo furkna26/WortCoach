@@ -6447,3 +6447,42 @@ body.coach-chat-focused .coach-chat-app-container {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+
+/* ==========================================================================
+   Rekabet / Kahoot Tam Ekran Mobil Arayüz Optimizasyonu
+   ========================================================================== */
+#modal-arena-kahoot-game {
+  z-index: 1000 !important;
+  overscroll-behavior-y: contain !important;
+}
+
+#modal-arena-kahoot-game .modal-sheet {
+  height: 100dvh !important;
+  height: 100vh !important;
+  max-height: 100dvh !important;
+  max-width: 600px !important;
+  border-radius: 0 !important;
+  padding: 12px 14px calc(24px + env(safe-area-inset-bottom, 0px)) 12px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+}
+
+#kahoot-phase-lobby,
+#kahoot-phase-question,
+#kahoot-phase-intermediate,
+#kahoot-phase-podium {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  overflow-y: auto !important;
+}
+
+.kahoot-btn {
+  padding: 14px 10px !important;
+  min-height: 60px !important;
+  font-size: 0.95rem !important;
+}

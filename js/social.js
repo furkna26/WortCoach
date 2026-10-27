@@ -1653,6 +1653,7 @@
       this.kahootCurrentPhase = 'lobby';
       this.showKahootPhase('lobby');
       this.renderKahootLobbyPlayers();
+      document.body.classList.add('arena-game-active');
       modal.classList.remove('hidden');
 
       // 1.8 Saniyelik Canlı Senkronizasyon & Polling Döngüsü
@@ -1897,6 +1898,7 @@
       if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
       if (this.kahootState?.timerId) clearInterval(this.kahootState.timerId);
       this.kahootPollTimer = null;
+      document.body.classList.remove('arena-game-active');
       $('modal-arena-kahoot-game')?.classList.add('hidden');
       if (noticeMsg && window.wmApp && window.wmApp.showToast) {
         window.wmApp.showToast(noticeMsg);
@@ -2854,51 +2856,70 @@
       if (!container) return;
 
       const banner = document.createElement('div');
-      banner.className = 'toast-invite-card';
+      banner.className = 'toast-invite-pill';
       banner.style.cssText = `
-        background: var(--bg-surface);
-        border: 2px solid var(--brand-blue);
-        border-radius: 14px;
-        padding: 14px 16px;
-        margin-bottom: 10px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        background: rgba(23, 25, 35, 0.96);
+        border: 1.5px solid var(--brand-blue);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 999px;
+        padding: 6px 12px 6px 14px;
+        margin-bottom: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
         gap: 10px;
-        min-width: 280px;
-        max-width: 380px;
+        max-width: 95vw;
+        width: max-content;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+        z-index: 10001;
       `;
 
       banner.innerHTML = `
-        <div>
-          <div style="font-weight:900; font-size:0.95rem; color:var(--text-primary);">
-            <span style="color:var(--brand-blue);">${item.fromUsername}</span> seni Rekabet Müsabakasına davet etti!
-          </div>
-          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px;">
-            Deste: <b>${item.deckTitle || 'Almanca'}</b> · Oda PIN: <b>${item.pin}</b>
-          </div>
+        <div style="display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden;">
+          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; flex-shrink:0;"></span>
+          <span style="font-size:0.82rem; font-weight:800; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <b style="color:var(--brand-blue);">${item.fromUsername || 'Arkadaşın'}</b> seni Rekabete davet etti
+          </span>
+          <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">(${item.pin})</span>
         </div>
-        <div style="display:flex; gap:8px;">
-          <button type="button" class="btn-toast-join" style="flex:1; background:var(--brand-blue); color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:800; font-size:0.85rem; cursor:pointer;">Katıl</button>
-          <button type="button" class="btn-toast-reject" style="flex:1; background:transparent; color:var(--text-muted); border:1px solid var(--border-medium); padding:8px 12px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;">Reddet</button>
+        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+          <button type="button" class="btn-toast-join" style="background:var(--brand-blue); color:#fff; border:none; padding:5px 12px; border-radius:999px; font-weight:800; font-size:0.78rem; cursor:pointer;">Katıl</button>
+          <button type="button" class="btn-toast-reject" style="background:transparent; color:var(--text-muted); border:none; padding:4px 6px; font-weight:900; font-size:0.88rem; cursor:pointer;" aria-label="Kapat">✕</button>
         </div>
       `;
 
-      banner.querySelector('.btn-toast-join')?.addEventListener('click', async () => {
+      banner.querySelector('.btn-toast-join')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        btn.textContent = 'Giriş...';
         banner.remove();
+
+        const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
         try {
-          await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: item.id });
+          if (myId && item.id) {
+            this.apiCall('decks/inbox/resolve', { userId: myId, giftId: item.id }).catch(() => {});
+          }
+        } catch (_) {}
+
+        try {
           await this.joinKahootRoom(item.pin);
         } catch (err) {
-          alert(err.message || 'Odaya bağlanılamadı.');
+          alert('Müsabakaya girilemedi: ' + (err.message || 'Oda bulunamadı veya kapandı.'));
         }
       });
 
       banner.querySelector('.btn-toast-reject')?.addEventListener('click', async () => {
         banner.remove();
+        const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
         try {
-          await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: item.id });
-          this.renderIncomingDeckGifts();
+          if (myId && item.id) {
+            this.apiCall('decks/inbox/resolve', { userId: myId, giftId: item.id }).catch(() => {});
+            this.renderIncomingDeckGifts();
+          }
         } catch (_) {}
       });
 
@@ -3468,6 +3489,7 @@
           if (this.kahootPollTimer) clearInterval(this.kahootPollTimer);
           if (this.kahootState?.timerId) clearInterval(this.kahootState.timerId);
           this.kahootPollTimer = null;
+          document.body.classList.remove('arena-game-active');
           $('modal-arena-kahoot-game')?.classList.add('hidden');
 
           if (pin) {
@@ -3505,6 +3527,7 @@
       });
 
       $('btn-finish-kahoot-game')?.addEventListener('click', () => {
+        document.body.classList.remove('arena-game-active');
         $('modal-arena-kahoot-game')?.classList.add('hidden');
         this.refreshProfileView();
       });
