@@ -5311,10 +5311,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// Akıllı Scroll Dinleyicisi: Dokunmatik hareket ve kaydırmada WortCoach üst barını gizle/göster
+// Akıllı Scroll Dinleyicisi: Doğal mobil scroll akışı ile WortCoach üst barını gizle/göster
 (function initHeaderScrollHide() {
   let lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
-  let touchStartY = 0;
   let ticking = false;
 
   const getHeader = () => document.querySelector('.app-header');
@@ -5324,42 +5323,27 @@ window.addEventListener('DOMContentLoaded', () => {
            document.body.classList.contains('has-active-game') ||
            document.body.classList.contains('tab-coach-active') ||
            document.body.classList.contains('reader-active-mode') ||
-           document.querySelector('#modal-game-arena:not(.hidden)') ||
-           document.querySelector('#modal-arena-kahoot-game:not(.hidden)');
+           document.querySelector('.modal-backdrop:not(.hidden)');
   };
 
   const hideHeader = () => {
     if (isGameOrModalActive()) return;
     const h = getHeader();
-    if (h) h.classList.add('header-hidden');
+    if (h && !h.classList.contains('header-hidden')) {
+      h.classList.add('header-hidden');
+    }
   };
 
   const showHeader = () => {
     const h = getHeader();
-    if (h) h.classList.remove('header-hidden');
+    if (h && h.classList.contains('header-hidden')) {
+      h.classList.remove('header-hidden');
+    }
   };
 
-  // 1. Dokunmatik Hareket Dinleyicisi (Mobilde kesin ve anlık tepki)
-  window.addEventListener('touchstart', (e) => {
-    if (e.touches && e.touches.length > 0) {
-      touchStartY = e.touches[0].clientY;
-    }
-  }, { passive: true, capture: true });
-
-  window.addEventListener('touchmove', (e) => {
-    if (!e.touches || e.touches.length === 0) return;
-    const currentY = e.touches[0].clientY;
-    const diffY = touchStartY - currentY; // diffY > 0 => parmak yukarı çekiliyor (içerik aşağı kayıyor)
-
-    if (diffY > 10) {
-      hideHeader();
-    } else if (diffY < -10) {
-      showHeader();
-    }
-  }, { passive: true, capture: true });
-
-  // 2. Wheel (Fare Tekerleği) Dinleyicisi
+  // 1. Wheel (Fare Tekerleği) Dinleyicisi
   window.addEventListener('wheel', (e) => {
+    if (isGameOrModalActive()) return;
     if (e.deltaY > 6) {
       hideHeader();
     } else if (e.deltaY < -6) {
@@ -5367,32 +5351,39 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }, { passive: true });
 
-  // 3. Genel Scroll (Capture Modu ile tüm alt container'ları kapsar)
-  const onScrollEvent = (e) => {
-    let currentY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-    if (e && e.target && e.target.scrollTop !== undefined && e.target.scrollTop > 0) {
-      currentY = Math.max(currentY, e.target.scrollTop);
+  // 2. Doğal Tarayıcı Scroll Dinleyicisi (Dokunmatik jest zincirini ASLA engellemez)
+  const onScrollEvent = () => {
+    if (isGameOrModalActive()) return;
+
+    const currentY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+
+    // Sayfa tepesindeyken header her zaman açık tutulur
+    if (currentY <= 20) {
+      showHeader();
+    } else if (currentY > 60) {
+      const delta = currentY - lastScrollY;
+      // Aşağı kaydırırken gizle
+      if (delta > 8) {
+        hideHeader();
+      }
+      // Yukarı kaydırırken göster
+      else if (delta < -8) {
+        showHeader();
+      }
     }
 
-    if (currentY <= 15) {
-      showHeader();
-    } else if (currentY > 30 && currentY > lastScrollY + 4) {
-      hideHeader();
-    } else if (currentY < lastScrollY - 4) {
-      showHeader();
-    }
     lastScrollY = Math.max(0, currentY);
     ticking = false;
   };
 
-  window.addEventListener('scroll', (e) => {
+  window.addEventListener('scroll', () => {
     if (!ticking) {
-      window.requestAnimationFrame(() => onScrollEvent(e));
+      window.requestAnimationFrame(onScrollEvent);
       ticking = true;
     }
-  }, { passive: true, capture: true });
+  }, { passive: true });
 
-  // 4. Mobil Klavye Visual Viewport Tespiti
+  // 3. Mobil Klavye Visual Viewport Tespiti
   if (window.visualViewport) {
     const initialH = window.visualViewport.height;
     window.visualViewport.addEventListener('resize', () => {

@@ -3485,14 +3485,14 @@
 /* Convert bottom-sheet modals to full-screen standard pages */
 .modal-backdrop.full-page-screen {
   position: fixed;
-  top: 56px;
+  top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background-color: var(--bg-main);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  z-index: 45;
+  z-index: 200;
   display: block;
   overflow-y: auto;
   padding: 0;
@@ -3509,7 +3509,7 @@
   border-radius: 0;
   box-shadow: none;
   animation: fadeIn 0.16s ease-out;
-  padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px)) 16px;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(96px + env(safe-area-inset-bottom, 0px)) 16px;
   overflow-y: visible;
 }
 

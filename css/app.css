@@ -127,7 +127,6 @@ html,
 body {
   width: 100%;
   min-height: 100%;
-  overscroll-behavior-y: contain;
   background-color: var(--bg-main);
   color: var(--text-primary);
   font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
@@ -178,8 +177,12 @@ body {
 
 /* Oyun, Arena ve Tam Ekran Modlarda Header & Nav Koruması */
 body.arena-game-active .app-header,
-body.has-active-game .app-header {
+body.has-active-game .app-header,
+body:has(.modal-backdrop.full-page-screen:not(.hidden)) .app-header,
+body:has(#modal-arena-kahoot-game:not(.hidden)) .app-header {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Mobil Klavye Açıldığında, Coach Odaklandığında, Arena Oyununda veya Coach Sekmesindeyken Bottom Nav Tamamen Gizlenir */
@@ -187,7 +190,9 @@ body.keyboard-open .bottom-nav,
 body.coach-chat-focused .bottom-nav,
 body.tab-coach-active .bottom-nav,
 body.arena-game-active .bottom-nav,
-body.has-active-game .bottom-nav {
+body.has-active-game .bottom-nav,
+body:has(.modal-backdrop.full-page-screen:not(.hidden)) .bottom-nav,
+body:has(#modal-arena-kahoot-game:not(.hidden)) .bottom-nav {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;

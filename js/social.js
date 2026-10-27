@@ -2329,7 +2329,10 @@
           e.currentTarget.textContent = 'Ekleniyor...';
           try {
             await this.importDeckToLocal({ title: giftObj.deckTitle, words: giftObj.words });
-            await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+            const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
+            if (myId) {
+              await this.apiCall('decks/inbox/resolve', { userId: myId, giftId: gid });
+            }
             if (window.wmApp && window.wmApp.showToast) {
               window.wmApp.showToast(`"${giftObj.deckTitle}" destesi kütüphanenize eklendi.`);
             }
@@ -2347,7 +2350,10 @@
           const gid = e.currentTarget.getAttribute('data-gift-id');
           e.currentTarget.disabled = true;
           try {
-            await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+            const myId = this.isCloudConnected() ? this.user?.id : this.getActiveProfile().id;
+            if (myId) {
+              await this.apiCall('decks/inbox/resolve', { userId: myId, giftId: gid });
+            }
             await this.renderIncomingDeckGifts();
           } catch (_) {}
         });
