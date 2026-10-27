@@ -496,6 +496,10 @@ class WortCoachApp {
     const targetEl = document.getElementById(tabId);
     if (targetEl) targetEl.classList.add('active');
 
+    // Özel Tam Ekran Sekmeler için Body Sınıfları
+    document.body.classList.toggle('tab-coach-active', tabId === 'tab-coach');
+    document.body.classList.toggle('reader-active-mode', tabId === 'tab-reader');
+
     if (!options.skipRoutePush) {
       const tabRouteMap = this.getTabRouteMap();
       let routePath = tabRouteMap[tabId] || '/sozluk';
@@ -5275,33 +5279,83 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// Akıllı Scroll Dinleyicisi: Aşağı kaydırırken WortCoach üst barını gizle, yukarı kaydırırken göster
+// Akıllı Scroll Dinleyicisi: Dokunmatik hareket ve kaydırmada WortCoach üst barını gizle/göster
 (function initHeaderScrollHide() {
   let lastScrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+  let touchStartY = 0;
   let ticking = false;
 
-  const onScroll = () => {
-    const currentScrollY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || (document.scrollingElement ? document.scrollingElement.scrollTop : 0) || 0;
-    const header = document.querySelector('.app-header');
-    if (header) {
-      if (currentScrollY > 35 && currentScrollY > lastScrollY + 4) {
-        header.classList.add('header-hidden');
-      } else if (currentScrollY < lastScrollY - 4 || currentScrollY <= 15) {
-        header.classList.remove('header-hidden');
-      }
+  const getHeader = () => document.querySelector('.app-header');
+
+  const hideHeader = () => {
+    const h = getHeader();
+    if (h) h.classList.add('header-hidden');
+  };
+
+  const showHeader = () => {
+    const h = getHeader();
+    if (h) h.classList.remove('header-hidden');
+  };
+
+  // 1. Dokunmatik Hareket Dinleyicisi (Mobilde kesin ve anlık tepki)
+  window.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length > 0) {
+      touchStartY = e.touches[0].clientY;
     }
-    lastScrollY = Math.max(0, currentScrollY);
+  }, { passive: true, capture: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!e.touches || e.touches.length === 0) return;
+    const currentY = e.touches[0].clientY;
+    const diffY = touchStartY - currentY; // diffY > 0 => parmak yukarı çekiliyor (içerik aşağı kayıyor)
+
+    if (diffY > 10) {
+      hideHeader();
+    } else if (diffY < -10) {
+      showHeader();
+    }
+  }, { passive: true, capture: true });
+
+  // 2. Wheel (Fare Tekerleği) Dinleyicisi
+  window.addEventListener('wheel', (e) => {
+    if (e.deltaY > 6) {
+      hideHeader();
+    } else if (e.deltaY < -6) {
+      showHeader();
+    }
+  }, { passive: true });
+
+  // 3. Genel Scroll (Capture Modu ile tüm alt container'ları kapsar)
+  const onScrollEvent = (e) => {
+    let currentY = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    if (e && e.target && e.target.scrollTop !== undefined && e.target.scrollTop > 0) {
+      currentY = Math.max(currentY, e.target.scrollTop);
+    }
+
+    if (currentY <= 15) {
+      showHeader();
+    } else if (currentY > 30 && currentY > lastScrollY + 4) {
+      hideHeader();
+    } else if (currentY < lastScrollY - 4) {
+      showHeader();
+    }
+    lastScrollY = Math.max(0, currentY);
     ticking = false;
   };
 
-  const scheduleTick = () => {
+  window.addEventListener('scroll', (e) => {
     if (!ticking) {
-      window.requestAnimationFrame(onScroll);
+      window.requestAnimationFrame(() => onScrollEvent(e));
       ticking = true;
     }
-  };
+  }, { passive: true, capture: true });
 
-  window.addEventListener('scroll', scheduleTick, { passive: true });
-  document.addEventListener('scroll', scheduleTick, { passive: true });
-  document.addEventListener('touchmove', scheduleTick, { passive: true });
+  // 4. Mobil Klavye Visual Viewport Tespiti
+  if (window.visualViewport) {
+    const initialH = window.visualViewport.height;
+    window.visualViewport.addEventListener('resize', () => {
+      const isKeyboard = window.visualViewport.height < initialH - 120;
+      document.body.classList.toggle('keyboard-open', isKeyboard);
+    });
+  }
 })();

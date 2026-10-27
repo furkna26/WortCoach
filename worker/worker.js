@@ -1038,13 +1038,13 @@ async function handleDatabaseApi(path, body, env, c) {
         return json({ error: 'Eksik deste veya alıcı bilgisi.' }, 400, c.headers);
       }
 
-      // Spam Koruması: Aynı kullanıcıdan 4 saniye içinde ardışık deste gönderim engeli
+      // Spam Koruması: Aynı kullanıcıdan 4 saniye içinde ardışık deste gönderim engeli (KV expirationTtl min 60s kuralına uygun)
       const spamKey = `spam_deck:${fromUserId}:${toUserId}`;
-      const isSpam = await env.LIMITS.get(spamKey);
-      if (isSpam) {
+      const lastSpamTime = await env.LIMITS.get(spamKey);
+      if (lastSpamTime && (Date.now() - Number(lastSpamTime)) < 4000) {
         return json({ error: 'Lütfen ardışık deste göndermeden önce birkaç saniye bekleyin.' }, 429, c.headers);
       }
-      await env.LIMITS.put(spamKey, '1', { expirationTtl: 4 });
+      await env.LIMITS.put(spamKey, String(Date.now()), { expirationTtl: 60 });
 
       const giftObj = {
         id: 'gift_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
@@ -1453,13 +1453,13 @@ async function handleDatabaseApi(path, body, env, c) {
         return json({ error: 'Eksik davet bilgisi.' }, 400, c.headers);
       }
 
-      // Spam Koruması: Aynı kullanıcıdan 4 saniye içinde ardışık maç daveti engeli
+      // Spam Koruması: Aynı kullanıcıdan 4 saniye içinde ardışık maç daveti engeli (KV expirationTtl min 60s kuralına uygun)
       const spamKey = `spam_inv:${fromUserId}:${toUserId}`;
-      const isSpam = await env.LIMITS.get(spamKey);
-      if (isSpam) {
+      const lastSpamTime = await env.LIMITS.get(spamKey);
+      if (lastSpamTime && (Date.now() - Number(lastSpamTime)) < 4000) {
         return json({ error: 'Lütfen ardışık davet göndermeden önce birkaç saniye bekleyin.' }, 429, c.headers);
       }
-      await env.LIMITS.put(spamKey, '1', { expirationTtl: 4 });
+      await env.LIMITS.put(spamKey, String(Date.now()), { expirationTtl: 60 });
 
       const inviteObj = {
         id: 'inv_' + Date.now() + '_' + Math.floor(Math.random() * 1000),

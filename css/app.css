@@ -166,17 +166,25 @@ body {
 }
 
 .app-header.header-hidden {
-  transform: translateY(-100%);
-  pointer-events: none;
+  transform: translateY(-100%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
-/* Mobil Klavye Açıldığında veya Coach Chat Odaklandığında Bottom Nav Gizleme */
+/* Mobil Klavye Açıldığında, Coach Odaklandığında veya Coach Sekmesindeyken Bottom Nav Tamamen Gizlenir */
 body.keyboard-open .bottom-nav,
-body.coach-chat-focused .bottom-nav {
-  transform: translateY(120%) !important;
-  opacity: 0 !important;
+body.coach-chat-focused .bottom-nav,
+body.tab-coach-active .bottom-nav {
+  display: none !important;
+  visibility: hidden !important;
   pointer-events: none !important;
-  transition: transform 0.22s ease, opacity 0.2s ease;
+  transform: translateY(200%) !important;
+  opacity: 0 !important;
+}
+
+body.tab-coach-active .app-content {
+  padding-bottom: 8px !important;
 }
 
 /* Tam Ekran Okuma Modu: Header & Bottom Nav Gizleme */

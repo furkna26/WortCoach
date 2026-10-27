@@ -613,12 +613,21 @@
     // 3. Yazdıkça Genişleyen Chatbox (Auto-expanding textarea)
     const chatInput = $('coach-chat-input');
     if (chatInput) {
-      // Mobil klavye açılınca bottom nav'ı sakla
+      // Mobil klavye açılınca bottom nav'ı anında sakla
       chatInput.addEventListener('focus', () => {
         document.body.classList.add('coach-chat-focused');
+        document.body.classList.add('keyboard-open');
+        const bNav = document.querySelector('.bottom-nav');
+        if (bNav) bNav.style.display = 'none';
       });
       chatInput.addEventListener('blur', () => {
         document.body.classList.remove('coach-chat-focused');
+        document.body.classList.remove('keyboard-open');
+        const activeTab = document.querySelector('.tab-view.active')?.id;
+        const bNav = document.querySelector('.bottom-nav');
+        if (bNav && activeTab !== 'tab-coach' && activeTab !== 'tab-reader') {
+          bNav.style.display = '';
+        }
       });
 
       chatInput.addEventListener('input', () => {
@@ -643,10 +652,40 @@
       $('modal-coach-exercise-player')?.classList.add('hidden');
     });
 
-    // 5. İlk Karşılama Mesajı (Eğer akış boşsa)
+    // 5. İlk Karşılama Mesajı & Hızlı Başlangıç Önerileri
     const stream = $('coach-chat-stream');
     if (stream && stream.children.length === 0) {
-      appendChatMessage('model', 'Merhaba! Ben sizin Almanca Dil Koçunuzum. Dilbilgisi kurallarını sorabilir, cümlelerinizi düzelttirebilir veya ataş butonuna tıklayarak bir belge/görsel yükleyip üzerinde analiz başlatabilirsiniz.');
+      const welcomeBubble = appendChatMessage('model', 'Merhaba! Ben sizin Almanca Dil Koçunuzum. Dilbilgisi kurallarını sorabilir, cümlelerinizi düzelttirebilir, konuşma pratiği yapabilir veya ataş butonuna tıklayarak çalışma belgesi yükleyebilirsiniz.');
+      if (welcomeBubble) {
+        const quickRow = document.createElement('div');
+        quickRow.className = 'coach-chat-suggested-row';
+        quickRow.style.marginTop = '10px';
+        quickRow.style.display = 'flex';
+        quickRow.style.flexWrap = 'wrap';
+        quickRow.style.gap = '8px';
+
+        const quickPrompts = [
+          'A1 Seviye Konuşma Pratiği Yap',
+          'Akkusativ ve Dativ Farkı Nedir?',
+          'Bana 5 Yeni Almanca Kelime Öğret',
+          'Yazdığım Almanca Cümleyi Düzelt'
+        ];
+
+        quickPrompts.forEach(pText => {
+          const pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'coach-chat-prompt-pill';
+          pill.textContent = pText;
+          pill.addEventListener('click', () => {
+            if (chatInput) {
+              chatInput.value = pText;
+              sendCoachMessage();
+            }
+          });
+          quickRow.appendChild(pill);
+        });
+        welcomeBubble.appendChild(quickRow);
+      }
     }
   }
 
