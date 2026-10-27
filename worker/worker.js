@@ -9,6 +9,71 @@ const MAX_FILE_B64 = 6_000_000; // ~4.5 MB
 const MAX_WORDS = 150;
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 
+// ---------- Web Push VAPID Sabitleri & RFC 8292 Gönderici ----------
+const VAPID_PUBLIC_KEY = 'BJcW3pPjbzlIy0LSBdYVRW-aGDY6tDEixX1u_kT5aKejmGC59tNh6hZghflHxMXB0nak4bEuOreXjvaZE7uieyM';
+const VAPID_PRIVATE_JWK = {
+  key_ops: ['sign'],
+  ext: true,
+  kty: 'EC',
+  x: 'lxbek-NvOUjLQtIF1hVFb5oYNjq0MSLFfW7-RPlop6M',
+  y: 'mGC59tNh6hZghflHxMXB0nak4bEuOreXjvaZE7uieyM',
+  crv: 'P-256',
+  d: '9vFfsLk7nqALEsX1qgibQ6Dq10MUfeobcH_bt7-e7qI'
+};
+const VAPID_SUBJECT = 'mailto:admin@wortcoach.app';
+
+async function sendVapidWebPush(endpoint) {
+  if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) return false;
+  try {
+    const url = new URL(endpoint);
+    const audience = url.origin;
+
+    const key = await crypto.subtle.importKey(
+      'jwk',
+      VAPID_PRIVATE_JWK,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign']
+    );
+
+    const b64url = (str) => btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const header = b64url(JSON.stringify({ typ: 'JWT', alg: 'ES256' }));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const payload = b64url(JSON.stringify({
+      aud: audience,
+      exp: nowSec + 86400,
+      sub: VAPID_SUBJECT
+    }));
+    const unsigned = `${header}.${payload}`;
+    const sig = await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      key,
+      new TextEncoder().encode(unsigned)
+    );
+
+    let binary = '';
+    const bytes = new Uint8Array(sig);
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const sigB64 = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const jwt = `${unsigned}.${sigB64}`;
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `vapid t=${jwt}, k=${VAPID_PUBLIC_KEY}`,
+        'TTL': '86400',
+        'Urgency': 'high'
+      }
+    });
+    return res.ok || res.status === 201;
+  } catch (err) {
+    console.warn('Vapid push trigger failed:', err);
+    return false;
+  }
+}
+
 // ---------- Prompts ----------
 const DECK_SYSTEM = `Sen uzman bir Alman dilbilimci (Germanist) ve veri ayıklama motorusun. Görevin, sana gönderilen görseldeki (kitap sayfası, kelime listesi, el yazısı not veya ekran görüntüsü) ya da dokümandaki Almanca kelimeleri tespit edip, bunları bir kelime öğrenme uygulamasının sözlük veritabanında aratılmaya hazır, temiz bir JSON listesine dönüştürmektir.
 
@@ -1064,6 +1129,15 @@ async function handleDatabaseApi(path, body, env, c) {
       inbox.unshift(giftObj);
       await env.LIMITS.put(inboxKey, JSON.stringify(inbox.slice(0, 30)), { expirationTtl: 86400 * 30 });
 
+      // Arka plandaki kapalı cihaza Web Push uyarısı fırlat
+      try {
+        const subStr = await env.LIMITS.get(`push_sub:${toUserId}`);
+        if (subStr) {
+          const sub = JSON.parse(subStr);
+          await sendVapidWebPush(sub.endpoint);
+        }
+      } catch (_) {}
+
       return json({ ok: true, gift: giftObj }, 200, c.headers);
     }
 
@@ -1480,6 +1554,15 @@ async function handleDatabaseApi(path, body, env, c) {
       inbox.unshift(inviteObj);
       await env.LIMITS.put(inboxKey, JSON.stringify(inbox.slice(0, 30)), { expirationTtl: 86400 * 2 });
 
+      // Arka plandaki kapalı cihaza Web Push uyarısı fırlat
+      try {
+        const subStr = await env.LIMITS.get(`push_sub:${toUserId}`);
+        if (subStr) {
+          const sub = JSON.parse(subStr);
+          await sendVapidWebPush(sub.endpoint);
+        }
+      } catch (_) {}
+
       return json({ ok: true, invite: inviteObj }, 200, c.headers);
     }
 
@@ -1667,6 +1750,21 @@ async function handleDatabaseApi(path, body, env, c) {
       } catch (_) {}
 
       return json({ ok: false, translation: '' }, 200, c.headers);
+    }
+
+    // 16. Web Push VAPID Abonelik ve Anahtar Endpointleri
+    if (path === '/api/push/vapid_key') {
+      return json({ ok: true, publicKey: VAPID_PUBLIC_KEY }, 200, c.headers);
+    }
+
+    if (path === '/api/push/subscribe') {
+      const userId = clean(body.userId, 40);
+      const subscription = body.subscription;
+      if (!userId || !subscription || !env.LIMITS) {
+        return json({ error: 'Eksik abonelik parametreleri.' }, 400, c.headers);
+      }
+      await env.LIMITS.put(`push_sub:${userId}`, JSON.stringify(subscription), { expirationTtl: 86400 * 90 });
+      return json({ ok: true }, 200, c.headers);
     }
 
     return json({ error: 'Geçersiz API uç noktası.' }, 404, c.headers);

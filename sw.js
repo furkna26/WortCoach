@@ -4,7 +4,7 @@
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v3.7.2';
+const CACHE_NAME = 'wortcoach-v3.7.3';
 
 const CORE_ASSETS = [
   './',
@@ -143,4 +143,86 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+
+// =========================================================================
+// PWA Web Push Bildirim Motoru (Uygulama Kapalıyken Uyandırma)
+// =========================================================================
+let currentPushUserId = null;
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'STORE_PUSH_USER' && event.data.userId) {
+    currentPushUserId = String(event.data.userId);
+    if ('caches' in self) {
+      caches.open('wortcoach-user-meta').then((c) => {
+        c.put('/__active_user_id', new Response(String(event.data.userId)));
+      }).catch(() => {});
+    }
+  }
+});
+
+async function getStoredPushUserId() {
+  if (currentPushUserId) return currentPushUserId;
+  try {
+    if ('caches' in self) {
+      const c = await caches.open('wortcoach-user-meta');
+      const res = await c.match('/__active_user_id');
+      if (res) return await res.text();
+    }
+  } catch (_) {}
+  return null;
+}
+
+self.addEventListener('push', (event) => {
+  event.waitUntil((async () => {
+    try {
+      let title = 'WortCoach';
+      let options = {
+        body: 'Yeni bir davetiniz veya bildiriminiz var!',
+        icon: 'icons/icon-192.svg',
+        badge: 'icons/icon-192.svg',
+        vibrate: [200, 100, 200],
+        tag: 'wortcoach_remote_push',
+        renotify: true
+      };
+
+      const userId = await getStoredPushUserId();
+      if (userId) {
+        const res = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/decks/inbox/get', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        const data = await res.json();
+        const items = Array.isArray(data.gifts) ? data.gifts : [];
+        if (items.length > 0) {
+          const latest = items[0];
+          if (latest.type === 'match_invite') {
+            title = 'WortCoach — Rekabet Daveti';
+            options.body = `${latest.fromUsername} seni müsabakaya davet etti! (PIN: ${latest.pin})`;
+            options.tag = 'match_inv_' + latest.id;
+            options.data = { pin: latest.pin, giftId: latest.id, matchType: latest.matchType || 'kahoot' };
+            options.actions = [
+              { action: 'join_match', title: 'Katıl' },
+              { action: 'reject_match', title: 'Reddet' }
+            ];
+          } else {
+            title = 'WortCoach — Yeni Deste Hediyesi';
+            options.body = `${latest.fromUsername} sana "${latest.deckTitle}" kelime destesini gönderdi.`;
+            options.tag = 'gift_' + latest.id;
+            options.data = { giftId: latest.id };
+          }
+        }
+      }
+
+      return self.registration.showNotification(title, options);
+    } catch (err) {
+      return self.registration.showNotification('WortCoach', {
+        body: 'Yeni bir aktivite bildirimi aldınız.',
+        icon: 'icons/icon-192.svg',
+        badge: 'icons/icon-192.svg'
+      });
+    }
+  })());
 });

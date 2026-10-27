@@ -2609,6 +2609,7 @@
         this.profile = data.profile;
         this.updateUI();
         this.autoSyncDecksToCloud().catch(() => {});
+        this.subscribeToWebPush().catch(() => {});
         try { await this.refreshProfileView(); } catch (_) {}
         try { await this.refreshSocialView(); } catch (_) {}
         return true;
@@ -2628,6 +2629,7 @@
         this.profile = data.profile;
         this.updateUI();
         this.autoSyncDecksToCloud().catch(() => {});
+        this.subscribeToWebPush().catch(() => {});
         try { await this.refreshProfileView(); } catch (_) {}
         try { await this.refreshSocialView(); } catch (_) {}
         return data;
@@ -2740,13 +2742,22 @@
     // BİLDİRİM SİSTEMİ (WEB NOTIFICATION & CANLI INBOX POLLING)
     // =========================================================================
     initNotificationSystem() {
-      // Tarayıcı Bildirim İzni İsteme (Kullanıcı etkileşiminde)
-      if ('Notification' in window && Notification.permission === 'default') {
-        const askPerm = () => {
-          Notification.requestPermission().catch(() => {});
-          document.removeEventListener('click', askPerm);
-        };
-        document.addEventListener('click', askPerm, { once: true });
+      // Tarayıcı Bildirim İzni İsteme ve Web Push VAPID Kaydı
+      if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+          const askPerm = async () => {
+            try {
+              const res = await Notification.requestPermission();
+              if (res === 'granted') {
+                this.subscribeToWebPush();
+              }
+            } catch (_) {}
+            document.removeEventListener('click', askPerm);
+          };
+          document.addEventListener('click', askPerm, { once: true });
+        } else if (Notification.permission === 'granted') {
+          this.subscribeToWebPush();
+        }
       }
 
       // Tekrar Kartları Hatırlatıcısı (Günde 1 kez veya açılışta due kart kontrolü)
@@ -2759,6 +2770,53 @@
 
       // Service Worker Arka Plan Bildirim Buton Dinleyicisi
       this.initServiceWorkerMessageListener();
+    }
+
+    urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    async subscribeToWebPush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+      if (!this.user || !this.user.id) return;
+
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (!reg.pushManager) return;
+
+        // Service Worker'a aktif kullanıcı ID'sini aktar (kapalıyken okuyabilmesi için)
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'STORE_PUSH_USER',
+            userId: this.user.id
+          });
+        }
+
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub && Notification.permission === 'granted') {
+          const VAPID_KEY = 'BJcW3pPjbzlIy0LSBdYVRW-aGDY6tDEixX1u_kT5aKejmGC59tNh6hZghflHxMXB0nak4bEuOreXjvaZE7uieyM';
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: this.urlBase64ToUint8Array(VAPID_KEY)
+          });
+        }
+
+        if (sub) {
+          await this.apiCall('push/subscribe', {
+            userId: this.user.id,
+            subscription: sub.toJSON ? sub.toJSON() : sub
+          });
+        }
+      } catch (err) {
+        console.warn('Web Push aboneliği oluşturulamadı:', err);
+      }
     }
 
     async sendPushNotification(title, options = {}) {
