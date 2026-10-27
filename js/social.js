@@ -2756,18 +2756,128 @@
 
       // Canlı Gelen Kutusu & Davet Polling'i (3.5 Saniyede bir anlık kontrol)
       this.startLiveInboxPolling();
+
+      // Service Worker Arka Plan Bildirim Buton Dinleyicisi
+      this.initServiceWorkerMessageListener();
     }
 
-    sendPushNotification(title, body) {
+    async sendPushNotification(title, options = {}) {
       try {
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(title, {
-            body,
-            icon: 'icons/icon-192.svg',
-            badge: 'icons/icon-192.svg'
-          });
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+        // Mobil PWA (Service Worker) bildirimi - Android Chrome için zorunlu standart yöntem
+        if ('serviceWorker' in navigator) {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            if (reg && reg.showNotification) {
+              return await reg.showNotification(title, {
+                icon: 'icons/icon-192.svg',
+                badge: 'icons/icon-192.svg',
+                vibrate: [200, 100, 200],
+                ...options
+              });
+            }
+          } catch (_) {}
         }
-      } catch (_) {}
+
+        // Masaüstü tarayıcı fallback
+        new Notification(title, {
+          icon: 'icons/icon-192.svg',
+          badge: 'icons/icon-192.svg',
+          ...options
+        });
+      } catch (err) {
+        console.warn('Sistem bildirimi gönderilemedi:', err);
+      }
+    }
+
+    showInteractiveInviteToast(item) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const banner = document.createElement('div');
+      banner.className = 'toast-invite-card';
+      banner.style.cssText = `
+        background: var(--bg-surface);
+        border: 2px solid var(--brand-blue);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 280px;
+        max-width: 380px;
+      `;
+
+      banner.innerHTML = `
+        <div>
+          <div style="font-weight:900; font-size:0.95rem; color:var(--text-primary);">
+            <span style="color:var(--brand-blue);">${item.fromUsername}</span> seni Rekabet Müsabakasına davet etti!
+          </div>
+          <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:3px;">
+            Deste: <b>${item.deckTitle || 'Almanca'}</b> · Oda PIN: <b>${item.pin}</b>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-toast-join" style="flex:1; background:var(--brand-blue); color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:800; font-size:0.85rem; cursor:pointer;">Katıl</button>
+          <button type="button" class="btn-toast-reject" style="flex:1; background:transparent; color:var(--text-muted); border:1px solid var(--border-medium); padding:8px 12px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer;">Reddet</button>
+        </div>
+      `;
+
+      banner.querySelector('.btn-toast-join')?.addEventListener('click', async () => {
+        banner.remove();
+        try {
+          await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: item.id });
+          await this.joinKahootRoom(item.pin);
+        } catch (err) {
+          alert(err.message || 'Odaya bağlanılamadı.');
+        }
+      });
+
+      banner.querySelector('.btn-toast-reject')?.addEventListener('click', async () => {
+        banner.remove();
+        try {
+          await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: item.id });
+          this.renderIncomingDeckGifts();
+        } catch (_) {}
+      });
+
+      container.appendChild(banner);
+      setTimeout(() => {
+        if (banner.parentNode) banner.remove();
+      }, 35000);
+    }
+
+    initServiceWorkerMessageListener() {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.addEventListener('message', async (event) => {
+        const msg = event.data;
+        if (!msg) return;
+        if (msg.type === 'JOIN_MATCH_INVITE' && msg.data) {
+          const pin = msg.data.pin;
+          const gid = msg.data.giftId;
+          try {
+            if (gid && this.user?.id) {
+              await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+            }
+            if (pin) {
+              await this.joinKahootRoom(pin);
+            }
+          } catch (err) {
+            alert(err.message || 'Müsabakaya girilemedi.');
+          }
+        } else if (msg.type === 'REJECT_MATCH_INVITE' && msg.data) {
+          const gid = msg.data.giftId;
+          if (gid && this.user?.id) {
+            try {
+              await this.apiCall('decks/inbox/resolve', { userId: this.user.id, giftId: gid });
+              this.renderIncomingDeckGifts();
+            } catch (_) {}
+          }
+        }
+      });
     }
 
     async checkDueCardsReminder() {
@@ -2781,10 +2891,9 @@
         const count = Array.isArray(dueCards) ? dueCards.length : 0;
         if (count >= 3) {
           localStorage.setItem('wm_last_due_reminder_date', todayStr);
-          this.sendPushNotification(
-            'WortCoach — Günün Kelime Tekrarı',
-            `Bugün tekrar bekleyen ${count} kelime kartınız var! Serinizi korumak için pratik yapın.`
-          );
+          this.sendPushNotification('WortCoach — Günün Kelime Tekrarı', {
+            body: `Bugün tekrar bekleyen ${count} kelime kartınız var! Serinizi korumak için pratik yapın.`
+          });
           if (window.wmApp && window.wmApp.showToast) {
             window.wmApp.showToast(`Günün tekrarı: ${count} kart tekrar edilmeye hazır.`);
           }
@@ -2818,15 +2927,30 @@
               hasNew = true;
 
               if (item.type === 'match_invite') {
-                const matchName = item.matchType === 'kahoot' ? 'Rekabet Müsabakasına' : 'Düelloya';
-                const msg = `${item.fromUsername} seni ${matchName} davet etti! (PIN: ${item.pin})`;
-                this.sendPushNotification('WortCoach — Rekabet Daveti', msg);
-                if (window.wmApp && window.wmApp.showToast) {
-                  window.wmApp.showToast(msg);
-                }
+                // 1. Sistem PWA Bildirimi (Katıl ve Reddet butonlu actions)
+                this.sendPushNotification('WortCoach — Rekabet Daveti', {
+                  body: `${item.fromUsername} seni müsabakaya davet etti! Deste: ${item.deckTitle || 'Almanca'} (PIN: ${item.pin})`,
+                  tag: 'match_inv_' + item.id,
+                  renotify: true,
+                  data: {
+                    pin: item.pin,
+                    giftId: item.id,
+                    matchType: item.matchType || 'kahoot'
+                  },
+                  actions: [
+                    { action: 'join_match', title: 'Katıl' },
+                    { action: 'reject_match', title: 'Reddet' }
+                  ]
+                });
+
+                // 2. Uygulama İçi İnteraktif Toast (Katıl ve Reddet Butonlu)
+                this.showInteractiveInviteToast(item);
               } else {
                 const msg = `${item.fromUsername} sana "${item.deckTitle}" kelime destesini gönderdi.`;
-                this.sendPushNotification('WortCoach — Yeni Deste Hediyesi', msg);
+                this.sendPushNotification('WortCoach — Yeni Deste Hediyesi', {
+                  body: msg,
+                  tag: 'gift_' + item.id
+                });
                 if (window.wmApp && window.wmApp.showToast) {
                   window.wmApp.showToast(msg);
                 }

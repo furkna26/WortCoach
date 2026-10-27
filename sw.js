@@ -4,7 +4,7 @@
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v3.7.1';
+const CACHE_NAME = 'wortcoach-v3.7.2';
 
 const CORE_ASSETS = [
   './',
@@ -106,5 +106,41 @@ self.addEventListener('fetch', (event) => {
           return new Response('', { status: 404, statusText: 'Not Found' });
         });
       })
+  );
+});
+
+
+// =========================================================================
+// PWA Sistem Bildirimi Eylemleri (Notification Click & Actions: Katıl / Reddet)
+// =========================================================================
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const action = event.action;
+  const data = event.notification.data || {};
+
+  if (action === 'reject_match') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'REJECT_MATCH_INVITE', data });
+        }
+      })
+    );
+    return;
+  }
+
+  // 'join_match' veya doğrudan bildirime tıklama
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.postMessage({ type: 'JOIN_MATCH_INVITE', data });
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow('./#match-pin=' + (data.pin || ''));
+      }
+    })
   );
 });
