@@ -362,9 +362,12 @@ function sanitizeDeck(o) {
 function sanitizeCoachChat(o) {
   if (!o || !o.reply) return null;
   const ex = o.exercise || { type: 'NONE' };
-  const sanitizedWords = Array.isArray(ex.words)
-    ? ex.words.map((w) => {
-        let lemma = clean(w?.lemma, 60).replace(/^(der|die|das|ein|eine)\s+/i, '');
+
+  // 1. Words sanitization
+  const rawWords = Array.isArray(ex.words) ? ex.words : (Array.isArray(ex.cards) ? ex.cards : (Array.isArray(ex.vocabulary) ? ex.vocabulary : null));
+  const sanitizedWords = rawWords
+    ? rawWords.map((w) => {
+        let lemma = clean(w?.lemma || w?.word || w?.german, 60).replace(/^(der|die|das|ein|eine)\s+/i, '');
         const pos = ['NOUN', 'VERB', 'ADJ', 'ADV', 'PHRASE'].includes(w.pos) ? w.pos : 'PHRASE';
         if (pos === 'NOUN') lemma = lemma.charAt(0).toUpperCase() + lemma.slice(1);
         else if (pos === 'VERB' || pos === 'ADJ' || pos === 'ADV') lemma = lemma.charAt(0).toLowerCase() + lemma.slice(1);
@@ -372,11 +375,47 @@ function sanitizeCoachChat(o) {
           lemma,
           pos,
           cefr: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(w.cefr) ? w.cefr : '',
-          contextMeaning: clean(w.contextMeaning, 120),
+          contextMeaning: clean(w.contextMeaning || w.meaning || w.turkish, 120),
           sourceSentence: w.sourceSentence ? clean(w.sourceSentence, 300) : null,
         };
       }).filter((w) => Boolean(w.lemma))
     : null;
+
+  // 2. Options sanitization
+  const rawOpts = Array.isArray(ex.options) ? ex.options : (
+    Array.isArray(ex.choices) ? ex.choices : (
+      Array.isArray(ex.answers) ? ex.answers : (
+        Array.isArray(ex.items) ? ex.items : null
+      )
+    )
+  );
+  const sanitizedOptions = rawOpts ? rawOpts.slice(0, 4).map((x) => clean(x, 70)).filter(Boolean) : null;
+
+  // 3. Pairs sanitization (Desteklenen çoklu anahtar formatları)
+  const rawPairs = Array.isArray(ex.pairs) ? ex.pairs : (
+    Array.isArray(ex.matchingPairs) ? ex.matchingPairs : null
+  );
+  const sanitizedPairs = rawPairs
+    ? rawPairs.slice(0, 8).map((p) => {
+        if (!p) return null;
+        const de = clean(p.de || p.german || p.germanWord || p.word || p.source || (Array.isArray(p) ? p[0] : ''), 60);
+        const tr = clean(p.tr || p.turkish || p.turkishMeaning || p.meaning || p.target || (Array.isArray(p) ? p[1] : ''), 80);
+        return de && tr ? { de, tr } : null;
+      }).filter(Boolean)
+    : null;
+
+  // 4. Type inferencing
+  const rawType = String(ex.type || '').toUpperCase();
+  let resolvedType = 'NONE';
+  if (['CLOZE', 'MATCHING', 'GRAMMAR', 'DECK', 'ARTICLE', 'VERB', 'QUIZ'].includes(rawType)) {
+    resolvedType = rawType;
+  } else if (sanitizedPairs && sanitizedPairs.length >= 2) {
+    resolvedType = 'MATCHING';
+  } else if (sanitizedWords && sanitizedWords.length >= 2) {
+    resolvedType = 'DECK';
+  } else if (sanitizedOptions && sanitizedOptions.length >= 2) {
+    resolvedType = 'CLOZE';
+  }
 
   return {
     reply: clean(o.reply, 2500),
@@ -385,15 +424,13 @@ function sanitizeCoachChat(o) {
       .map((s) => clean(s, 70))
       .filter(Boolean),
     exercise: {
-      type: ['CLOZE', 'MATCHING', 'GRAMMAR', 'DECK', 'NONE'].includes(ex.type) ? ex.type : 'NONE',
-      title: ex.title ? clean(ex.title, 80) : '',
-      instruction: ex.instruction ? clean(ex.instruction, 180) : '',
-      sentence: ex.sentence ? clean(ex.sentence, 300) : null,
-      options: Array.isArray(ex.options) ? ex.options.slice(0, 4).map((x) => clean(x, 70)) : null,
+      type: resolvedType,
+      title: clean(ex.title || ex.instruction || '', 80),
+      instruction: clean(ex.instruction || '', 180),
+      sentence: clean(ex.sentence || ex.question || ex.prompt || ex.text || '', 300) || null,
+      options: sanitizedOptions,
       correctIndex: typeof ex.correctIndex === 'number' ? Math.max(0, Math.min(3, ex.correctIndex)) : 0,
-      pairs: Array.isArray(ex.pairs)
-        ? ex.pairs.slice(0, 6).map((p) => ({ de: clean(p.de, 60), tr: clean(p.tr, 80) }))
-        : null,
+      pairs: sanitizedPairs,
       words: sanitizedWords,
       explanation: ex.explanation ? clean(ex.explanation, 500) : null,
     },

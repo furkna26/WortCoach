@@ -111,17 +111,42 @@
   }
 
   // =========================================================================
-  // İNTERAKTİF ALIŞTIRMALAR (CLOZE, MATCHING, GRAMMAR, DECK)
+  // İNTERAKTİF ALIŞTIRMALAR (CLOZE, MATCHING, GRAMMAR, DECK, ARTICLE, VERB)
   // =========================================================================
   const TYPE_NAMES = {
     CLOZE: 'Boşluk Doldurma',
     MATCHING: 'Eşleştirme Oyunu',
     GRAMMAR: 'Dilbilgisi Çalışması',
     DECK: 'Deste Önerisi',
+    ARTICLE: 'Artikel Pratiği',
+    VERB: 'Fiil Çekim Pratiği',
+    QUIZ: 'Kelime Testi',
   };
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
 
   function renderInteractiveExercise(exercise, container) {
     if (!exercise || exercise.type === 'NONE') return;
+
+    const rawType = String(exercise.type || '').toUpperCase();
+    let displayType = 'CLOZE';
+    if (['MATCHING', 'MATCH', 'PAIRS', 'CABLE_MATCH', 'ESLESTIRME'].includes(rawType) || (Array.isArray(exercise.pairs) && exercise.pairs.length > 0)) {
+      displayType = 'MATCHING';
+    } else if (['DECK', 'CARDS', 'VOCAB', 'DESTE'].includes(rawType) || (Array.isArray(exercise.words) && exercise.words.length > 0)) {
+      displayType = 'DECK';
+    } else if (['ARTICLE', 'ARTIKEL'].includes(rawType)) {
+      displayType = 'ARTICLE';
+    } else if (['VERB', 'FIIL'].includes(rawType)) {
+      displayType = 'VERB';
+    } else if (['GRAMMAR', 'QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) {
+      displayType = 'GRAMMAR';
+    }
 
     const card = document.createElement('div');
     card.className = 'coach-exercise-card';
@@ -147,23 +172,31 @@
     typeBadge.style.fontWeight = '800';
     typeBadge.style.padding = '3px 8px';
     typeBadge.style.borderRadius = '6px';
-    typeBadge.textContent = TYPE_NAMES[exercise.type] || 'Alıştırma';
+    typeBadge.textContent = TYPE_NAMES[displayType] || TYPE_NAMES[exercise.type] || 'Alıştırma';
 
     const titleText = document.createElement('span');
     titleText.className = 'coach-exercise-title';
     titleText.style.fontWeight = '800';
     titleText.style.fontSize = '0.94rem';
-    titleText.textContent = exercise.title || exercise.instruction || 'Pratik Çalışması';
+    titleText.textContent = exercise.title || exercise.instruction || (TYPE_NAMES[displayType] || 'Pratik Çalışması');
     head.append(typeBadge, titleText);
     card.appendChild(head);
 
-    if (exercise.sentence) {
+    const sentencePreview = exercise.sentence || exercise.question || exercise.prompt || '';
+    if (sentencePreview) {
       const sentSnippet = document.createElement('div');
       sentSnippet.style.fontSize = '0.9rem';
       sentSnippet.style.color = 'var(--text-secondary)';
       sentSnippet.style.margin = '4px 0 8px';
-      sentSnippet.innerHTML = exercise.sentence.replace('___', '<strong style="color:var(--brand-blue); text-decoration:underline;">______</strong>');
+      sentSnippet.innerHTML = escapeHtml(sentencePreview).replace(/(\.{3,}|_{2,}|\[\s*\]|\(\s*\))/g, '<strong style="color:var(--brand-blue); text-decoration:underline;">______</strong>');
       card.appendChild(sentSnippet);
+    } else if (displayType === 'MATCHING' && Array.isArray(exercise.pairs) && exercise.pairs.length > 0) {
+      const matchSnippet = document.createElement('div');
+      matchSnippet.style.fontSize = '0.85rem';
+      matchSnippet.style.color = 'var(--text-secondary)';
+      matchSnippet.style.margin = '4px 0 8px';
+      matchSnippet.textContent = `${exercise.pairs.length} adet kelime çiftini eşleştirme oyunu`;
+      card.appendChild(matchSnippet);
     }
 
     const startBtn = document.createElement('button');
@@ -192,20 +225,107 @@
     const bodyEl = $('cep-body');
     if (!modal || !bodyEl || !rawExercise) return;
 
-    // Normalizasyon & Format Güvencesi (Yapay zeka format sapmalarını tolere et)
+    // 1. Normalizasyon: Pairs (Eşleştirme çiftleri)
+    const rawPairs = Array.isArray(rawExercise.pairs) ? rawExercise.pairs : (
+      Array.isArray(rawExercise.matchingPairs) ? rawExercise.matchingPairs : []
+    );
+    const pairs = rawPairs.map((p) => {
+      if (!p) return null;
+      const de = String(p.de || p.german || p.germanWord || p.word || p.source || (Array.isArray(p) ? p[0] : '') || '').trim();
+      const tr = String(p.tr || p.turkish || p.turkishMeaning || p.meaning || p.target || (Array.isArray(p) ? p[1] : '') || '').trim();
+      return de && tr ? { de, tr } : null;
+    }).filter(Boolean);
+
+    // 2. Normalizasyon: Words (Deste kelimeleri)
+    const rawWords = Array.isArray(rawExercise.words) ? rawExercise.words : (
+      Array.isArray(rawExercise.cards) ? rawExercise.cards : (
+        Array.isArray(rawExercise.vocabulary) ? rawExercise.vocabulary : []
+      )
+    );
+    const words = rawWords.map((w) => {
+      if (!w) return null;
+      const lemma = String(w.lemma || w.word || w.german || (typeof w === 'string' ? w : '') || '').trim();
+      const contextMeaning = String(w.contextMeaning || w.meaning || w.turkish || '').trim();
+      const pos = String(w.pos || 'NOUN').toUpperCase();
+      const sourceSentence = String(w.sourceSentence || w.example || '').trim();
+      return lemma ? { lemma, contextMeaning, pos, sourceSentence, cefr: w.cefr || 'A1' } : null;
+    }).filter(Boolean);
+
+    // 3. Normalizasyon: Options (Soru seçenekleri)
+    let options = Array.isArray(rawExercise.options) ? rawExercise.options : (
+      Array.isArray(rawExercise.choices) ? rawExercise.choices : (
+        Array.isArray(rawExercise.answers) ? rawExercise.answers : (
+          Array.isArray(rawExercise.items) ? rawExercise.items : []
+        )
+      )
+    );
+    options = options.map((o) => String(o || '').trim()).filter(Boolean);
+
+    // 4. Normalizasyon: Sentence & Prompt (Soru metni)
+    let sentence = String(rawExercise.sentence || rawExercise.question || rawExercise.prompt || rawExercise.text || '').trim();
+
+    // Seçenekler boşsa metinden veya yanıttan A-) B-) seçeneklerini yakala
+    if (options.length < 2 && (sentence || rawExercise.reply)) {
+      const scanText = `${sentence}\n${rawExercise.reply || ''}`;
+      const optMatches = scanText.match(/(?:[A-Da-d][\.\-\)]\s*|\b[1-4][\.\-\)]\s*)([^\n\rA-Da-d1-4\.\-\)]+)/g);
+      if (optMatches && optMatches.length >= 2) {
+        options = optMatches.slice(0, 4).map((m) => m.replace(/^[A-Da-d1-4][\.\-\)]\s*/, '').trim()).filter(Boolean);
+      }
+    }
+
+    // 5. Tür Tespiti & Akıllı Tip Çözümleme
     const rawType = String(rawExercise.type || '').toUpperCase();
     let type = rawType;
-    if (['CLOZE', 'GAP_FILL', 'FILL_IN_THE_BLANK', 'FILL_BLANK'].includes(rawType)) type = 'CLOZE';
-    else if (['GRAMMAR', 'QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) type = 'GRAMMAR';
-    else if (['MATCHING', 'MATCH', 'PAIRS'].includes(rawType)) type = 'MATCHING';
-    else if (['DECK', 'CARDS', 'VOCAB'].includes(rawType)) type = 'DECK';
-    else type = 'GRAMMAR';
+    if (pairs.length >= 2 && (!options.length || ['MATCHING', 'MATCH', 'PAIRS', 'CABLE_MATCH', 'ESLESTIRME'].includes(rawType))) {
+      type = 'MATCHING';
+    } else if (words.length >= 2 && (!options.length || ['DECK', 'CARDS', 'VOCAB', 'DESTE'].includes(rawType))) {
+      type = 'DECK';
+    } else if (['ARTICLE', 'ARTIKEL'].includes(rawType)) {
+      type = 'ARTICLE';
+    } else if (['VERB', 'FIIL'].includes(rawType)) {
+      type = 'VERB';
+    } else if (['GRAMMAR', 'QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) {
+      type = 'GRAMMAR';
+    } else {
+      type = 'CLOZE';
+    }
 
-    const options = Array.isArray(rawExercise.options) ? rawExercise.options : (Array.isArray(rawExercise.choices) ? rawExercise.choices : (Array.isArray(rawExercise.answers) ? rawExercise.answers : []));
-    const sentence = rawExercise.sentence || rawExercise.question || rawExercise.text || '';
-    const pairs = Array.isArray(rawExercise.pairs) ? rawExercise.pairs : (Array.isArray(rawExercise.matchingPairs) ? rawExercise.matchingPairs : []);
-    const words = Array.isArray(rawExercise.words) ? rawExercise.words : (Array.isArray(rawExercise.cards) ? rawExercise.cards : []);
-    const correctIndex = typeof rawExercise.correctIndex === 'number' ? rawExercise.correctIndex : (typeof rawExercise.answerIndex === 'number' ? rawExercise.answerIndex : 0);
+    // Artikel alıştırması için seçenek garantisi
+    if (type === 'ARTICLE' && options.length < 3) {
+      options = ['der', 'die', 'das'];
+    }
+
+    // Cloze veya Grammar için seçenek garantisi (Boş soru render edilmesini önle)
+    if ((type === 'CLOZE' || type === 'GRAMMAR') && options.length < 2) {
+      if (sentence && /(\bder\b|\bdie\b|\bdas\b)/i.test(sentence)) {
+        options = ['der', 'die', 'das'];
+      } else if (sentence && /akkusativ|dativ|genitiv/i.test(sentence)) {
+        options = ['den', 'dem', 'des', 'die'];
+      } else {
+        options = ['in', 'an', 'auf', 'nach'];
+      }
+    }
+
+    // Cümlede boşluk işareti garantisi
+    if (type === 'CLOZE' || type === 'GRAMMAR') {
+      if (!sentence) {
+        sentence = rawExercise.title || rawExercise.instruction || 'Aşağıdaki cümlede boş bırakılan yere en uygun seçeneği belirleyin:';
+      }
+      sentence = sentence.replace(/(\.{3,}|\[\s*\]|\(\s*\)|_{2,})/g, '___');
+      if (!sentence.includes('___')) {
+        sentence += ' (___)';
+      }
+    }
+
+    let correctIndex = 0;
+    if (typeof rawExercise.correctIndex === 'number') {
+      correctIndex = Math.max(0, Math.min(options.length - 1, rawExercise.correctIndex));
+    } else if (typeof rawExercise.answerIndex === 'number') {
+      correctIndex = Math.max(0, Math.min(options.length - 1, rawExercise.answerIndex));
+    } else if (typeof rawExercise.answer === 'string') {
+      const aIdx = options.findIndex((o) => o.toLowerCase() === rawExercise.answer.toLowerCase());
+      if (aIdx >= 0) correctIndex = aIdx;
+    }
 
     const exercise = {
       ...rawExercise,
@@ -215,25 +335,15 @@
       pairs,
       words,
       correctIndex,
-      title: rawExercise.title || rawExercise.instruction || (type === 'CLOZE' ? 'Boşluk Doldurma Alıştırması' : 'Dilbilgisi Çalışması')
+      title: rawExercise.title || rawExercise.instruction || (TYPE_NAMES[type] || 'Pratik Çalışması')
     };
-
-    // Boş popup koruması: Soru, şık veya eşleştirme yoksa boş pencere açılmasını engelle
-    const hasClozeContent = (type === 'CLOZE' || type === 'GRAMMAR') && (options.length > 0 || sentence);
-    const hasMatchingContent = type === 'MATCHING' && pairs.length > 0;
-    const hasDeckContent = type === 'DECK' && words.length > 0;
-
-    if (!hasClozeContent && !hasMatchingContent && !hasDeckContent) {
-      toast('Alıştırma içeriği eksik oluşturuldu. Lütfen koçtan yeni bir alıştırma isteyiniz.');
-      return;
-    }
 
     if (badgeEl) badgeEl.textContent = TYPE_NAMES[exercise.type] || 'Alıştırma';
     if (titleEl) titleEl.textContent = exercise.title;
     bodyEl.innerHTML = '';
 
-    // 1. CLOZE veya GRAMMAR TESTİ
-    if ((exercise.type === 'CLOZE' || exercise.type === 'GRAMMAR') && Array.isArray(exercise.options)) {
+    // 1. CLOZE, GRAMMAR, ARTICLE VEYA TEST
+    if (['CLOZE', 'GRAMMAR', 'ARTICLE', 'VERB'].includes(exercise.type) && Array.isArray(exercise.options) && exercise.options.length > 0) {
       if (exercise.sentence) {
         const sentEl = document.createElement('div');
         sentEl.style.padding = '18px';
@@ -244,7 +354,8 @@
         sentEl.style.fontWeight = '700';
         sentEl.style.lineHeight = '1.55';
         sentEl.style.color = 'var(--text-primary)';
-        sentEl.innerHTML = exercise.sentence.replace('___', '<span style="display:inline-block; min-width:80px; padding:2px 8px; border-bottom:3px solid var(--brand-blue); color:var(--brand-blue); text-align:center;">______</span>');
+        sentEl.style.marginBottom = '14px';
+        sentEl.innerHTML = escapeHtml(exercise.sentence).replace('___', '<span style="display:inline-block; min-width:80px; padding:2px 8px; border-bottom:3px solid var(--brand-blue); color:var(--brand-blue); text-align:center;">______</span>');
         bodyEl.appendChild(sentEl);
       }
 
@@ -263,7 +374,7 @@
         btn.style.padding = '14px 16px';
         btn.style.fontSize = '0.96rem';
         const letter = LETTERS[idx] ? `${LETTERS[idx]}-)` : `${idx + 1}-)`;
-        btn.innerHTML = `<span class="coach-opt-letter" style="font-weight:900;">${letter}</span><span class="coach-opt-label" style="font-weight:700;">${optText}</span>`;
+        btn.innerHTML = `<span class="coach-opt-letter" style="font-weight:900;">${letter}</span><span class="coach-opt-label" style="font-weight:700;">${escapeHtml(optText)}</span>`;
 
         btn.addEventListener('click', () => {
           if (answered) return;
@@ -290,7 +401,7 @@
           // Supabase Aktivite & ELO Kaydı
           if (window.wmSocial && window.wmSocial.recordActivity) {
             window.wmSocial.recordActivity({
-              type: 'cloze',
+              type: exercise.type === 'ARTICLE' ? 'artikel' : 'cloze',
               isCorrect,
               responseTimeMs: respTime,
               comboCount: 0,
@@ -303,12 +414,12 @@
           resultBox.className = `coach-explanation-box ${isCorrect ? 'correct' : 'wrong'}`;
           resultBox.style.padding = '14px';
           resultBox.style.borderRadius = '12px';
-          resultBox.style.marginTop = '12px';
+          resultBox.style.marginTop = '14px';
           resultBox.innerHTML = `
             <div style="font-weight:900; font-size:1rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
               <span>${isCorrect ? 'Tebrikler! Doğru Cevap (+12 ELO)' : 'Yanlış Cevap (-10 ELO)'}</span>
             </div>
-            <div style="font-size:0.88rem; line-height:1.5;">${exercise.explanation || (isCorrect ? 'Dilbilgisi kuralını doğru uyguladınız.' : `Doğru seçenek: ${correctOpt}`)}</div>
+            <div style="font-size:0.88rem; line-height:1.5;">${escapeHtml(exercise.explanation || (isCorrect ? 'Dilbilgisi kuralını doğru uyguladınız.' : `Doğru seçenek: ${correctOpt}`))}</div>
           `;
           bodyEl.appendChild(resultBox);
 
@@ -339,8 +450,8 @@
       bodyEl.appendChild(grid);
     }
 
-    // 2. EŞLEŞTİRME OYUNU
-    if (exercise.type === 'MATCHING' && Array.isArray(exercise.pairs) && exercise.pairs.length > 0) {
+    // 2. ÇİFT YÖNLÜ EŞLEŞTİRME OYUNU (Almanca ya da Türkçe önce tıklanabilir)
+    else if (exercise.type === 'MATCHING' && Array.isArray(exercise.pairs) && exercise.pairs.length > 0) {
       const matchWrap = document.createElement('div');
       matchWrap.className = 'coach-matching-arena';
       matchWrap.style.display = 'grid';
@@ -348,6 +459,7 @@
       matchWrap.style.gap = '14px';
 
       let selectedDeBtn = null;
+      let selectedTrBtn = null;
       let matchedCount = 0;
       const totalPairs = exercise.pairs.length;
 
@@ -363,8 +475,71 @@
       trCol.style.flexDirection = 'column';
       trCol.style.gap = '8px';
 
-      const deList = exercise.pairs.map((p, i) => ({ text: p.de, id: i }));
+      const deList = exercise.pairs.map((p, i) => ({ text: p.de, id: i })).sort(() => Math.random() - 0.5);
       const trList = exercise.pairs.map((p, i) => ({ text: p.tr, id: i })).sort(() => Math.random() - 0.5);
+
+      function checkMatch() {
+        if (!selectedDeBtn || !selectedTrBtn) return;
+        const deId = selectedDeBtn.dataset.pairId;
+        const trId = selectedTrBtn.dataset.pairId;
+
+        if (deId === trId) {
+          selectedDeBtn.classList.remove('selected');
+          selectedDeBtn.classList.add('matched');
+          selectedDeBtn.style.background = 'rgba(16,185,129,0.2)';
+          selectedDeBtn.style.borderColor = '#10B981';
+
+          selectedTrBtn.classList.remove('selected');
+          selectedTrBtn.classList.add('matched');
+          selectedTrBtn.style.background = 'rgba(16,185,129,0.2)';
+          selectedTrBtn.style.borderColor = '#10B981';
+
+          selectedDeBtn = null;
+          selectedTrBtn = null;
+          matchedCount++;
+
+          if (matchedCount === totalPairs) {
+            const winBox = document.createElement('div');
+            winBox.className = 'coach-explanation-box correct';
+            winBox.style.padding = '14px';
+            winBox.style.borderRadius = '12px';
+            winBox.style.marginTop = '14px';
+            winBox.innerHTML = '<strong>Tebrikler!</strong> Tüm kelimeleri başarıyla eşleştirdiniz.';
+            bodyEl.appendChild(winBox);
+
+            if (window.wmSocial && window.wmSocial.recordActivity) {
+              window.wmSocial.recordActivity({ type: 'cloze', isCorrect: true, responseTimeMs: 4000 });
+            }
+
+            const doneBtn = document.createElement('button');
+            doneBtn.type = 'button';
+            doneBtn.className = 'btn-coach-build-full';
+            doneBtn.style.marginTop = '12px';
+            doneBtn.innerHTML = '<span>Koç\'a Bildir &amp; Devam Et</span>';
+            doneBtn.addEventListener('click', () => {
+              modal.classList.add('hidden');
+              sendCoachMessage(`Hazırladığın eşleştirme oyunundaki tüm kelimeleri (${totalPairs} çift) eksiksiz eşleştirdim! Bir sonraki konuya geçelim mi?`, 'EXERCISE_FEEDBACK');
+            });
+            bodyEl.appendChild(doneBtn);
+          }
+        } else {
+          const btnDe = selectedDeBtn;
+          const btnTr = selectedTrBtn;
+          btnDe.classList.add('wrong');
+          btnTr.classList.add('wrong');
+          btnDe.style.borderColor = '#EF4444';
+          btnTr.style.borderColor = '#EF4444';
+          selectedDeBtn = null;
+          selectedTrBtn = null;
+
+          setTimeout(() => {
+            btnDe.classList.remove('wrong', 'selected');
+            btnTr.classList.remove('wrong', 'selected');
+            btnDe.style.borderColor = '';
+            btnTr.style.borderColor = '';
+          }, 600);
+        }
+      }
 
       deList.forEach((item) => {
         const b = document.createElement('button');
@@ -377,9 +552,15 @@
         b.dataset.pairId = String(item.id);
         b.addEventListener('click', () => {
           if (b.classList.contains('matched')) return;
+          if (selectedDeBtn === b) {
+            b.classList.remove('selected');
+            selectedDeBtn = null;
+            return;
+          }
           deCol.querySelectorAll('.coach-match-btn').forEach((x) => x.classList.remove('selected'));
           b.classList.add('selected');
           selectedDeBtn = b;
+          checkMatch();
         });
         deCol.appendChild(b);
       });
@@ -394,50 +575,16 @@
         b.textContent = item.text;
         b.dataset.pairId = String(item.id);
         b.addEventListener('click', () => {
-          if (b.classList.contains('matched') || !selectedDeBtn) return;
-          if (selectedDeBtn.dataset.pairId === b.dataset.pairId) {
-            selectedDeBtn.classList.remove('selected');
-            selectedDeBtn.classList.add('matched');
-            selectedDeBtn.style.background = 'rgba(16,185,129,0.2)';
-            selectedDeBtn.style.borderColor = '#10B981';
-            b.classList.add('matched');
-            b.style.background = 'rgba(16,185,129,0.2)';
-            b.style.borderColor = '#10B981';
-            selectedDeBtn = null;
-            matchedCount++;
-
-            if (matchedCount === totalPairs) {
-              const winBox = document.createElement('div');
-              winBox.className = 'coach-explanation-box correct';
-              winBox.style.padding = '14px';
-              winBox.style.borderRadius = '12px';
-              winBox.style.marginTop = '14px';
-              winBox.innerHTML = '<strong>Tebrikler!</strong> Tüm kelimeleri başarıyla eşleştirdiniz.';
-              bodyEl.appendChild(winBox);
-
-              if (window.wmSocial && window.wmSocial.recordActivity) {
-                window.wmSocial.recordActivity({ type: 'cloze', isCorrect: true, responseTimeMs: 4000 });
-              }
-
-              const doneBtn = document.createElement('button');
-              doneBtn.type = 'button';
-              doneBtn.className = 'btn-coach-build-full';
-              doneBtn.style.marginTop = '12px';
-              doneBtn.innerHTML = '<span>Koç\'a Bildir &amp; Devam Et</span>';
-              doneBtn.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                sendCoachMessage(`Hazırladığın eşleştirme oyunundaki tüm kelimeleri (${totalPairs} çift) eksiksiz eşleştirdim! Bir sonraki konuya geçelim mi?`, 'EXERCISE_FEEDBACK');
-              });
-              bodyEl.appendChild(doneBtn);
-            }
-          } else {
-            b.classList.add('wrong');
-            b.style.borderColor = '#EF4444';
-            setTimeout(() => {
-              b.classList.remove('wrong');
-              b.style.borderColor = '';
-            }, 600);
+          if (b.classList.contains('matched')) return;
+          if (selectedTrBtn === b) {
+            b.classList.remove('selected');
+            selectedTrBtn = null;
+            return;
           }
+          trCol.querySelectorAll('.coach-match-btn').forEach((x) => x.classList.remove('selected'));
+          b.classList.add('selected');
+          selectedTrBtn = b;
+          checkMatch();
         });
         trCol.appendChild(b);
       });
@@ -447,7 +594,7 @@
     }
 
     // 3. DECK ÖNERİSİ
-    if (exercise.type === 'DECK' && Array.isArray(exercise.words) && exercise.words.length > 0) {
+    else if (exercise.type === 'DECK' && Array.isArray(exercise.words) && exercise.words.length > 0) {
       const listWrap = document.createElement('div');
       listWrap.style.display = 'flex';
       listWrap.style.flexDirection = 'column';
@@ -462,7 +609,7 @@
         row.style.borderRadius = '8px';
         row.style.display = 'flex';
         row.style.justifyContent = 'space-between';
-        row.innerHTML = `<span style="font-weight:800;">${w.lemma}</span><span style="color:var(--text-secondary); font-size:0.85rem;">${w.contextMeaning}</span>`;
+        row.innerHTML = `<span style="font-weight:800;">${escapeHtml(w.lemma)}</span><span style="color:var(--text-secondary); font-size:0.85rem;">${escapeHtml(w.contextMeaning)}</span>`;
         listWrap.appendChild(row);
       });
 
@@ -497,6 +644,15 @@
         }
       });
       bodyEl.appendChild(saveBtn);
+    } else {
+      // Beklenmedik format durumunda güvenli yedek mesaj
+      const infoBox = document.createElement('div');
+      infoBox.style.padding = '16px';
+      infoBox.style.background = 'var(--bg-elevated)';
+      infoBox.style.borderRadius = '12px';
+      infoBox.style.lineHeight = '1.5';
+      infoBox.innerHTML = `<strong>Pratik Bilgisi:</strong><br>${escapeHtml(exercise.title || exercise.instruction || 'Bu alıştırmayı sohbet ekranında koç ile çözebilirsiniz.')}`;
+      bodyEl.appendChild(infoBox);
     }
 
     modal.classList.remove('hidden');
@@ -650,6 +806,11 @@
     // 4.1 Oyun & Alıştırma Modalı Kapatma
     $('btn-close-coach-exercise')?.addEventListener('click', () => {
       $('modal-coach-exercise-player')?.classList.add('hidden');
+    });
+    $('modal-coach-exercise-player')?.addEventListener('click', (e) => {
+      if (e.target.id === 'modal-coach-exercise-player') {
+        $('modal-coach-exercise-player')?.classList.add('hidden');
+      }
     });
 
     // 5. İlk Karşılama Mesajı & Hızlı Başlangıç Önerileri

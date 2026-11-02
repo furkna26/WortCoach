@@ -304,6 +304,8 @@ class WortCoachApp {
     document.getElementById('modal-game-deck-select')?.classList.add('hidden');
     document.getElementById('modal-game-quiz')?.classList.add('hidden');
     document.getElementById('modal-cable-game')?.classList.add('hidden');
+    document.getElementById('modal-coach-exercise-player')?.classList.add('hidden');
+    document.getElementById('modal-deck-builder')?.classList.add('hidden');
   }
 
   navigateBack(fallbackTabId = 'tab-home') {

@@ -42,8 +42,8 @@ class WordGameService {
     // Kullanıcı bir veya birden fazla deste seçtiyse filtrele
     const isFiltered = Array.isArray(selectedDeckIds) && selectedDeckIds.length > 0 && !selectedDeckIds.includes('all');
     if (isFiltered) {
-      const numIds = selectedDeckIds.map(Number);
-      userCards = userCards.filter((c) => numIds.includes(Number(c.deckId)));
+      const selectedIdSet = new Set(selectedDeckIds.map((id) => String(id).trim()));
+      userCards = userCards.filter((c) => selectedIdSet.has(String(c.deckId).trim()));
     }
 
     // Küratörlü hazır destelerden kelime havuzunu zenginleştir
@@ -113,6 +113,15 @@ class WordGameService {
       return c.germanWord && hasMeaning;
     });
 
+    if (eligible.length < count) {
+      const extras = (this.poolCards.length ? this.poolCards : []).filter((c) => c.germanWord && (c.meaningsTr || c.meaningsEn));
+      for (const ex of extras) {
+        if (!eligible.some((e) => (e.germanWord || '').toLowerCase() === (ex.germanWord || '').toLowerCase())) {
+          eligible.push(ex);
+          if (eligible.length >= count) break;
+        }
+      }
+    }
     const shuffled = [...eligible].sort(() => 0.5 - Math.random()).slice(0, count);
 
     // Sol Sütun: Almanca Kelimeler (Normatif Artikellerle)
@@ -165,8 +174,9 @@ class WordGameService {
    * Ayrılabilen & Dönüşlü testinde sadece FİİLLER sorulur.
    */
   filterEligibleCards(gameType) {
+    const normType = String(gameType || "MIXED").trim().toUpperCase();
     const cards = this.poolCards;
-    switch (gameType) {
+    switch (normType) {
       case 'ARTICLE':
         return cards.filter((c) => {
           const isNoun = (c.partOfSpeech || '').toUpperCase() === 'NOUN';
@@ -211,7 +221,8 @@ class WordGameService {
   }
 
   startNewGame(gameType, maxQuestions = 15) {
-    this.currentGameType = gameType;
+    const normType = String(gameType || "MIXED").trim().toUpperCase();
+    this.currentGameType = normType;
     this.score = { correct: 0, wrong: 0, streak: 0, maxStreak: 0, points: 0 };
     this.currentIndex = 0;
     this.isAnswerRevealed = false;
@@ -219,7 +230,7 @@ class WordGameService {
     this.questionStartTime = Date.now();
     this.remainingSeconds = this.durationSeconds;
 
-    let eligible = this.filterEligibleCards(gameType);
+    let eligible = this.filterEligibleCards(normType);
 
     // Güvenlik Kalkanı: Eğer seçili destede bu türe ait yeterli kart yoksa,
     // ASLA yanlış türden kart sorma! Küratörlü kütüphaneden sadece o türe uygun kartları tamamla.
@@ -261,17 +272,18 @@ class WordGameService {
       }
     }
 
-    this.questions = this.generateQuestions(eligible, gameType, maxQuestions);
+    this.questions = this.generateQuestions(eligible, normType, maxQuestions);
     return this.questions;
   }
 
   generateQuestions(eligibleCards, gameType, maxQuestions = 15) {
+    const normType = String(gameType || "MIXED").trim().toUpperCase();
     const shuffled = [...eligibleCards].sort(() => 0.5 - Math.random()).slice(0, maxQuestions);
     const questions = [];
 
     for (const card of shuffled) {
       let q = null;
-      switch (gameType) {
+      switch (normType) {
         case 'ARTICLE':
           q = this.generateArticleQuestion(card);
           break;
