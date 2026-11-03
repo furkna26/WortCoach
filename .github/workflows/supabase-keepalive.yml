@@ -1,0 +1,50 @@
+name: Supabase Keep-Alive Ping
+
+on:
+  schedule:
+    # Her gün saat 04:00 ve 16:00 UTC (12 saatte bir) otomatik çalışır
+    - cron: '0 4,16 * * *'
+  workflow_dispatch: # GitHub arayüzünden manuel tetikleme imkanı
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database & Auth API
+        env:
+          SUPABASE_URL: "https://zomxltwusqvqbpbgcdki.supabase.co"
+          SUPABASE_ANON_KEY: "sb_publishable_dPIJjAD8M6JKrGgTu8yMxg_W_-pk-Ce"
+        run: |
+          echo "Sending keep-alive ping to Supabase..."
+          
+          # 1. PostgREST Database Query (profiles tablosundan 1 kayıt sorgula)
+          DB_RES=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles?select=id&limit=1")
+          
+          echo "Database ping HTTP status: $DB_RES"
+          
+          # 2. Auth Service Health Check
+          AUTH_RES=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/auth/v1/health")
+            
+          echo "Auth health HTTP status: $AUTH_RES"
+          
+          # 3. Cloudflare Worker Database Proxy Ping (Eğer worker üzerinden proxy ediliyorsa)
+          WORKER_RES=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/decks/public")
+            
+          echo "Worker Proxy ping HTTP status: $WORKER_RES"
+          
+          if [ "$DB_RES" -eq 200 ] || [ "$AUTH_RES" -eq 200 ] || [ "$WORKER_RES" -eq 200 ]; then
+            echo "Keep-alive ping successful. Supabase project is active and healthy."
+            exit 0
+          else
+            echo "Warning: All keep-alive endpoints returned non-200 status."
+            exit 1
+          fi

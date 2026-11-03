@@ -462,6 +462,19 @@ function getSbFetch(env) {
 async function handleDatabaseApi(path, body, env, c) {
   const sbFetch = getSbFetch(env);
   try {
+    // 0. Supabase Keep-Alive Health Check (Veritabanının uykuya / offline moda düşmesini önler)
+    if (path === '/api/health' || path === '/api/keepalive') {
+      const dbRes = await sbFetch('/rest/v1/profiles?select=id&limit=1');
+      const authRes = await sbFetch('/auth/v1/health');
+      return json({
+        ok: true,
+        status: 'active',
+        database: dbRes.status === 200 ? 'online' : dbRes.status,
+        auth: authRes.status === 200 ? 'online' : authRes.status,
+        timestamp: new Date().toISOString()
+      }, 200, c.headers);
+    }
+
     // 1. Kayıt Ol (Admin API ile onaysız direkt aktif etme)
     if (path === '/api/auth/register') {
       const username = clean(body.username, 30);
@@ -1891,4 +1904,21 @@ export default {
 
     return json({ error: 'not found' }, 404, c.headers);
   },
+
+  // Cloudflare Cron Trigger (Günde 2 kez Supabase'e keep-alive sorgusu gönderir)
+  async scheduled(event, env, ctx) {
+    const sbFetch = getSbFetch(env);
+    ctx.waitUntil((async () => {
+      try {
+        await Promise.all([
+          sbFetch('/rest/v1/profiles?select=id&limit=1'),
+          sbFetch('/rest/v1/decks?select=id&limit=1'),
+          sbFetch('/auth/v1/health')
+        ]);
+        console.log('[WortCoach] Supabase Keep-Alive Cron Ping executed successfully at', new Date().toISOString());
+      } catch (err) {
+        console.error('[WortCoach] Supabase Keep-Alive Cron Ping failed:', err);
+      }
+    })());
+  }
 };

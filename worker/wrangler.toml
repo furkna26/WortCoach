@@ -16,3 +16,7 @@ id = "2335363350024e0f856d8e72e7a7318b"
 name = "MINUTE_LIMITER"
 namespace_id = "1001"
 simple = { limit = 6, period = 60 }
+
+# Supabase Veritabanını 7 Gün Hareketsizlikten Korumak İçin Otomatik Cron Tetikleyici (Her 12 Saatte Bir)
+[triggers]
+crons = ["0 4,16 * * *"]
