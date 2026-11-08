@@ -390,7 +390,7 @@ class WortMeisterStudy {
     // 6. KART ARKA YÜZÜ
     const backTopLabel = document.querySelector('#flashcard-inner .scb-top-label');
     if (backTopLabel) {
-      backTopLabel.textContent = isQuizCard ? 'DOĞRU CEVAP / ARKAYÜZ' : 'TÜRKÇE ANLAMI';
+      backTopLabel.textContent = isQuizCard ? 'CEVAP' : 'TÜRKÇE ANLAMI';
     }
     const meaningTrEl = document.getElementById('fc-back-meaning-tr');
     if (meaningTrEl) {
@@ -411,9 +411,13 @@ class WortMeisterStudy {
       subtextEl.textContent = isQuizCard ? `Soru: ${formattedWord}` : `Almanca: ${formattedWord}`;
     }
 
-    // Örnek Cümle Kartı (Arka Yüz)
+    // Örnek Cümle / Ek Bilgi Kartı (Arka Yüz)
     const exCard = document.getElementById('fc-back-example-card');
     const exText = document.getElementById('fc-back-example');
+    const exHeaderSpan = document.querySelector('#fc-back-example-card .scb-example-header > span');
+    if (exHeaderSpan) {
+      exHeaderSpan.textContent = isQuizCard ? 'EK BİLGİ & İPUCU' : 'ÖRNEK CÜMLE';
+    }
     if (card.exampleSentence) {
       exCard?.classList.remove('hidden');
       if (exText) exText.textContent = card.exampleSentence;

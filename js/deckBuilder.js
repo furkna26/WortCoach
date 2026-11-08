@@ -38,9 +38,9 @@
       'Sıfatları ve kalıp ifadeleri desteye ekle'
     ],
     quiz: [
-      'Metindeki önemli bilgileri soru-cevap yap',
-      'Eyalet, kavram veya terimleri ön-arka yüz eşleştir',
-      'Kişileri, eserleri ve tanımları quiz kartına çevir'
+      'Belgedeki bilgileri soru, cevap ve ek bilgi kartına çevir',
+      'Önemli kişi, olay ve tarihleri soru-cevap yap',
+      'Temel bilgileri ve ekstra ipuçlarını quiz yap'
     ]
   };
 
@@ -161,7 +161,7 @@
     const subtitleEl = $('deck-builder-subtitle');
     if (subtitleEl) {
       subtitleEl.textContent = isQuiz
-        ? 'Belge, tablo veya ders notlarından Soru - Cevap ve Ön Yüz - Arka Yüz bilgi kartları üretin'
+        ? 'Belge, görsel veya metinden Soru - Cevap - Ek Bilgi kartları üretin'
         : 'Yapay zeka ile belge, görsel veya metinden sözlük uyumlu kelime destesi üretin';
     }
 
@@ -170,7 +170,7 @@
       if (isQuiz) {
         bannerEl.style.background = 'rgba(245, 158, 11, 0.09)';
         bannerEl.style.borderColor = 'rgba(245, 158, 11, 0.28)';
-        bannerEl.innerHTML = '<strong style="color:#FBBF24;">Quiz Destesi Modu (Soru - Cevap):</strong> Kelime çevirisi yapmaz. Belgedeki bilgileri doğrudan <strong>Ön Yüz (Soru / Eyalet / Kavram)</strong> ve <strong>Arka Yüz (Cevap / Başkent / Kişi)</strong> şeklinde bilgi kartlarına dönüştürür.';
+        bannerEl.innerHTML = '<strong style="color:#FBBF24;">Quiz Destesi Modu:</strong> Kelime çevirisi yapmaz; doğrudan <strong>Soru, Cevap ve Ek Bilgi</strong> şeklinde kartlara dönüştürür.';
       } else {
         bannerEl.style.background = 'rgba(59, 130, 246, 0.08)';
         bannerEl.style.borderColor = 'rgba(59, 130, 246, 0.22)';
@@ -180,25 +180,23 @@
 
     const textInput = $('deck-builder-text-input');
     if (textInput) {
-      textInput.placeholder = isQuiz
-        ? 'Quiz veya soru-cevap çıkarılacak ders notunu, tabloyu (örn. Eyaletler ve Başkentleri) buraya yapıştırın ya da PDF / Görsel / DOCX yükleyin...'
-        : 'Metni buraya yapıştırın veya bir görsel, PDF, DOCX ya da TXT dosyası yükleyin...';
+      textInput.placeholder = 'Metni buraya yapıştırın veya bir görsel, PDF, DOCX ya da TXT dosyası yükleyin...';
     }
 
     const sugLabel = $('deck-builder-suggestions-label');
     if (sugLabel) {
-      sugLabel.textContent = isQuiz ? 'Önerilen Quiz & Soru-Cevap Talimatları:' : 'Önerilen Kelime Destesi Talimatları:';
+      sugLabel.textContent = isQuiz ? 'Önerilen Quiz Talimatları:' : 'Önerilen Kelime Destesi Talimatları:';
     }
 
     const instLabel = $('deck-builder-instruction-label');
     if (instLabel) {
-      instLabel.textContent = isQuiz ? 'QUİZ KURGUSU / ÖN-ARKA YÜZ TALİMATI (İSTEĞE BAĞLI)' : 'ÖZEL TALİMAT (İSTEĞE BAĞLI)';
+      instLabel.textContent = 'ÖZEL TALİMAT (İSTEĞE BAĞLI)';
     }
 
     if (instEl) {
       instEl.value = cur.instruction || '';
       instEl.placeholder = isQuiz
-        ? 'Örn: Eyaletleri ön yüz, başkentleri arka yüz yap / Metindeki filozof ve eserleri soru-cevap kartına çevir...'
+        ? 'Örn: Belgedeki önemli bilgileri soru, cevap ve ek bilgi kartlarına dönüştür...'
         : 'Örn: Bu metindeki A2-B1 seviyesi fiil ve isimleri desteye çevir...';
     }
 
@@ -418,16 +416,17 @@
     state.byMode[activeMode].instruction = instruction;
     payload.deckMode = activeMode;
     if (isQuiz) {
-      const quizCoreDirective = 'BU BİR QUİZ (SORU-CEVAP / ÖN YÜZ - ARKA YÜZ) DESTESİDİR. Kelime çevirisi yapma! lemma alanına Kartın Ön Yüzünü (Soru, Eyalet veya Kavram), contextMeaning alanına Kartın Arka Yüzünü (Cevap, Başkent veya Immanuel Kant gibi özel isim/bilgi) yaz.';
+      const quizCoreDirective = 'BU BİR QUİZ (SORU - CEVAP - EK BİLGİ) DESTESİDİR. Kelime çevirisi yapma! lemma alanına Soruyu (belge Türkçe ise Türkçe, Almanca ise Almanca), contextMeaning alanına Doğru Cevabı, sourceSentence alanına ise belgeden bulduğun ekstra bilgileri veya konuya dair ek bilgileri / ipuçlarını (Tips & Tricks: örn. Bayern başkenti München, nüfusu yaklaşık 1.5 milyon vb.) Türkçe olarak MUTLAKA yaz.';
       payload.instruction = instruction ? `${quizCoreDirective} Kullanıcı Kurgusu: ${instruction}` : quizCoreDirective;
     } else {
-      payload.instruction = instruction;
+      const wordTipDirective = 'sourceSentence alanına kelimenin belgedeki cümlesini ve varsa belgeden/kullanımdan kısa bir ek bilgi (ipucu) yaz.';
+      payload.instruction = instruction ? `${instruction}. (${wordTipDirective})` : wordTipDirective;
     }
 
     setBusy(true, 'Koç düşünüyor...');
     setStatus(
       isQuiz
-        ? 'Koç belgedeki bilgileri Ön Yüz (Soru/Kavram) ve Arka Yüz (Cevap/Karşılık) kartlarına dönüştürüyor...'
+        ? 'Koç belgedeki bilgileri Soru, Cevap ve Ek Bilgi kartlarına dönüştürüyor...'
         : 'Koç içeriği inceliyor ve kelimeleri ayıklıyor...'
     );
 
@@ -535,20 +534,22 @@
       if (isQuiz) {
         const frontText = w.front || w.lemma;
         const backText = w.back || w.contextMeaning;
-        const catText = w.category || w.cefr || 'Soru - Cevap';
         const hintText = w.hint || w.sourceSentence || '';
 
         info.innerHTML = `
-          <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
-            <span class="badge" style="background:rgba(245,158,11,0.16); color:#FBBF24; font-size:0.66rem; font-weight:800; padding:2px 7px; border-radius:6px;">ÖN YÜZ (SORU)</span>
-            <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-size:0.66rem; font-weight:700; padding:2px 7px; border-radius:6px;">${catText}</span>
+          <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:5px;">
+            <span class="badge" style="background:rgba(245,158,11,0.16); color:#FBBF24; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">SORU</span>
+            <span style="font-weight:800; font-size:0.93rem; color:var(--text-primary); line-height:1.4;">${frontText}</span>
           </div>
-          <div style="font-weight:800; font-size:0.93rem; color:var(--text-primary); line-height:1.4; margin-bottom:6px;">${frontText}</div>
           <div style="display:flex; align-items:baseline; gap:6px; padding-top:5px; border-top:1px dashed var(--border-subtle);">
-            <span class="badge" style="background:rgba(16,185,129,0.16); color:#34D399; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">ARKA YÜZ (CEVAP)</span>
+            <span class="badge" style="background:rgba(16,185,129,0.16); color:#34D399; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">CEVAP</span>
             <span style="font-weight:700; font-size:0.88rem; color:#34D399; line-height:1.35;">${backText}</span>
           </div>
-          ${hintText ? `<div style="font-size:0.76rem; color:var(--text-muted); margin-top:4px; font-style:italic;">Not: ${hintText}</div>` : ''}
+          ${hintText ? `
+          <div style="display:flex; align-items:baseline; gap:6px; margin-top:5px; padding-top:5px; border-top:1px dashed var(--border-subtle);">
+            <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-size:0.64rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">EK BİLGİ</span>
+            <span style="font-size:0.8rem; color:var(--text-secondary); line-height:1.35;">${hintText}</span>
+          </div>` : ''}
         `;
       } else {
         info.innerHTML = `
@@ -558,6 +559,7 @@
             ${w.cefr ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34D399; font-size:0.68rem; padding:2px 6px; border-radius:6px;">${w.cefr}</span>` : ''}
           </div>
           <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">${w.contextMeaning}</div>
+          ${w.sourceSentence ? `<div style="font-size:0.76rem; color:var(--text-muted); margin-top:3px; font-style:italic;">${w.sourceSentence}</div>` : ''}
         `;
       }
 

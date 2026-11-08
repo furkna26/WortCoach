@@ -85,7 +85,28 @@
       $('coach-chat-file-chip')?.classList.remove('hidden');
       toast(`"${name}" çalışma bağlamı olarak eklendi.`);
 
-      appendChatMessage('system', `Çalışma dosyası eklendi: ${name}. Bu belge hakkında soru sorabilir veya alıştırma isteyebilirsiniz.`);
+      const sysBubble = appendChatMessage('system', `Çalışma dosyası eklendi: ${name}. Bu belge üzerinden bilgi/quiz soruları veya kelime alıştırmaları çözebilirsiniz.`);
+      if (sysBubble) {
+        const docQuickRow = document.createElement('div');
+        docQuickRow.className = 'coach-chat-suggested-row';
+        docQuickRow.style.marginTop = '8px';
+        docQuickRow.style.display = 'flex';
+        docQuickRow.style.flexWrap = 'wrap';
+        docQuickRow.style.gap = '6px';
+        [
+          'Bu belgeden bilgi & quiz sorusu sor',
+          'Bu belgeden eşleştirme oyunu hazırla',
+          'Bu belgeden kelime alıştırması hazırla'
+        ].forEach((qText) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'coach-chat-prompt-pill';
+          b.textContent = qText;
+          b.addEventListener('click', () => sendCoachMessage(qText));
+          docQuickRow.appendChild(b);
+        });
+        sysBubble.appendChild(docQuickRow);
+      }
     } catch (e) {
       chatState.file = null;
       $('coach-chat-file-chip')?.classList.add('hidden');
@@ -116,11 +137,11 @@
   const TYPE_NAMES = {
     CLOZE: 'Boşluk Doldurma',
     MATCHING: 'Eşleştirme Oyunu',
-    GRAMMAR: 'Dilbilgisi Çalışması',
+    GRAMMAR: 'Dilbilgisi & Bilgi Sorusu',
     DECK: 'Deste Önerisi',
     ARTICLE: 'Artikel Pratiği',
     VERB: 'Fiil Çekim Pratiği',
-    QUIZ: 'Kelime Testi',
+    QUIZ: 'Bilgi & Quiz Sorusu',
   };
 
   function escapeHtml(str) {
@@ -144,7 +165,9 @@
       displayType = 'ARTICLE';
     } else if (['VERB', 'FIIL'].includes(rawType)) {
       displayType = 'VERB';
-    } else if (['GRAMMAR', 'QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) {
+    } else if (['QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) {
+      displayType = 'QUIZ';
+    } else if (rawType === 'GRAMMAR') {
       displayType = 'GRAMMAR';
     }
 
@@ -284,7 +307,9 @@
       type = 'ARTICLE';
     } else if (['VERB', 'FIIL'].includes(rawType)) {
       type = 'VERB';
-    } else if (['GRAMMAR', 'QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType)) {
+    } else if (['QUIZ', 'TEST', 'MULTIPLE_CHOICE'].includes(rawType) || (sentence && sentence.trim().endsWith('?') && !sentence.includes('___'))) {
+      type = 'QUIZ';
+    } else if (rawType === 'GRAMMAR') {
       type = 'GRAMMAR';
     } else {
       type = 'CLOZE';
@@ -295,8 +320,8 @@
       options = ['der', 'die', 'das'];
     }
 
-    // Cloze veya Grammar için seçenek garantisi (Boş soru render edilmesini önle)
-    if ((type === 'CLOZE' || type === 'GRAMMAR') && options.length < 2) {
+    // Cloze, Grammar veya Quiz için seçenek garantisi (Boş soru render edilmesini önle)
+    if ((type === 'CLOZE' || type === 'GRAMMAR' || type === 'QUIZ') && options.length < 2) {
       if (sentence && /(\bder\b|\bdie\b|\bdas\b)/i.test(sentence)) {
         options = ['der', 'die', 'das'];
       } else if (sentence && /akkusativ|dativ|genitiv/i.test(sentence)) {
@@ -306,13 +331,13 @@
       }
     }
 
-    // Cümlede boşluk işareti garantisi
-    if (type === 'CLOZE' || type === 'GRAMMAR') {
+    // Cümlede boşluk işareti garantisi (Doğrudan soru cümlesi ise sonuna boşluk ekleme)
+    if (type === 'CLOZE' || type === 'GRAMMAR' || type === 'QUIZ') {
       if (!sentence) {
-        sentence = rawExercise.title || rawExercise.instruction || 'Aşağıdaki cümlede boş bırakılan yere en uygun seçeneği belirleyin:';
+        sentence = rawExercise.title || rawExercise.instruction || 'Aşağıdaki soruda doğru seçeneği belirleyin:';
       }
       sentence = sentence.replace(/(\.{3,}|\[\s*\]|\(\s*\)|_{2,})/g, '___');
-      if (!sentence.includes('___')) {
+      if (type !== 'QUIZ' && !sentence.includes('___') && !sentence.trim().endsWith('?')) {
         sentence += ' (___)';
       }
     }
@@ -342,8 +367,8 @@
     if (titleEl) titleEl.textContent = exercise.title;
     bodyEl.innerHTML = '';
 
-    // 1. CLOZE, GRAMMAR, ARTICLE VEYA TEST
-    if (['CLOZE', 'GRAMMAR', 'ARTICLE', 'VERB'].includes(exercise.type) && Array.isArray(exercise.options) && exercise.options.length > 0) {
+    // 1. CLOZE, GRAMMAR, ARTICLE, VERB VEYA QUIZ TESTİ
+    if (['CLOZE', 'GRAMMAR', 'ARTICLE', 'VERB', 'QUIZ'].includes(exercise.type) && Array.isArray(exercise.options) && exercise.options.length > 0) {
       if (exercise.sentence) {
         const sentEl = document.createElement('div');
         sentEl.style.padding = '18px';
@@ -409,7 +434,7 @@
             });
           }
 
-          // Açıklama & Sonuç Kutusu
+          // Açıklama & Ek Bilgi Kutusu
           const resultBox = document.createElement('div');
           resultBox.className = `coach-explanation-box ${isCorrect ? 'correct' : 'wrong'}`;
           resultBox.style.padding = '14px';
@@ -419,7 +444,10 @@
             <div style="font-weight:900; font-size:1rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
               <span>${isCorrect ? 'Tebrikler! Doğru Cevap (+12 ELO)' : 'Yanlış Cevap (-10 ELO)'}</span>
             </div>
-            <div style="font-size:0.88rem; line-height:1.5;">${escapeHtml(exercise.explanation || (isCorrect ? 'Dilbilgisi kuralını doğru uyguladınız.' : `Doğru seçenek: ${correctOpt}`))}</div>
+            <div style="font-size:0.88rem; line-height:1.5;">
+              ${!isCorrect ? `<div style="margin-bottom:4px;"><strong>Doğru Cevap:</strong> ${escapeHtml(correctOpt)}</div>` : ''}
+              ${exercise.explanation ? `<div><strong>Ek Bilgi &amp; Açıklama:</strong> ${escapeHtml(exercise.explanation)}</div>` : ''}
+            </div>
           `;
           bodyEl.appendChild(resultBox);
 
@@ -682,11 +710,11 @@
       chatState.history.push({ role: 'user', text: msg });
     }
 
-    // Katı Konu ve Token Koruması (Yalnızca Almanca Öğrenimi)
-    const OFF_TOPIC_RE = /(python|javascript|typescript|php|html|css|kod yaz|programlama|hava durumu|dolar kaç|borsa|bitcoin|kripto|felsefe|siyaset|seçim|magazin|yemek tarifi|burç|astroloji|matematik|fizik|kuantum|bana bir hikaye|fıkra anlat)/i;
+    // Katı Konu ve Token Koruması (Yalnızca Almanca ve Çalışma Belgesi / Kültür Öğrenimi)
+    const OFF_TOPIC_RE = /(python|javascript|typescript|php|html|css|kod yaz|programlama|hava durumu|dolar kaç|borsa|bitcoin|kripto|siyaset|seçim|magazin|yemek tarifi|burç|astroloji|kuantum|bana bir hikaye|fıkra anlat)/i;
     if (msg && !action && !chatState.file && !chatState.contextText && OFF_TOPIC_RE.test(msg)) {
       setTimeout(() => {
-        appendChatMessage('model', 'Maalesef bu konuda yardımcı olamam. Ben yalnızca Almanca öğreniminizde size rehberlik etmek üzere tasarlanmış bir dil koçuyum. Lütfen Almanca dilbilgisi, kelimeler veya metinlerinizle ilgili bir soru sorunuz.');
+        appendChatMessage('model', 'Maalesef bu konuda yardımcı olamam. Ben yalnızca Almanca öğreniminizde ve çalışma belgelerinizde size rehberlik etmek üzere tasarlanmış bir koçum.');
         chatState.busy = false;
         if (sendBtn) sendBtn.disabled = false;
       }, 250);
@@ -699,8 +727,11 @@
     stream?.appendChild(typingEl);
     if (stream) stream.scrollTop = stream.scrollHeight;
 
+    const rawUserQuery = msg || (action === 'cloze' ? 'Boşluk doldurma alıştırması hazırla' : (action || 'Bana bir quiz sorusu hazırla'));
+    const coachSystemNote = `\n[SİSTEM NOTU: Kullanıcı quiz, test, soru-cevap veya belge üzerinden soru istediğinde SADECE kelime anlamı sorma; belgedeki veya konudaki olgusal bilgileri (örn. eyalet-başkent, kişi-eser, tarih, kavram, genel kültür / Landeskunde veya okuduğunu anlama) ölçen doğrudan Soru-Cevap (Quiz) soruları da sor. Çoktan seçmeli bir soru veya alıştırma hazırladığında reply metninin en sonuna MUTLAKA şu satırı ekle: [QUIZ_DATA] Soru: <soru metni> | A) <şık 1> | B) <şık 2> | C) <şık 3> | D) <şık 4> | Cevap: <A/B/C/D> | EkBilgi: <konuyla ilgili belgeden veya genel kültürden ekstra bilgi, ipucu, nüfus, tarih vb.> [/QUIZ_DATA]]`;
+
     const payload = {
-      message: msg || (action === 'cloze' ? 'Boşluk doldurma alıştırması hazırla' : action),
+      message: action === 'EXERCISE_FEEDBACK' ? rawUserQuery : (rawUserQuery + coachSystemNote),
       userLevel: 'B1',
       action: action || '',
       history: chatState.history.slice(-6),
@@ -712,10 +743,52 @@
       const res = await window.coachRequest('chat', payload);
       typingEl.remove();
 
-      const modelMsgEl = appendChatMessage('model', res.reply || '');
-      chatState.history.push({ role: 'model', text: res.reply || '' });
+      let rawReply = String(res.reply || '');
+      let parsedQuiz = null;
+      const quizMatch = rawReply.match(/\[QUIZ_DATA\]([\s\S]*?)(?:\[\/QUIZ_DATA\]|$)/i);
+      if (quizMatch) {
+        const block = quizMatch[1].trim();
+        rawReply = rawReply.replace(quizMatch[0], '').trim();
+        const qM = block.match(/Soru\s*:\s*([^|]+)/i);
+        const aM = block.match(/A\)\s*([^|]+)/i);
+        const bM = block.match(/B\)\s*([^|]+)/i);
+        const cM = block.match(/C\)\s*([^|]+)/i);
+        const dM = block.match(/D\)\s*([^|]+)/i);
+        const ansM = block.match(/Cevap\s*:\s*([A-D])/i);
+        const infoM = block.match(/EkBilgi\s*:\s*([^|\]]+)/i);
+
+        const qOpts = [aM?.[1], bM?.[1], cM?.[1], dM?.[1]].map((x) => (x || '').trim()).filter(Boolean);
+        if (qM && qOpts.length >= 2) {
+          const ansLetter = (ansM?.[1] || 'A').toUpperCase();
+          const ansIdx = Math.max(0, ['A', 'B', 'C', 'D'].indexOf(ansLetter));
+          parsedQuiz = {
+            type: 'QUIZ',
+            title: 'Bilgi & Quiz Sorusu',
+            sentence: qM[1].trim(),
+            options: qOpts,
+            correctIndex: ansIdx,
+            explanation: infoM ? infoM[1].trim() : ''
+          };
+        }
+      }
+
+      const modelMsgEl = appendChatMessage('model', rawReply);
+      chatState.history.push({ role: 'model', text: rawReply });
+
+      if (parsedQuiz) {
+        res.exercise = {
+          ...(res.exercise || {}),
+          type: (res.exercise && res.exercise.type && res.exercise.type !== 'NONE' && res.exercise.type !== 'DECK') ? res.exercise.type : 'QUIZ',
+          title: (res.exercise && res.exercise.title) || parsedQuiz.title,
+          sentence: parsedQuiz.sentence || (res.exercise && res.exercise.sentence),
+          options: (res.exercise && Array.isArray(res.exercise.options) && res.exercise.options.length >= 2) ? res.exercise.options : parsedQuiz.options,
+          correctIndex: typeof parsedQuiz.correctIndex === 'number' ? parsedQuiz.correctIndex : ((res.exercise && res.exercise.correctIndex) || 0),
+          explanation: parsedQuiz.explanation || (res.exercise && res.exercise.explanation) || ''
+        };
+      }
 
       if (res.exercise && res.exercise.type !== 'NONE') {
+        res.exercise.reply = rawReply;
         renderInteractiveExercise(res.exercise, modelMsgEl);
       }
 
@@ -826,6 +899,7 @@
         quickRow.style.gap = '8px';
 
         const quickPrompts = [
+          'Almanya Genel Kültür & Quiz Sorusu Sor',
           'A1 Seviye Konuşma Pratiği Yap',
           'Akkusativ ve Dativ Farkı Nedir?',
           'Bana 5 Yeni Almanca Kelime Öğret',
