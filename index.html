@@ -1593,6 +1593,18 @@
             <div class="game-card-desc">Soru sorun, dilbilgisi kurallarını öğrenin, çalışma belgelerinizi ve görsellerinizi yükleyerek anında pratik ve analiz yapın.</div>
           </div>
 
+          <!-- Sätze bilden (Dağınık ve Çekimsiz Kelimelerden Yazarak Cümle Kurma) -->
+          <div class="game-card featured-game-card" id="btn-open-satz-builder-card" style="margin-bottom: 14px; cursor: pointer; background: linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(59, 130, 246, 0.12) 100%); border: 1px solid rgba(16, 185, 129, 0.4);">
+            <div class="game-card-top">
+              <div class="game-icon-box" style="background: rgba(16, 185, 129, 0.2); color: #34D399;">
+                <svg class="svg-icon" style="width:24px; height:24px;"><use href="#icon-cards"></use></svg>
+              </div>
+              <span class="badge" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.45); color:#34D399; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">YAZARAK CÜMLE KURMA &amp; AI KONTROL</span>
+            </div>
+            <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Sätze bilden (Cümle Kurma Oyunu)</div>
+            <div class="game-card-desc">Dağınık ve çekimsiz verilen kelimeleri çekimleyerek doğru Almanca cümleler yazın. <strong>27 hazır çalışma cümlesi</strong> veya kendi belgenizden/metninizden cümle dağıtma modu!</div>
+          </div>
+
           <!-- 4. Kablo ile Anlam Eşleştirme -->
           <div class="game-card featured-game-card" data-game-type="CABLE_MATCH" style="margin-bottom: 14px; cursor: pointer; background: var(--bg-surface); border: 1px solid var(--border-subtle);">
             <div class="game-card-top">
@@ -3112,6 +3124,138 @@
       </div>
     </div>
   </div>
+
+  <!-- MODAL: SÄTZE BILDEN (DAĞINIK VE ÇEKİMSİZ KELİMELERDEN CÜMLE KURMA OYUNU) -->
+  <div id="modal-satz-builder" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true" aria-labelledby="satz-builder-title">
+    <div class="modal-sheet coach-modal-sheet" style="max-width:680px; margin:0 auto;">
+      <div class="modal-header coach-modal-header">
+        <div class="coach-title-wrap">
+          <div class="coach-avatar-badge" style="background:linear-gradient(135deg, #10B981, #3B82F6);">SB</div>
+          <div>
+            <h3 id="satz-builder-title">Sätze bilden</h3>
+            <div class="coach-subtitle">Dağınık &amp; çekimsiz kelimelerden yazarak cümle kurma ve AI kontrolü</div>
+          </div>
+        </div>
+        <button id="btn-close-satz-builder" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <!-- 2 Sekmeli Mod Seçici: Oyun Alanı vs Belgeden Cümle Dağıtıcı -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:var(--bg-elevated); padding:6px; border-radius:14px; border:1px solid var(--border-subtle); margin-bottom:14px;">
+        <button type="button" id="tab-btn-satz-play" style="padding:10px 12px; border-radius:10px; font-weight:800; font-size:0.86rem; cursor:pointer; transition:all 0.2s ease; border:1px solid var(--brand-blue); background:var(--brand-blue); color:#fff;">
+          Cümle Kurma Oyunu (27+ Soru)
+        </button>
+        <button type="button" id="tab-btn-satz-extract" style="padding:10px 12px; border-radius:10px; font-weight:800; font-size:0.86rem; cursor:pointer; transition:all 0.2s ease; border:1px solid var(--border-subtle); background:var(--bg-surface); color:var(--text-secondary);">
+          Belgeden / Metinden Cümle Dağıt
+        </button>
+      </div>
+
+      <!-- SEKME 1: CÜMLE KURMA OYUN ALANI -->
+      <div id="satz-pane-play" style="display:flex; flex-direction:column; gap:12px;">
+        <!-- Veri Seti & İlerleme Üst Çubuğu -->
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; background:var(--bg-surface); padding:10px 12px; border-radius:12px; border:1px solid var(--border-subtle);">
+          <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:200px;">
+            <label for="satz-source-set-select" style="font-size:0.75rem; font-weight:800; color:var(--text-muted); white-space:nowrap;">ÇALIŞMA SETİ:</label>
+            <select id="satz-source-set-select" class="dock-select" style="flex:1; padding:6px 10px; font-weight:800; font-size:0.84rem;">
+              <option value="builtin">Hazır Çalışma Seti (27 Cümle)</option>
+            </select>
+          </div>
+          <span id="satz-progress-badge" class="badge" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#34D399; font-weight:800; font-size:0.76rem; padding:5px 10px; border-radius:999px;">0 / 27 Tamamlandı</span>
+        </div>
+
+        <!-- Soru Seçici & Gezinme Butonları -->
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button type="button" id="btn-satz-prev" class="btn-secondary-compact" style="padding:8px 12px; font-weight:800; font-size:0.82rem;">Önceki</button>
+          <select id="satz-question-select" class="dock-select" style="flex:1; min-width:170px; padding:8px 10px; font-weight:800; font-size:0.86rem;"></select>
+          <button type="button" id="btn-satz-random" class="btn-secondary-compact" style="padding:8px 12px; font-weight:800; font-size:0.82rem;">Rastgele</button>
+          <button type="button" id="btn-satz-next" class="btn-secondary-compact" style="padding:8px 12px; font-weight:800; font-size:0.82rem;">Sonraki</button>
+        </div>
+
+        <!-- Soru Kartı: Hedef Kalıp + Dağınık Kelimeler -->
+        <div style="background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div>
+              <div style="font-size:0.72rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Hedef Fiil / Kalıp</div>
+              <div id="satz-current-topic" style="font-size:1.12rem; font-weight:900; color:var(--brand-blue-hover);">1. jemandem auf die Schulter klopfen</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span id="satz-current-solved-badge" class="badge hidden" style="background:rgba(16,185,129,0.18); color:#34D399; font-weight:800; font-size:0.74rem; padding:4px 9px; border-radius:8px;">Çözüldü</span>
+              <button type="button" id="btn-satz-shuffle-words" class="btn-secondary-compact" style="padding:5px 10px; font-size:0.76rem; font-weight:800;">Kelimeleri Karıştır</button>
+            </div>
+          </div>
+
+          <!-- Slash (/) ile ayrılmış orijinal görünüm -->
+          <div style="padding:11px 13px; background:var(--bg-elevated); border-radius:12px; border:1px dashed var(--border-medium);">
+            <div style="font-size:0.7rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px;">Verilen Dağınık &amp; Çekimsiz Kelimeler:</div>
+            <div id="satz-raw-slash-text" style="font-size:0.92rem; font-weight:800; color:var(--text-primary); line-height:1.55; word-break:break-word;"></div>
+          </div>
+
+          <!-- Tıklanabilir Kelime Çipleri -->
+          <div>
+            <div style="font-size:0.73rem; font-weight:700; color:var(--text-muted); margin-bottom:6px;">Kelimelere tıklayarak kutuya ekleyebilir ve ardından çekimleyerek düzenleyebilirsiniz:</div>
+            <div id="satz-word-chips" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+          </div>
+
+          <!-- Kullanıcının Yazarak Cümle Kurduğu Alan -->
+          <div>
+            <label for="satz-user-input" style="font-size:0.76rem; font-weight:800; color:var(--text-secondary); display:block; margin-bottom:6px; text-transform:uppercase;">Cümlenizi Çekimleyerek Yazın:</label>
+            <textarea id="satz-user-input" class="coach-source-textarea" rows="3" maxlength="500" placeholder="Kelimeleri doğru sıraya dizip fiil, artikel ve sıfat çekimlerini yaparak tam cümleyi buraya yazın..." style="font-size:0.98rem; font-weight:700; line-height:1.45;"></textarea>
+          </div>
+
+          <!-- Aksiyon Butonları -->
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" id="btn-satz-check" class="btn-coach-build-full" style="flex:2; min-width:200px; margin:0;">
+              <span>Yapay Zeka ile Kontrol Et</span>
+            </button>
+            <button type="button" id="btn-satz-hint" class="btn-secondary-compact" style="padding:10px 14px; font-weight:800; font-size:0.84rem;">
+              <span>İpucu / Örnek Cümle</span>
+            </button>
+            <button type="button" id="btn-satz-clear" class="btn-secondary-compact" style="padding:10px 14px; font-weight:800; font-size:0.84rem;">
+              <span>Temizle</span>
+            </button>
+          </div>
+
+          <!-- İpucu / Örnek Cümle Kutusu -->
+          <div id="satz-hint-box" class="hidden" style="padding:12px 14px; border-radius:12px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.35);"></div>
+
+          <!-- Yapay Zeka Değerlendirme Sonucu -->
+          <div id="satz-eval-result" class="hidden" style="padding:14px; border-radius:14px; transition:all 0.2s ease;"></div>
+        </div>
+      </div>
+
+      <!-- SEKME 2: BELGEDEN / METİNDEN CÜMLE DAĞITICI -->
+      <div id="satz-pane-extract" class="hidden" style="display:flex; flex-direction:column; gap:12px;">
+        <div class="coach-card" style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:14px; padding:16px;">
+          <div style="font-weight:900; font-size:1.02rem; color:var(--text-primary); margin-bottom:4px;">Belgeden veya Metinden "Sätze bilden" Oyunu Üret</div>
+          <p style="font-size:0.84rem; color:var(--text-secondary); margin:0 0 12px 0; line-height:1.45;">
+            Yüklediğiniz <strong>PDF, DOCX, TXT, görsel</strong> veya yapıştırdığınız metindeki Almanca cümleler yapay zeka tarafından çekimsiz (yalın/mastar) hale getirilir ve kelimeleri karıştırılarak <code>/</code> ile ayrılmış cümle kurma egzersizlerine dönüştürülür.
+          </p>
+
+          <input type="file" id="satz-extract-file-input" accept="image/*,application/pdf,.pdf,.docx,.txt" class="hidden" />
+          <textarea id="satz-extract-text-input" class="coach-source-textarea" rows="5" maxlength="25000" placeholder="Almanca ders notu, metin veya cümle listesini buraya yapıştırın ya da aşağıdan belge yükleyin..."></textarea>
+
+          <div id="satz-extract-file-chip" class="coach-file-chip hidden" style="margin-top:8px;">
+            <span id="satz-extract-file-name"></span>
+            <button type="button" id="btn-satz-extract-file-remove" class="coach-chip-remove" aria-label="Dosyayı kaldır">x</button>
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+            <button type="button" id="btn-satz-extract-pick" class="coach-pick-btn">
+              <svg class="svg-icon" style="width:16px;height:16px;"><use href="#icon-upload"></use></svg>
+              <span>Belge / Görsel Seç (PDF, DOCX, TXT, Foto)</span>
+            </button>
+          </div>
+
+          <div id="satz-extract-status" class="coach-status hidden" style="margin-top:10px; font-weight:700; font-size:0.84rem;"></div>
+
+          <button type="button" id="btn-satz-extract-generate" class="btn-coach-build-full" style="margin-top:12px;">
+            <span>Belgeden Dağınık Cümleler Üret ve Oyuna Başla</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   
   <!-- MODAL: KOÇ OYUN & ALIŞTIRMA TAM EKRAN OYNATICI (modal-coach-exercise-player) -->
   <div id="modal-coach-exercise-player" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true" aria-labelledby="cep-title">
@@ -3593,24 +3737,25 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.7.8"></script>
-  <script src="js/db.js?v=3.7.8"></script>
-  <script src="js/verbHelper.js?v=3.7.8"></script>
-  <script src="js/grammarEnrichment.js?v=3.7.8"></script>
-  <script src="js/offlineDictionary.js?v=3.7.8"></script>
-  <script src="js/dictionary.js?v=3.7.8"></script>
-  <script src="js/curatedPacks.js?v=3.7.8"></script>
-  <script src="js/seeder.js?v=3.7.8"></script>
-  <script src="js/tts.js?v=3.7.8"></script>
-  <script src="js/pronunciation.js?v=3.7.8"></script>
-  <script src="js/translator.js?v=3.7.8"></script>
-  <script src="js/game.js?v=3.7.8"></script>
-  <script src="js/study.js?v=3.7.8"></script>
-  <script src="js/stats.js?v=3.7.8"></script>
-  <script src="js/coach.js?v=3.7.8"></script>
-  <script src="js/deckBuilder.js?v=3.7.8"></script>
-  <script src="js/social.js?v=3.7.8"></script>
-  <script src="js/app.js?v=3.7.8"></script>
+  <script src="js/config.js?v=3.7.9"></script>
+  <script src="js/db.js?v=3.7.9"></script>
+  <script src="js/verbHelper.js?v=3.7.9"></script>
+  <script src="js/grammarEnrichment.js?v=3.7.9"></script>
+  <script src="js/offlineDictionary.js?v=3.7.9"></script>
+  <script src="js/dictionary.js?v=3.7.9"></script>
+  <script src="js/curatedPacks.js?v=3.7.9"></script>
+  <script src="js/seeder.js?v=3.7.9"></script>
+  <script src="js/tts.js?v=3.7.9"></script>
+  <script src="js/pronunciation.js?v=3.7.9"></script>
+  <script src="js/translator.js?v=3.7.9"></script>
+  <script src="js/game.js?v=3.7.9"></script>
+  <script src="js/study.js?v=3.7.9"></script>
+  <script src="js/stats.js?v=3.7.9"></script>
+  <script src="js/coach.js?v=3.7.9"></script>
+  <script src="js/deckBuilder.js?v=3.7.9"></script>
+  <script src="js/satzBuilder.js?v=3.7.9"></script>
+  <script src="js/social.js?v=3.7.9"></script>
+  <script src="js/app.js?v=3.7.9"></script>
 </body>
 </html>
 
