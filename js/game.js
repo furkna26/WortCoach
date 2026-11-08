@@ -124,14 +124,16 @@ class WordGameService {
     }
     const shuffled = [...eligible].sort(() => 0.5 - Math.random()).slice(0, count);
 
-    // Sol Sütun: Almanca Kelimeler (Normatif Artikellerle)
+    // Sol Sütun: Almanca Kelimeler / Quiz Ön Yüzleri
     const leftItems = shuffled.map((c, idx) => {
-      const isNoun = (c.partOfSpeech || '').toUpperCase() === 'NOUN';
+      const isQuiz = (c.partOfSpeech || '').toUpperCase() === 'QUIZ' || Boolean(c.isQuizCard);
+      const isNoun = !isQuiz && (c.partOfSpeech || '').toUpperCase() === 'NOUN';
       const cleanW = (c.germanWord || '').replace(/^(der|die|das)\s+/i, '').trim();
       const display = isNoun && c.article
         ? `${c.article} ${cleanW.charAt(0).toUpperCase() + cleanW.slice(1)}`
         : c.germanWord;
-      const rawTr = (c.meaningsTr || c.meaningsEn || '').split(/[,;\n]/)[0].trim();
+      const fullTr = (c.meaningsTr || c.meaningsEn || '').trim();
+      const rawTr = isQuiz ? fullTr : fullTr.split(/[,;\n]/)[0].trim();
       return {
         id: `left-${idx}`,
         cardId: c.id || idx,
@@ -502,13 +504,23 @@ class WordGameService {
   }
 
   generateMeaningQuestion(card, promptText) {
-    const rawMeaning = card.meaningsTr || card.meaningsEn || '';
-    const correct = rawMeaning.split(/[,;]/)[0].trim();
+    const isQuiz = (card.partOfSpeech || '').toUpperCase() === 'QUIZ' || Boolean(card.isQuizCard);
+    const rawMeaning = (card.meaningsTr || card.meaningsEn || '').trim();
+    const correct = isQuiz ? rawMeaning : rawMeaning.split(/[,;]/)[0].trim();
     if (!correct) return null;
 
-    const otherMeanings = this.poolCards
-      .filter((c) => c.id !== card.id)
-      .map((c) => (c.meaningsTr || c.meaningsEn || '').split(/[,;]/)[0].trim())
+    // Quiz kartlarında önce aynı destedeki / quiz türündeki diğer cevapları çeldirici olarak seç
+    const sameTypePool = isQuiz
+      ? this.poolCards.filter((c) => c.id !== card.id && ((c.partOfSpeech || '').toUpperCase() === 'QUIZ' || Boolean(c.isQuizCard)))
+      : [];
+    const sourcePool = sameTypePool.length >= 3 ? sameTypePool : this.poolCards.filter((c) => c.id !== card.id);
+
+    const otherMeanings = sourcePool
+      .map((c) => {
+        const m = (c.meaningsTr || c.meaningsEn || '').trim();
+        const cIsQuiz = (c.partOfSpeech || '').toUpperCase() === 'QUIZ' || Boolean(c.isQuizCard);
+        return cIsQuiz ? m : m.split(/[,;]/)[0].trim();
+      })
       .filter((m) => m && m.toLowerCase() !== correct.toLowerCase());
 
     const uniqueOthers = [...new Set(otherMeanings)].sort(() => 0.5 - Math.random()).slice(0, 3);
@@ -521,18 +533,21 @@ class WordGameService {
     const options = [...uniqueOthers, correct].sort(() => 0.5 - Math.random());
     return {
       card,
-      prompt: promptText,
-      subject: `${card.article ? card.article + ' ' : ''}${card.germanWord}`,
+      prompt: isQuiz ? 'Doğru cevabı seçin' : promptText,
+      subject: `${!isQuiz && card.article ? card.article + ' ' : ''}${card.germanWord}`,
       subprompt: card.exampleSentence || '',
       options,
       correctIndex: options.indexOf(correct),
-      explanation: `Doğru Anlam: ${rawMeaning}`,
+      explanation: isQuiz ? `Doğru Cevap: ${rawMeaning}` : `Doğru Anlam: ${rawMeaning}`,
       audioWord: card.germanWord
     };
   }
 
   generateMixedQuestion(card) {
     const pos = (card.partOfSpeech || '').toUpperCase();
+    if (pos === 'QUIZ' || card.isQuizCard) {
+      return this.generateMeaningQuestion(card, 'Doğru cevabı seçin');
+    }
     if (pos === 'NOUN' && card.article) {
       return Math.random() > 0.5 ? this.generateArticleQuestion(card) : this.generateNounQuestion(card);
     }

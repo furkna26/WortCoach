@@ -15,8 +15,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.7.6" />
-  <link rel="stylesheet" href="css/components.css?v=3.7.6" />
+  <link rel="stylesheet" href="css/app.css?v=3.7.7" />
+  <link rel="stylesheet" href="css/components.css?v=3.7.7" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1575,10 +1575,10 @@
               <div class="game-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">
                 <svg class="svg-icon" style="width:24px; height:24px;"><use href="#nav-icon-decks"></use></svg>
               </div>
-              <span class="badge" style="background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); color:#FBBF24; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">AI DESTE MOTORU</span>
+              <span class="badge" style="background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); color:#FBBF24; font-weight:800; font-size:0.7rem; padding:4px 10px; border-radius:999px;">KELİME &amp; QUİZ DESTE MOTORU</span>
             </div>
             <div class="game-card-title" style="font-size: 1.18rem; font-weight: 900;">Koç ile Deste Oluşturma</div>
-            <div class="game-card-desc">Metin, kitap sayfası, görsel veya PDF yükleyin; yapay zeka seviyeye göre kelimeleri ayıklayıp otomatik deste oluştursun.</div>
+            <div class="game-card-desc">Belge, görsel veya metin yükleyin; ister Almanca-Türkçe <strong>Kelime Destesi</strong>, ister Soru-Cevap / Ön-Arka Yüz <strong>Quiz Destesi</strong> oluşturun.</div>
           </div>
 
           <!-- Coach (Almanca Dil Koçu - Saf Chat) -->
@@ -3022,14 +3022,31 @@
   <!-- MODAL: KOÇ İLE DESTE OLUŞTURMA (modal-deck-builder) -->
   <div id="modal-deck-builder" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true" aria-labelledby="deck-builder-title">
     <div class="modal-sheet" style="max-width:760px; height:92vh; display:flex; flex-direction:column; padding:20px; overflow-y:auto;">
-      <div class="modal-header" style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+      <div class="modal-header" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
         <div>
           <h3 id="deck-builder-title" style="font-size:1.3rem; font-weight:900; margin:0; color:var(--text-primary);">Koç ile Deste Oluşturma</h3>
-          <p style="font-size:0.82rem; color:var(--text-secondary); margin:2px 0 0;">Yapay zeka ile belge, görsel veya metinden sözlük uyumlu kelime destesi üretin</p>
+          <p id="deck-builder-subtitle" style="font-size:0.82rem; color:var(--text-secondary); margin:2px 0 0;">Yapay zeka ile belge, görsel veya metinden sözlük uyumlu kelime destesi üretin</p>
         </div>
         <button id="btn-close-deck-builder" class="icon-btn-ghost" aria-label="Kapat">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
         </button>
+      </div>
+
+      <!-- 2'li Mod Seçici: Kelime Destesi vs Quiz Destesi (Birbiriyle Çakışmayan Bağımsız Sekmeler) -->
+      <div id="deck-builder-mode-tabs" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:5px; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:14px; margin-bottom:14px;">
+        <button type="button" id="tab-btn-deck-mode-word" data-deck-mode="word" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 12px; border-radius:10px; border:1px solid var(--brand-blue); background:var(--accent-primary-soft); color:var(--text-primary); cursor:pointer; transition:all 0.18s ease;">
+          <span style="font-size:0.9rem; font-weight:900; color:var(--brand-blue-hover);">Kelime Destesi</span>
+          <span style="font-size:0.72rem; color:var(--text-secondary); margin-top:2px;">Almanca - Türkçe Sözlük Anlamları</span>
+        </button>
+        <button type="button" id="tab-btn-deck-mode-quiz" data-deck-mode="quiz" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 12px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--text-secondary); cursor:pointer; transition:all 0.18s ease;">
+          <span style="font-size:0.9rem; font-weight:900;">Quiz Destesi</span>
+          <span style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Soru - Cevap / Ön Yüz - Arka Yüz</span>
+        </button>
+      </div>
+
+      <!-- Mod Bilgi Şeridi -->
+      <div id="deck-builder-mode-banner" style="margin-bottom:12px; padding:10px 14px; border-radius:11px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.22); font-size:0.8rem; color:var(--text-secondary); line-height:1.45;">
+        <strong style="color:var(--brand-blue-hover);">Kelime Destesi Modu:</strong> Yüklediğiniz metin veya belgedeki Almanca kelimeleri yalın halleriyle (artikel, çekim ve Türkçe anlamlarıyla) sözlük uyumlu kelime kartlarına dönüştürür.
       </div>
 
       <!-- Giriş Kartı: Dosya & Metin Girişi -->
@@ -3043,15 +3060,17 @@
           <button type="button" id="btn-deck-builder-file-remove" class="coach-chip-remove" aria-label="Dosyayı kaldır">Kaldır</button>
         </div>
 
-        <div class="coach-actions" style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px;">
+        <div class="coach-actions" style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; gap:10px; flex-wrap:wrap;">
           <button type="button" id="btn-deck-builder-pick" class="btn-secondary-compact" style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px; border-radius:10px; font-weight:800;">
             <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-paperclip"></use></svg>
             <span>Dosya Seç</span>
           </button>
-          <button type="button" id="btn-deck-builder-analyze" class="btn-primary-compact" style="display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:10px; font-weight:800; background:var(--brand-blue); color:#fff;">
-            <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-sparkle"></use></svg>
-            <span>İçeriği İncele</span>
-          </button>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button type="button" id="btn-deck-builder-analyze" class="btn-primary-compact" style="display:inline-flex; align-items:center; gap:6px; padding:10px 18px; border-radius:10px; font-weight:800; background:var(--brand-blue); color:#fff;">
+              <svg class="svg-icon" style="width:16px; height:16px;"><use href="#icon-sparkle"></use></svg>
+              <span>İçeriği İncele</span>
+            </button>
+          </div>
         </div>
         <div id="deck-builder-status" class="coach-status hidden" style="margin-top:10px; font-size:0.84rem; font-weight:700;"></div>
       </div>
@@ -3064,19 +3083,19 @@
         </div>
         <p id="deck-builder-summary" style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5; margin:0 0 12px;"></p>
         
-        <div style="font-size:0.8rem; font-weight:800; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">Önerilen Deste Talimatları:</div>
+        <div id="deck-builder-suggestions-label" style="font-size:0.8rem; font-weight:800; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.03em;">Önerilen Deste Talimatları:</div>
         <div id="deck-builder-suggestions" class="coach-quick-actions" style="margin-bottom:12px;"></div>
 
         <div class="coach-prompt-builder">
-          <label for="deck-builder-instruction" class="coach-instruction-label">ÖZEL TALİMAT (İSTEĞE BAĞLI)</label>
+          <label for="deck-builder-instruction" id="deck-builder-instruction-label" class="coach-instruction-label">ÖZEL TALİMAT (İSTEĞE BAĞLI)</label>
           <textarea id="deck-builder-instruction" class="coach-instruction-textarea" rows="2" maxlength="300" placeholder="Örn: Bu metindeki A2-B1 seviyesi fiil ve isimleri desteye çevir..."></textarea>
           <button type="button" id="btn-deck-builder-build" class="btn-coach-build-full" style="margin-top:8px;">
-            <span>Deste Oluştur</span>
+            <span id="btn-deck-builder-build-text">Deste Oluştur</span>
           </button>
         </div>
       </div>
 
-      <!-- Çıkarılan Kelimeler & Kaydetme Kartı -->
+      <!-- Çıkarılan Kartlar & Kaydetme Kartı -->
       <div id="deck-builder-result" class="coach-card hidden" style="background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:14px; padding:16px;">
         <div style="margin-bottom:12px;">
           <label for="deck-builder-deck-name" style="font-size:0.8rem; font-weight:800; color:var(--text-muted); display:block; margin-bottom:4px;">DESTE ADI</label>
@@ -3574,24 +3593,24 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.7.6"></script>
-  <script src="js/db.js?v=3.7.6"></script>
-  <script src="js/verbHelper.js?v=3.7.6"></script>
-  <script src="js/grammarEnrichment.js?v=3.7.6"></script>
-  <script src="js/offlineDictionary.js?v=3.7.6"></script>
-  <script src="js/dictionary.js?v=3.7.6"></script>
-  <script src="js/curatedPacks.js?v=3.7.6"></script>
-  <script src="js/seeder.js?v=3.7.6"></script>
-  <script src="js/tts.js?v=3.7.6"></script>
-  <script src="js/pronunciation.js?v=3.7.6"></script>
-  <script src="js/translator.js?v=3.7.6"></script>
-  <script src="js/game.js?v=3.7.6"></script>
-  <script src="js/study.js?v=3.7.6"></script>
-  <script src="js/stats.js?v=3.7.6"></script>
-  <script src="js/coach.js?v=3.7.6"></script>
-  <script src="js/deckBuilder.js?v=3.7.6"></script>
-  <script src="js/social.js?v=3.7.6"></script>
-  <script src="js/app.js?v=3.7.6"></script>
+  <script src="js/config.js?v=3.7.7"></script>
+  <script src="js/db.js?v=3.7.7"></script>
+  <script src="js/verbHelper.js?v=3.7.7"></script>
+  <script src="js/grammarEnrichment.js?v=3.7.7"></script>
+  <script src="js/offlineDictionary.js?v=3.7.7"></script>
+  <script src="js/dictionary.js?v=3.7.7"></script>
+  <script src="js/curatedPacks.js?v=3.7.7"></script>
+  <script src="js/seeder.js?v=3.7.7"></script>
+  <script src="js/tts.js?v=3.7.7"></script>
+  <script src="js/pronunciation.js?v=3.7.7"></script>
+  <script src="js/translator.js?v=3.7.7"></script>
+  <script src="js/game.js?v=3.7.7"></script>
+  <script src="js/study.js?v=3.7.7"></script>
+  <script src="js/stats.js?v=3.7.7"></script>
+  <script src="js/coach.js?v=3.7.7"></script>
+  <script src="js/deckBuilder.js?v=3.7.7"></script>
+  <script src="js/social.js?v=3.7.7"></script>
+  <script src="js/app.js?v=3.7.7"></script>
 </body>
 </html>
 

@@ -112,6 +112,46 @@ BU MOD YALNIZCA KELİME DESTESİ OLUŞTURMAK İÇİNDİR.
 - suggestions: kullanıcıya sunulacak 3 adet KELİME DESTESİ OLUŞTURMA talimatı. KESİNLİKLE genel sohbet, metin özeti veya soru sorma seçeneği VERME. Yalnızca kelime destesi üretmeye yönelik talimatlar öner. (Örnekler: 'Bu metindeki B1 fiilleri desteye ekle', 'Sıfatları ve zarfları deste yap', 'Metindeki çevre terimlerini desteye çevir', 'A2 seviyesi anahtar kelimeleri seç'). Her öneri en fazla 60 karakter olmalıdır.
 Emoji veya sohbet üslubu KULLANMA.`;
 
+const QUIZ_ANALYZE_SYSTEM = `Sen bir öğrenme ve çalışma uygulamasının 'AI Quiz Destesi (Soru-Cevap & Bilgi Kartı) Oluşturma' motorusun. Görevin, yüklenen içeriği (metin, ders notu, tablo, görsel veya belge) analiz ederek kullanıcının bundan Ön Yüz (Soru/Kavram) - Arka Yüz (Cevap/Karşılık) şeklinde bir Quiz Destesi üretmesine yardımcı olmaktır.
+BU MOD KELİME SÖZLÜĞÜ DEĞİL, BİLGİ / SORU-CEVAP / EŞLEŞTİRME DESTESİ OLUŞTURMAK İÇİNDİR.
+- contentType: içeriğin türü (Örn: 'Eyalet & Başkent Tablosu', 'Tarih / Felsefe Notu', 'Ders Özeti', 'Kültür & Coğrafya Belgesi').
+- summary: belgedeki temel bilgi, eşleşme veya konuların en fazla 2 cümlelik özeti (Türkçe, resmi ve sade).
+- estimatedLevel: konu alanı veya zorluk etiketi (Örn: 'Genel Kültür', 'Coğrafya', 'Felsefe & Tarih', 'B1 Landeskunde').
+- suggestions: kullanıcıya sunulacak 3 adet QUİZ / SORU-CEVAP DESTESİ OLUŞTURMA talimatı. KESİNLİKLE sözlük kelime çevirisi önerme; içerikteki olgusal bilgileri, eşleştirmeleri veya soru-cevapları kart yapmaya yönelik talimatlar öner. (Örnekler: 'Eyaletleri ön yüz, başkentleri arka yüz yap', 'Ünlü düşünürleri ve eserlerini soru-cevap yap', 'Metindeki tüm önemli bilgileri soru-cevap kartına çevir'). Her öneri en fazla 65 karakter olmalıdır.
+Emoji veya sohbet üslubu KULLANMA.`;
+
+const QUIZ_DECK_SYSTEM = `Sen uzman bir eğitim içerik tasarımcısı ve Quiz / Soru-Cevap Kartı (Flashcard) üretim motorusun. Görevin, sana gönderilen görseldeki, tablodaki veya belgedeki bilgileri analiz edip bunları Ön Yüz (front: Soru veya Kavram) ve Arka Yüz (back: Cevap veya Karşılık) şeklinde çalışan bilgi kartlarına (Quiz Destesi) dönüştürmektir.
+
+KESİN KURALLAR:
+1. SÖZLÜK KELİME ÇEVİRİSİ YAPMA:
+   - Bu mod bir sözlük veya kelime çeviri modu DEĞİLDİR.
+   - Örneğin belgede "Dönemin ünlü filozofu Immanuel Kant'tır" veya "Aydınlanma çağının en önemli düşünürü kimdir? Immanuel Kant" yazıyorsa, "filozof -> felsefeci" gibi kelime anlamı ÇIKARMA. Bunun yerine:
+     front: "Dönemin ünlü filozofu kimdir?" (veya belgedeki bağlama göre tam soru)
+     back: "Immanuel Kant"
+     şeklinde doğrudan bilgiyi ölçen Soru-Cevap kartı üret.
+
+2. TABLO, EŞLEŞTİRME VE LİSTE İÇERİKLERİ (Örn: Eyaletler ve Başkentleri):
+   - Belgede eyalet-başkent, ülke-başkent, yazar-eser, kavram-tanım, tarih-olay gibi eşleşmeler varsa kullanıcı talimatına göre (veya doğal yapısıyla) bir sütunu Ön Yüz ("front"), karşılığını Arka Yüz ("back") yap.
+   - Örn: Almanya eyaletleri ve başkentleri belgesinde:
+     front: "Bayern (Bavyera)" veya "Bayern eyaletinin başkenti neresidir?"
+     back: "München"
+   - Tablodaki veya listedeki maddeleri atlamadan eksiksiz çıkar.
+
+3. METİN VE DERS NOTU İÇERİKLERİ:
+   - Düz metin veya ders notu yüklendiyse, metindeki kilit olguları, kişileri, yerleri, kuralları, tarihleri ve tanımları net, tek ve tartışmasız cevabı olan Soru (front) -> Cevap (back) kartlarına dönüştür.
+   - Eğer belgede halihazırda sorular ve cevapları varsa, soruyu "front", doğru cevabı "back" alanına yaz.
+
+4. KULLANICI TALİMATINA UYUM:
+   - Kullanıcının "KULLANICI TALİMATI" alanında belirttiği ön yüz / arka yüz kurgusuna (Örn: "eyaletler ön yüz başkentler arka yüz olsun", "sorular Almanca olsun", "sadece tarihleri ve kişileri çıkar") birebir uy.
+   - Talimat belirtilmemişse belgenin diline ve yapısına en uygun Soru-Cevap / Ön-Arka yüz kartlarını üret.
+
+5. FORMAT:
+   - front: Kartın ön yüzü (Soru, Eyalet, Kavram veya İstem). Net ve anlaşılır olmalı.
+   - back: Kartın arka yüzü (Doğru Cevap, Başkent, Kişi veya Tanım). Kısa, net ve doğrudan cevap olmalı.
+   - category: Kısa kategori etiketi (Örn: 'Başkentler', 'Felsefe', 'Tarih', 'Coğrafya', 'Bilgi Kartı').
+   - hint: Varsa belgedeki ilgili kaynak cümle veya kısa ipucu (yoksa null).
+   - KESİNLİKLE emoji kullanma.`;
+
 const OCR_SYSTEM = `Sen uzman bir Almanca OCR ve metin aktarım motorusun. Sana gönderilen görseldeki veya belgedeki Almanca metinleri eksiksiz, temiz ve düzenli bir metin olarak ayıkla.
 Kurallar:
 1. Yalnızca görselde yer alan orijinal Almanca metni çıkar.
@@ -158,6 +198,27 @@ const DECK_SCHEMA = {
     },
   },
   required: ['deckTitle', 'words'],
+};
+
+const QUIZ_DECK_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    deckTitle: { type: 'STRING', description: 'İçeriğin konusuna göre kısa Quiz destesi adı' },
+    cards: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          front: { type: 'STRING', description: 'Kartın ön yüzü: Soru, Eyalet, Kavram veya İstem' },
+          back: { type: 'STRING', description: 'Kartın arka yüzü: Cevap, Başkent, Kişi veya Tanım' },
+          category: { type: 'STRING', description: 'Kısa kategori etiketi (Örn: Başkentler, Felsefe, Tarih, Bilgi Kartı)' },
+          hint: { type: 'STRING', nullable: true, description: 'Varsa kaynak cümle veya ek açıklama' },
+        },
+        required: ['front', 'back', 'category'],
+      },
+    },
+  },
+  required: ['deckTitle', 'cards'],
 };
 
 const ANALYZE_SCHEMA = {
@@ -356,7 +417,37 @@ function sanitizeDeck(o) {
     });
     if (words.length >= MAX_WORDS) break;
   }
-  return { deckTitle: clean(o.deckTitle, 80) || 'Coach Destesi', words };
+  return { deckTitle: clean(o.deckTitle, 80) || 'Coach Destesi', deckMode: 'word', words };
+}
+
+function sanitizeQuizDeck(o) {
+  const rawList = o && (Array.isArray(o.cards) ? o.cards : (Array.isArray(o.words) ? o.words : null));
+  if (!rawList) return null;
+  const seen = new Set();
+  const words = [];
+  for (const c of rawList) {
+    const front = clean(c?.front || c?.lemma || c?.question, 180);
+    const back = clean(c?.back || c?.contextMeaning || c?.answer, 180);
+    if (!front || !back) continue;
+    const key = front.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const category = clean(c?.category || c?.cefr || 'Bilgi Kartı', 40) || 'Bilgi Kartı';
+    const hint = (c?.hint || c?.sourceSentence) ? clean(c.hint || c.sourceSentence, 300) : null;
+    words.push({
+      front,
+      back,
+      category,
+      hint,
+      lemma: front,
+      pos: 'QUIZ',
+      cefr: category,
+      contextMeaning: back,
+      sourceSentence: hint,
+    });
+    if (words.length >= MAX_WORDS) break;
+  }
+  return { deckTitle: clean(o.deckTitle, 80) || 'Quiz Destesi', deckMode: 'quiz', words };
 }
 
 function sanitizeCoachChat(o) {
@@ -1843,19 +1934,27 @@ export default {
     const blocked = await overLimit(env, ip);
     if (blocked) return json({ error: blocked }, 429, c.headers);
 
-    // 1. /coach/analyze (AI Deste Oluşturma için içerik analizi)
+    // 1. /coach/analyze (AI Deste Oluşturma için içerik analizi - Kelime veya Quiz Modu)
     if (path === '/coach/analyze') {
       const parts = buildParts(body);
       if (!parts) return json({ error: 'İçerik boş veya çok büyük.' }, 400, c.headers);
-      const out = sanitizeAnalyze(await callGemini(env, ANALYZE_SYSTEM, ANALYZE_SCHEMA, parts));
+      const isQuiz = body.deckMode === 'quiz';
+      const systemPrompt = isQuiz ? QUIZ_ANALYZE_SYSTEM : ANALYZE_SYSTEM;
+      const out = sanitizeAnalyze(await callGemini(env, systemPrompt, ANALYZE_SCHEMA, parts));
       return out ? json(out, 200, c.headers) : json({ error: 'İçerik incelenemedi.' }, 502, c.headers);
     }
 
-    // 2. /coach/deck (Sadece sözlük uyumlu deste oluşturma)
-    if (path === '/coach/deck') {
-      const extra = `KULLANICI TALİMATI: ${clean(body.instruction, MAX_INSTRUCTION) || '(genel deste kelimeleri)'}`;
+    // 2. /coach/deck veya /coach/quiz-deck (Kelime Destesi veya Quiz Soru-Cevap Destesi)
+    if (path === '/coach/deck' || path === '/coach/quiz-deck') {
+      const isQuiz = body.deckMode === 'quiz' || path === '/coach/quiz-deck';
+      const defaultInst = isQuiz ? '(İçerikteki bilgileri Ön Yüz Soru/Kavram ve Arka Yüz Cevap/Karşılık şeklinde quiz kartlarına dönüştür)' : '(genel deste kelimeleri)';
+      const extra = `KULLANICI TALİMATI: ${clean(body.instruction, MAX_INSTRUCTION) || defaultInst}`;
       const parts = buildParts(body, extra);
       if (!parts) return json({ error: 'İçerik boş veya çok büyük.' }, 400, c.headers);
+      if (isQuiz) {
+        const out = sanitizeQuizDeck(await callGemini(env, QUIZ_DECK_SYSTEM, QUIZ_DECK_SCHEMA, parts));
+        return out && out.words.length ? json(out, 200, c.headers) : json({ error: 'İçerikten soru-cevap kartı çıkarılamadı.' }, 502, c.headers);
+      }
       const out = sanitizeDeck(await callGemini(env, DECK_SYSTEM, DECK_SCHEMA, parts));
       return out && out.words.length ? json(out, 200, c.headers) : json({ error: 'Kelime çıkarılamadı.' }, 502, c.headers);
     }

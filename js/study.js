@@ -233,8 +233,10 @@ class WortMeisterStudy {
     const card = this.getCurrentCard();
     if (!card) return;
 
-    // Anlam eksikse anlık sentezle
-    if (!card.meaningsTr || card.meaningsTr === '-') {
+    const isQuizCard = (card.partOfSpeech || '').toUpperCase() === 'QUIZ' || Boolean(card.isQuizCard);
+
+    // Anlam eksikse anlık sentezle (Quiz kartlarında sözlük sentezi devre dışıdır)
+    if (!isQuizCard && (!card.meaningsTr || card.meaningsTr === '-')) {
       try {
         if (window.DictionaryService) {
           const synth = window.DictionaryService.synthesizeInstantEntry(card.germanWord);
@@ -249,10 +251,11 @@ class WortMeisterStudy {
     if (this.cardInner) this.cardInner.classList.remove('is-flipped');
 
     // 1. POS Rozeti
-    const posLabels = { VERB: 'Fiil', NOUN: 'İsim', ADJECTIVE: 'Sıfat', OTHER: 'İfade' };
+    const posLabels = { VERB: 'Fiil', NOUN: 'İsim', ADJECTIVE: 'Sıfat', OTHER: 'İfade', QUIZ: 'Soru - Cevap' };
     const posBadgeEl = document.getElementById('fc-front-pos-badge');
     if (posBadgeEl) {
-      posBadgeEl.innerHTML = `<span class="badge badge-pos-${card.partOfSpeech}">${posLabels[card.partOfSpeech] || 'Kelime'}</span>`;
+      const label = isQuizCard ? (card.cefr && card.cefr !== 'QUIZ' ? `Quiz • ${card.cefr}` : 'Soru - Cevap') : (posLabels[card.partOfSpeech] || 'Kelime');
+      posBadgeEl.innerHTML = `<span class="badge badge-pos-${card.partOfSpeech}">${label}</span>`;
     }
 
     // 2. Olgunluk Rozeti (Yeni, Öğreniliyor, Genç, Olgun - Leitner Kutu Metinleri Yerine)
@@ -273,7 +276,7 @@ class WortMeisterStudy {
     }
 
     // 4. İsim / Fiil ve Kelime Formatı
-    const isNoun = (card.partOfSpeech || '').toUpperCase() === 'NOUN' || Boolean(card.article);
+    const isNoun = !isQuizCard && ((card.partOfSpeech || '').toUpperCase() === 'NOUN' || Boolean(card.article));
     const nounArticle = card.article ? card.article.toLowerCase() : '';
     const cleanWord = (card.germanWord || '').replace(/^(der|die|das)\s+/i, '').trim();
     const formattedWord = isNoun && nounArticle
@@ -281,7 +284,17 @@ class WortMeisterStudy {
       : card.germanWord;
 
     const wordEl = document.getElementById('fc-front-word');
-    if (wordEl) wordEl.textContent = formattedWord;
+    if (wordEl) {
+      wordEl.textContent = formattedWord;
+      const len = (formattedWord || '').length;
+      if (isQuizCard || len > 28) {
+        wordEl.style.fontSize = len > 65 ? '1.18rem' : '1.38rem';
+        wordEl.style.lineHeight = '1.38';
+      } else {
+        wordEl.style.fontSize = '';
+        wordEl.style.lineHeight = '';
+      }
+    }
 
     // 5. ÇALIŞMA MODU: CLOZE (BOŞLUK DOLDURMA) VS STANDART
     const standardContainer = document.getElementById('fc-front-standard-container');
@@ -358,7 +371,7 @@ class WortMeisterStudy {
       }
 
       // Rektion (Verben mit Präpositionen) & Karıştırılan Kelime (False Friends)
-      const enrichment = window.getGrammarEnrichment ? window.getGrammarEnrichment(card.germanWord) : null;
+      const enrichment = (!isQuizCard && window.getGrammarEnrichment) ? window.getGrammarEnrichment(card.germanWord) : null;
       if (enrichment && rektionBox && rektionBadge) {
         rektionBadge.textContent = enrichment.badge;
         rektionBox.classList.remove('hidden');
@@ -366,7 +379,7 @@ class WortMeisterStudy {
         rektionBox.classList.add('hidden');
       }
 
-      const confused = window.getConfusedWordPair ? window.getConfusedWordPair(card.germanWord) : null;
+      const confused = (!isQuizCard && window.getConfusedWordPair) ? window.getConfusedWordPair(card.germanWord) : null;
       if (confused && falseFriendBox && falseFriendText) {
         falseFriendText.textContent = confused.note;
         falseFriendBox.classList.remove('hidden');
@@ -375,6 +388,10 @@ class WortMeisterStudy {
       }
 
     // 6. KART ARKA YÜZÜ
+    const backTopLabel = document.querySelector('#flashcard-inner .scb-top-label');
+    if (backTopLabel) {
+      backTopLabel.textContent = isQuizCard ? 'DOĞRU CEVAP / ARKAYÜZ' : 'TÜRKÇE ANLAMI';
+    }
     const meaningTrEl = document.getElementById('fc-back-meaning-tr');
     if (meaningTrEl) {
       meaningTrEl.textContent = card.meaningsTr || card.back || card.meaning || 'Anlam belirtilmedi';
@@ -391,7 +408,7 @@ class WortMeisterStudy {
 
     const subtextEl = document.getElementById('fc-back-subtext');
     if (subtextEl) {
-      subtextEl.textContent = `Almanca: ${formattedWord}`;
+      subtextEl.textContent = isQuizCard ? `Soru: ${formattedWord}` : `Almanca: ${formattedWord}`;
     }
 
     // Örnek Cümle Kartı (Arka Yüz)
