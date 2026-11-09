@@ -21,32 +21,32 @@
       num: 1,
       topic: 'jemandem auf die Schulter klopfen',
       rawWords: 'Der Lehrer / wollen / die Schülerin / fleißig / die Schulter / auf / schlagen / wegen / schön / die Handschrift / die Hausaufgaben / in / alt / klein',
-      sampleAnswer: 'Der alte Lehrer wollte der fleißigen Schülerin wegen der schönen Handschrift in den kleinen Hausaufgaben auf die Schulter klopfen.',
-      grammarTip: 'jemandem (Dativ: der fleißigen Schülerin) auf die Schulter (Akkusativ) klopfen/schlagen; wegen + Genitiv (wegen der schönen Handschrift); in + Dativ (in den kleinen Hausaufgaben).'
+      sampleAnswer: 'Der alte Lehrer will der kleinen, fleißigen Schülerin wegen der schönen Handschrift in den Hausaufgaben auf die Schulter schlagen.',
+      grammarTip: 'jemandem (Dativ: der kleinen, fleißigen Schülerin) auf die Schulter (Akkusativ) schlagen/klopfen; wegen + Genitiv (wegen der schönen Handschrift); in + Dativ (in den Hausaufgaben).'
     },
     {
       id: 'b-2',
       num: 2,
       topic: 'einbiegen in etwas',
       rawWords: 'Das Kind / wollen / die Gasse / in / dunkel / einbiegen / abends / nicht / die Hunde / bellend / krank / wegen / dick',
-      sampleAnswer: 'Das kranke Kind wollte abends wegen der dicken bellenden Hunde nicht in die dunkle Gasse einbiegen.',
-      grammarTip: 'in etwas (Akkusativ - yönelme: in die dunkle Gasse) einbiegen; wegen + Genitiv Plural (wegen der dicken bellenden Hunde).'
+      sampleAnswer: 'Das kranke Kind will abends wegen der dicken, bellenden Hunde nicht in die dunkle Gasse einbiegen.',
+      grammarTip: 'in etwas (Akkusativ - yönelme: in die dunkle Gasse) einbiegen; wegen + Genitiv Plural (wegen der dicken, bellenden Hunde).'
     },
     {
       id: 'b-3',
       num: 3,
       topic: 'zählen',
       rawWords: 'Der Verkäufer / die Bleistifte / die Schublade / in / zählen / der Morgen / an / der Laden / in / groß / neu / rot / eng / in',
-      sampleAnswer: 'Der neue Verkäufer zählt am Morgen in dem großen Laden die roten Bleistifte in der engen Schublade.',
-      grammarTip: 'an dem Morgen -> am Morgen; in + Dativ (bulunma: in dem großen Laden / in der engen Schublade); die roten Bleistifte (Akkusativ Plural).'
+      sampleAnswer: 'Der neue Verkäufer zählt an dem Morgen in dem großen Laden die roten Bleistifte in der engen Schublade.',
+      grammarTip: 'an dem Morgen (am Morgen); in + Dativ (in dem großen Laden / in der engen Schublade); die roten Bleistifte (Akkusativ Plural).'
     },
     {
       id: 'b-4',
       num: 4,
       topic: 'ahnen',
       rawWords: 'Die Lehrerin / der Fehler / in / das Schulbuch / schnell / alt / ahnen / groß / nicht / die Bilder / mit / das Lesen / bei',
-      sampleAnswer: 'Die alte Lehrerin ahnte beim Lesen den großen Fehler in dem Schulbuch mit den Bildern nicht schnell.',
-      grammarTip: 'etwas (Akkusativ: den großen Fehler) ahnen; bei dem Lesen -> beim Lesen; in dem Schulbuch mit den Bildern (Dativ).'
+      sampleAnswer: 'Die alte Lehrerin ahnt bei dem Lesen den großen Fehler in dem Schulbuch mit den Bildern nicht schnell.',
+      grammarTip: 'etwas (Akkusativ: den großen Fehler) ahnen; bei dem Lesen (beim Lesen); in dem Schulbuch mit den Bildern (Dativ).'
     },
     {
       id: 'b-5',
@@ -149,8 +149,8 @@
       num: 17,
       topic: 'fehlen',
       rawWords: 'Der Mann / krank / der Atem / das Krankenhaus / in / wegen / COPD-Erkrankung / mit / plötzlich / schwerkrank / bekannt / fehlen',
-      sampleAnswer: 'Dem schwerkranken Mann mit der bekannten COPD-Erkrankung fehlt in dem Krankenhaus plötzlich der Atem.',
-      grammarTip: 'jemandem (Dativ: Dem schwerkranken Mann) fehlt etwas (Nominativ: der Atem); mit der bekannten COPD-Erkrankung (Dativ).'
+      sampleAnswer: 'Dem kranken, schwerkranken Mann mit der bekannten COPD-Erkrankung fehlt in dem Krankenhaus wegen der COPD-Erkrankung plötzlich der Atem.',
+      grammarTip: 'jemandem (Dativ: Dem kranken, schwerkranken Mann) fehlt etwas (Nominativ: der Atem); wegen / mit der bekannten COPD-Erkrankung.'
     },
     {
       id: 'b-18',
@@ -467,34 +467,268 @@
     box.classList.remove('hidden');
   }
 
-  // Çevrimdışı veya API Yedek Değerlendirici (Akıllı Token & Çekim Karşılaştırması)
-  function fallbackLocalEvaluation(ex, userSentence) {
-    const normalize = (s) => String(s || '')
+  // ============================================================================
+  // SIKI KELİME DENETÇİSİ (Olmayan Kelime Eklemeyi ve Eksik Kelime Bırakmayı Engeller)
+  // ============================================================================
+  const GRAMMAR_ARTICLES = new Set([
+    'der', 'die', 'das', 'den', 'dem', 'des',
+    'ein', 'eine', 'einen', 'einem', 'einer', 'eines',
+    'mein', 'meine', 'meiner', 'meinen', 'meinem', 'meines',
+    'ihr', 'ihre', 'ihrer', 'ihren', 'ihrem', 'ihres',
+    'sein', 'seine', 'seiner', 'seinen', 'seinem', 'seines',
+    'dies', 'diese', 'dieser', 'dieses', 'diesem', 'diesen',
+    'sich'
+  ]);
+
+  const IRREGULAR_STEM_MAP = {
+    wollen: ['woll', 'will'],
+    können: ['könn', 'kann', 'konnt', 'koenn'],
+    sollen: ['soll'],
+    sein: ['sein', 'ist', 'sind', 'war', 'wär', 'sei'],
+    haben: ['hab', 'hat', 'hätt'],
+    werden: ['werd', 'wird', 'wurd', 'word'],
+    fahren: ['fahr', 'fähr', 'faehr', 'fuhr', 'gefahr'],
+    schlagen: ['schlag', 'schläg', 'schlaeg', 'schlug', 'geschlag', 'klopf'],
+    klopfen: ['klopf', 'schlag', 'schläg', 'schlug'],
+    treffen: ['treff', 'triff', 'traf', 'getroff'],
+    kommen: ['komm', 'kam', 'gekomm'],
+    verleihen: ['verleih', 'verlieh'],
+    scheinen: ['schein', 'schien'],
+    kriechen: ['kriech', 'kroch', 'gekroch'],
+    einbiegen: ['einbieg', 'einbog', 'eingebog', 'bieg', 'bog'],
+    abschneiden: ['abschneid', 'abschnitt', 'abgeschnitt', 'schneid', 'schnitt'],
+    überlegen: ['überleg', 'ueberleg'],
+    vertragen: ['vertrag', 'verträg', 'vertraeg', 'vertrug'],
+    ertragen: ['ertrag', 'erträg', 'ertraeg', 'ertrug'],
+    hüten: ['hüt', 'huet'],
+    erkälten: ['erkält', 'erkaelt'],
+    beugen: ['beug'],
+    strömen: ['ström', 'stroem'],
+    zählen: ['zähl', 'zaehl'],
+    warnen: ['warn'],
+    ahnen: ['ahn'],
+    schmecken: ['schmeck'],
+    sorgen: ['sorg'],
+    melden: ['meld'],
+    horchen: ['horch'],
+    finden: ['find', 'fand', 'gefund'],
+    fehlen: ['fehl'],
+    brauchen: ['brauch'],
+    waschen: ['wasch', 'wäsch', 'wusch', 'gewasch'],
+    groß: ['groß', 'gross', 'größ', 'groess'],
+    alt: ['alt', 'ält', 'aelt'],
+    jung: ['jung', 'jüng', 'jueng'],
+    lang: ['lang', 'läng', 'laeng'],
+    krank: ['krank', 'kränk'],
+    rachen: ['rach', 'roch'],
+    mann: ['mann', 'männ'],
+    haus: ['haus', 'häus'],
+    buch: ['buch', 'büch'],
+    laden: ['laden', 'läden'],
+    stadt: ['stadt', 'städt'],
+    nacht: ['nacht', 'nächt'],
+    hand: ['hand', 'händ'],
+    schuh: ['schuh'],
+    winterschuhe: ['winterschuh']
+  };
+
+  const SEPARABLE_PREFIXES = ['ein', 'ab', 'auf', 'an', 'aus', 'mit', 'nach', 'vor', 'zu', 'unter', 'über'];
+
+  function expandContractions(text) {
+    return String(text || '')
+      .replace(/\bim\b/gi, 'in dem')
+      .replace(/\bins\b/gi, 'in das')
+      .replace(/\bam\b/gi, 'an dem')
+      .replace(/\bans\b/gi, 'an das')
+      .replace(/\bbeim\b/gi, 'bei dem')
+      .replace(/\bvom\b/gi, 'von dem')
+      .replace(/\bzum\b/gi, 'zu dem')
+      .replace(/\bzur\b/gi, 'zu der')
+      .replace(/\bübers\b/gi, 'über das')
+      .replace(/\bunterm\b/gi, 'unter dem')
+      .replace(/\bvorm\b/gi, 'vor dem');
+  }
+
+  function cleanWordToken(str) {
+    return String(str || '')
       .toLowerCase()
-      .replace(/[.,!?;:"„“”()]/g, ' ')
+      .replace(/[.,!?;:"„“”'«»()[\]]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+  }
 
-    const userNorm = normalize(userSentence);
-    const sampleNorm = normalize(ex.sampleAnswer || '');
-    const userWords = userNorm.split(' ').filter(Boolean);
+  function buildStemsForWord(w) {
+    const lower = w.toLowerCase().trim();
+    if (!lower) return [];
+    if (IRREGULAR_STEM_MAP[lower]) return IRREGULAR_STEM_MAP[lower];
 
-    // Kök / stem eşleşmesi kontrolü
-    const rawTokens = parseTokens(ex.rawWords)
-      .map((t) => normalize(t).replace(/^(der|die|das|ein|eine|sich)\s+/i, '').trim())
-      .filter((t) => t.length >= 3);
+    const stems = new Set([lower]);
+    // Mastar / çoğul / sıfat eklerini kırparak kök üret
+    let base = lower;
+    if (base.length > 4 && base.endsWith('en')) base = base.slice(0, -2);
+    else if (base.length > 4 && (base.endsWith('er') || base.endsWith('es') || base.endsWith('em'))) base = base.slice(0, -2);
+    else if (base.length > 3 && (base.endsWith('e') || base.endsWith('n') || base.endsWith('s'))) base = base.slice(0, -1);
 
-    let matchedStems = 0;
-    rawTokens.forEach((tok) => {
-      const stem = tok.slice(0, Math.max(3, Math.min(5, tok.length - 1)));
-      if (userNorm.includes(stem)) matchedStems += 1;
+    stems.add(base);
+    // -el / -er ile biten sıfatlarda çekimde iç 'e' düşmesi (dunkel -> dunkle/dunklen, teuer -> teure/teuren)
+    if (lower.length >= 5 && lower.endsWith('el')) {
+      stems.add(lower.slice(0, -2) + 'l');
+    }
+    if (lower.length >= 5 && lower.endsWith('er')) {
+      stems.add(lower.slice(0, -2) + 'r');
+    }
+    // Umlaut varyasyonları
+    stems.add(base.replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u'));
+    stems.add(base.replace(/a/g, 'ä').replace(/o/g, 'ö').replace(/u/g, 'ü'));
+
+    // Ayrılabilen fiil kontrolü (örn. einbiegen -> bieg, abschneiden -> schneid)
+    for (const pref of SEPARABLE_PREFIXES) {
+      if (lower.startsWith(pref) && lower.length >= pref.length + 4) {
+        const rest = lower.slice(pref.length);
+        if (IRREGULAR_STEM_MAP[rest]) {
+          IRREGULAR_STEM_MAP[rest].forEach((s) => stems.add(s));
+        } else {
+          const restBase = rest.endsWith('en') ? rest.slice(0, -2) : rest;
+          if (restBase.length >= 3) stems.add(restBase);
+        }
+      }
+    }
+
+    return Array.from(stems).filter((s) => s.length >= 2);
+  }
+
+  function doesSentenceWordMatchStem(sentWord, stems, exactShortWord = '') {
+    if (!sentWord) return false;
+    if (exactShortWord && sentWord === exactShortWord) return true;
+    // Kısa edat/zarflar için tam eşleşme (in, an, auf, vor, mit, bei, zu, für, nach, und,ไม่)
+    if (exactShortWord && exactShortWord.length <= 3 && !IRREGULAR_STEM_MAP[exactShortWord]) {
+      return sentWord === exactShortWord || sentWord.startsWith(exactShortWord + 'e') || sentWord.startsWith(exactShortWord + 's');
+    }
+    for (const st of stems) {
+      if (sentWord === st) return true;
+      if (st.length >= 3 && sentWord.startsWith(st)) return true;
+      // Partizip II 'ge-' öneki veya birleşik kelime içi eşleşme
+      if (st.length >= 4 && sentWord.includes(st)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Verilen dağınık kelimeler (ex.rawWords) ile kurulan cümleyi (sentenceStr) birebir denetler:
+   * - missingWords: Verilen kelimelerden cümlede HİÇ KULLANILMAYANLAR
+   * - extraWords: Verilen kelimelerde OLMAYIP cümleye dışarıdan EKLENEN kelimeler
+   */
+  function auditWordUsage(ex, sentenceStr) {
+    const expandedSent = expandContractions(sentenceStr);
+    const sentWords = cleanWordToken(expandedSent).split(' ').filter(Boolean);
+
+    // 1. rawWords içindeki her bir öğeyi ayrıştır
+    const rawChunks = parseTokens(ex.rawWords);
+    const requiredItems = [];
+    const allowedLexicalSubwords = [];
+
+    // Başlıktaki kelimeleri de (örn. klopfen / schlagen) izinli havuza ekle
+    cleanWordToken(ex.topic || '')
+      .split(' ')
+      .filter((w) => w.length >= 3 && !GRAMMAR_ARTICLES.has(w) && w !== 'etwas' && w !== 'jemandem' && w !== 'irgendwohin' && w !== 'dativ' && w !== 'akk')
+      .forEach((w) => {
+        allowedLexicalSubwords.push({ raw: w, stems: buildStemsForWord(w) });
+      });
+
+    const seenChunkKeys = new Set();
+    rawChunks.forEach((chunk) => {
+      // Parantez içi alternatifleri temizle: "die(meine) Freundin" -> ["die", "meine", "freundin"]
+      const subTokens = cleanWordToken(chunk).split(' ').filter(Boolean);
+      const contentWords = subTokens.filter((w) => !GRAMMAR_ARTICLES.has(w));
+      const effectiveWords = contentWords.length > 0 ? contentWords : subTokens;
+
+      effectiveWords.forEach((w) => {
+        const stems = buildStemsForWord(w);
+        allowedLexicalSubwords.push({ raw: w, stems });
+        // Ayrılabilen fiil öneklerini de izinli havuza ekle (einbiegen -> ein, abschneiden -> ab)
+        for (const pref of SEPARABLE_PREFIXES) {
+          if (w.startsWith(pref) && w.length >= pref.length + 4) {
+            allowedLexicalSubwords.push({ raw: pref, stems: [pref] });
+          }
+        }
+      });
+
+      const chunkKey = effectiveWords.join('_');
+      if (!chunkKey || seenChunkKeys.has(chunkKey)) return;
+      seenChunkKeys.add(chunkKey);
+
+      requiredItems.push({
+        label: chunk.trim(),
+        words: effectiveWords.map((w) => ({ raw: w, stems: buildStemsForWord(w) }))
+      });
     });
 
-    const ratio = rawTokens.length ? matchedStems / rawTokens.length : 0.8;
-    const exactMatch = sampleNorm && userNorm === sampleNorm;
-    const score = exactMatch ? 100 : Math.min(95, Math.max(40, Math.round(ratio * 95)));
-    const isCorrect = score >= 80 && userWords.length >= 6;
-    const isPartial = !isCorrect && score >= 55;
+    // 2. Eksik (Kullanılmayan) Kelimeleri Bul
+    const missingWords = [];
+    requiredItems.forEach((item) => {
+      // Öğenin içindeki ana kelimelerden en az biri (veya çok kelimeliyse hepsi) cümlede geçiyor mu?
+      const allMatched = item.words.every((wObj) =>
+        sentWords.some((sw) => doesSentenceWordMatchStem(sw, wObj.stems, wObj.raw))
+      );
+      if (!allMatched) {
+        missingWords.push(item.label);
+      }
+    });
+
+    // 3. Listede Olmayan (Fazladan Eklenen) Kelimeleri Bul
+    const extraWords = [];
+    sentWords.forEach((sw) => {
+      if (GRAMMAR_ARTICLES.has(sw)) return;
+      const isAllowed = allowedLexicalSubwords.some((allowObj) =>
+        doesSentenceWordMatchStem(sw, allowObj.stems, allowObj.raw)
+      );
+      if (!isAllowed) {
+        extraWords.push(sw);
+      }
+    });
+
+    return {
+      missingWords,
+      extraWords: Array.from(new Set(extraWords)),
+      isCompleteAndStrict: missingWords.length === 0 && extraWords.length === 0
+    };
+  }
+
+  // Yapay zekanın önerdiği Duzeltme/Alternatif cümlelerde listede olmayan kelime varsa temizler
+  function sanitizeAiSuggestedSentence(ex, candidateSentence) {
+    if (!candidateSentence) return ex.sampleAnswer || '';
+    const audit = auditWordUsage(ex, candidateSentence);
+    // Eğer AI listede olmayan kelime uydurduysa veya kelimeleri atladıysa doğrudan orijinal sampleAnswer'ı döndür
+    if (audit.extraWords.length > 0 || audit.missingWords.length > 1) {
+      return ex.sampleAnswer || candidateSentence;
+    }
+    return candidateSentence;
+  }
+
+  // Çevrimdışı veya API Yedek Değerlendirici (Sıkı Kelime & Çekim Denetimi)
+  function fallbackLocalEvaluation(ex, userSentence) {
+    const audit = auditWordUsage(ex, userSentence);
+    const totalReq = Math.max(1, parseTokens(ex.rawWords).length);
+    const usedRatio = Math.max(0, (totalReq - audit.missingWords.length) / totalReq);
+
+    let score = Math.round(usedRatio * 92);
+    if (audit.extraWords.length > 0) {
+      score = Math.max(15, score - audit.extraWords.length * 20);
+    }
+    if (audit.missingWords.length > 0) {
+      score = Math.min(65, score);
+    }
+
+    const isCorrect = audit.isCompleteAndStrict && score >= 80;
+    const isPartial = !isCorrect && score >= 45;
+
+    let analysisMsg = ex.grammarTip || 'Cümleniz verilen kelimeler ve örnek çekim yapısıyla karşılaştırıldı.';
+    if (audit.missingWords.length > 0) {
+      analysisMsg = `Verilen şu kelimeleri cümlenizde kullanmadınız: ${audit.missingWords.join(', ')}. Tüm verilen kelimeler eksiksiz kullanılmalıdır. ` + analysisMsg;
+    }
+    if (audit.extraWords.length > 0) {
+      analysisMsg = `Verilen kelimeler listesinde olmayan şu kelimeleri eklediniz: ${audit.extraWords.join(', ')}. Sadece verilen kelimeleri kullanmalısınız. ` + analysisMsg;
+    }
 
     return {
       isCorrect,
@@ -502,12 +736,14 @@
       score,
       userSentence,
       corrected: ex.sampleAnswer || userSentence,
-      alternative: ex.sampleAnswer || '',
-      analysis: ex.grammarTip || 'Cümleniz verilen kelimeler ve örnek çekim yapısıyla karşılaştırıldı.'
+      alternative: '',
+      analysis: analysisMsg,
+      missingWords: audit.missingWords,
+      extraWords: audit.extraWords
     };
   }
 
-  // Yapay Zeka Destekli Cümle Değerlendirme (Birden fazla doğru cevabı kabul eder)
+  // Yapay Zeka Destekli Cümle Değerlendirme (Sıkı kelime kontrolü + çoklu doğru dizilim desteği)
   async function evaluateUserSentence() {
     if (state.busy) return;
     const ex = getCurrentExercise();
@@ -527,17 +763,23 @@
       checkBtn.innerHTML = '<span>Yapay Zeka Kontrol Ediyor...</span>';
     }
 
+    // Önce yerel sıkı kelime denetçisini çalıştır (Eksik veya listede olmayan kelime var mı?)
+    const userAudit = auditWordUsage(ex, userSentence);
+
     const evalPrompt = `SÄTZE BILDEN CÜMLE KONTROLÜ (Not: Yanıt şemasında exercise.type değerini 'NONE' yap, değerlendirmeyi reply içine yaz):
 Hedef Kalıp: ${ex.topic}
 Verilen Çekimsiz Kelimeler: ${ex.rawWords}
 Referans Cümle: ${ex.sampleAnswer || ''}
 Kullanıcının Yazdığı Cümle: ${userSentence}
+${userAudit.missingWords.length ? `Kullanıcının KULLANMADIĞI (Eksik) Kelimeler: ${userAudit.missingWords.join(', ')}` : ''}
+${userAudit.extraWords.length ? `Kullanıcının Listede Olmadığı Halde EKLEDİĞİ Fazla Kelimeler: ${userAudit.extraWords.join(', ')}` : ''}
 
-GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
-1. Almancada aynı kelimelerle birden fazla doğru söz dizimi (Wortstellung), zaman ve sıfat-isim eşleştirmesi mümkündür; gramer ve anlam doğruysa farklı dizilimleri DOĞRU kabul et.
-2. Fiil çekimi, artikel/hal (Kasus), edatlar ve sıfat çekimlerini kontrol et.
-3. reply metninin en sonuna mutlaka şu formatta tek satır ekle:
-[SATZ_EVAL] Durum: DOGRU veya KISMEN veya YANLIS | Puan: 0-100 | Duzeltme: kusursuz Almanca hali | Alternatif: alternatif doğru Almanca dizilim | Analiz: Türkçe gramer ve çekim açıklaması [/SATZ_EVAL]`;
+KESİN KURALLAR:
+1. OLMAYAN KELİME EKLEME YASAĞI: Hem kullanıcının cümlesinde hem de senin yazacağın "Duzeltme" ve "Alternatif" cümlelerinde SADECE "Verilen Çekimsiz Kelimeler" listesindeki kelimeler (ve zorunlu artikel/hal çekimleri) kullanılabilir. Listede olmayan hiçbir kelime, zarf, sıfat, bağlaç veya fiil ASLA eklenemez!
+2. TÜM KELİMELERİ KULLANMA ZORUNLULUĞU: Verilen kelimelerin TAMAMI cümlede eksiksiz kullanılmak zorundadır. Kullanıcı verilen kelimelerden birini bile kullanmadıysa veya listede olmayan kelime eklediyse Durum kesinlikle DOGRU olamaz (YANLIS veya KISMEN olmalıdır).
+3. Almancada aynı kelimelerle birden fazla doğru söz dizimi (Wortstellung) ve sıfat-isim eşleştirmesi mümkündür; kullanıcı tüm verilen kelimeleri eksiksiz ve dışarıdan kelime eklemeden gramerce doğru kullandıysa farklı dizilimleri DOGRU kabul et.
+4. reply metninin en sonuna mutlaka şu formatta tek satır ekle:
+[SATZ_EVAL] Durum: DOGRU veya KISMEN veya YANLIS | Puan: 0-100 | Duzeltme: sadece verilen kelimelerle kurulan kusursuz Almanca cümle | Alternatif: sadece verilen kelimelerle kurulan alternatif doğru dizilim | Analiz: Türkçe gramer, çekim ve eksik/fazla kelime açıklaması [/SATZ_EVAL]`;
 
     try {
       let evalData = null;
@@ -553,7 +795,7 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
         let status = 'KISMEN';
         let score = 75;
         let corrected = ex.sampleAnswer || userSentence;
-        let alternative = ex.sampleAnswer || '';
+        let alternative = '';
         let analysis = rawReply.replace(/\[SATZ_EVAL\][\s\S]*$/i, '').trim();
 
         const match = rawReply.match(/\[SATZ_EVAL\]([\s\S]*?)(?:\[\/SATZ_EVAL\]|$)/i);
@@ -570,13 +812,34 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
           if (corM) corrected = corM[1].trim();
           if (altM) alternative = altM[1].trim();
           if (anM) analysis = anM[1].trim();
-        } else if (/tebrik|doğru|kusursuz|harika|başarılı/i.test(rawReply) && !/hatalı|yanlış/i.test(rawReply)) {
+        } else if (/tebrik|doğru|kusursuz|harika|başarılı/i.test(rawReply) && !/hatalı|yanlış|eksik/i.test(rawReply)) {
           status = 'DOGRU';
           score = 95;
         }
 
-        const isCorrect = status.includes('DOGRU') || status.includes('DOĞRU') || score >= 80;
-        const isPartial = !isCorrect && (status.includes('KISMEN') || score >= 50);
+        // Yapay zekanın Duzeltme ve Alternatif cümlelerini denetle: listede olmayan kelime eklediyse anında engelle!
+        corrected = sanitizeAiSuggestedSentence(ex, corrected);
+        if (alternative) {
+          const altAudit = auditWordUsage(ex, alternative);
+          if (altAudit.extraWords.length > 0 || altAudit.missingWords.length > 0) {
+            alternative = '';
+          }
+        }
+
+        let isCorrect = status.includes('DOGRU') || status.includes('DOĞRU') || score >= 80;
+
+        // KESİN ENGEL: Kullanıcı verilen kelimelerden birini bile kullanmadıysa veya listede olmayan kelime eklediyse DOĞRU kabul edilemez!
+        if (!userAudit.isCompleteAndStrict) {
+          isCorrect = false;
+          if (userAudit.extraWords.length > 0) {
+            score = Math.min(score, 45);
+          }
+          if (userAudit.missingWords.length > 0) {
+            score = Math.min(score, 60);
+          }
+        }
+
+        const isPartial = !isCorrect && (status.includes('KISMEN') || score >= 45);
 
         evalData = {
           isCorrect,
@@ -585,7 +848,9 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
           userSentence,
           corrected,
           alternative,
-          analysis: analysis || ex.grammarTip || 'Cümle yapısı incelendi.'
+          analysis: analysis || ex.grammarTip || 'Cümle yapısı incelendi.',
+          missingWords: userAudit.missingWords,
+          extraWords: userAudit.extraWords
         };
       } catch (_apiErr) {
         evalData = fallbackLocalEvaluation(ex, userSentence);
@@ -638,12 +903,20 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
     const resEl = $('satz-eval-result');
     if (!resEl) return;
 
+    const hasMissing = Array.isArray(data.missingWords) && data.missingWords.length > 0;
+    const hasExtra = Array.isArray(data.extraWords) && data.extraWords.length > 0;
+
     const borderColor = data.isCorrect ? '#10B981' : (data.isPartial ? '#F59E0B' : '#EF4444');
     const bgColor = data.isCorrect ? 'rgba(16,185,129,0.1)' : (data.isPartial ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)');
     const titleColor = data.isCorrect ? '#34D399' : (data.isPartial ? '#FBBF24' : '#F87171');
-    const statusLabel = data.isCorrect
+
+    let statusLabel = data.isCorrect
       ? `Doğru Cümle! (${data.score} / 100 Puan)`
       : (data.isPartial ? `Kısmen Doğru / Küçük Çekim Hatası (${data.score} / 100 Puan)` : `Gramer / Çekim Düzeltmesi Gerekli (${data.score} / 100 Puan)`);
+
+    if (hasMissing || hasExtra) {
+      statusLabel = `Kelime Eksik veya Fazla! (${data.score} / 100 Puan)`;
+    }
 
     resEl.style.border = `1px solid ${borderColor}`;
     resEl.style.background = bgColor;
@@ -655,8 +928,22 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
         </button>
       </div>
 
+      ${hasMissing ? `
+      <div style="margin-bottom:8px; padding:9px 12px; background:rgba(239,68,68,0.14); border-radius:10px; border:1px solid rgba(239,68,68,0.45);">
+        <div style="font-size:0.74rem; font-weight:900; color:#F87171; text-transform:uppercase; margin-bottom:2px;">Kullanılmayan (Eksik) Kelimeler:</div>
+        <div style="font-size:0.88rem; font-weight:800; color:var(--text-primary);">${escapeHtml(data.missingWords.join(' / '))}</div>
+        <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:2px;">Verilen tüm kelimeleri kullanmadan cümle doğru kabul edilmez.</div>
+      </div>` : ''}
+
+      ${hasExtra ? `
+      <div style="margin-bottom:8px; padding:9px 12px; background:rgba(245,158,11,0.14); border-radius:10px; border:1px solid rgba(245,158,11,0.45);">
+        <div style="font-size:0.74rem; font-weight:900; color:#FBBF24; text-transform:uppercase; margin-bottom:2px;">Listede Olmayan (Fazladan Eklenen) Kelimeler:</div>
+        <div style="font-size:0.88rem; font-weight:800; color:var(--text-primary);">${escapeHtml(data.extraWords.join(', '))}</div>
+        <div style="font-size:0.76rem; color:var(--text-secondary); margin-top:2px;">Verilen kelimeler dışından cümleye ekstra kelime eklenemez.</div>
+      </div>` : ''}
+
       <div style="margin-bottom:8px; padding:10px 12px; background:var(--bg-surface); border-radius:10px; border:1px solid var(--border-subtle);">
-        <div style="font-size:0.72rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:3px;">Doğru / Kusursuz Hali:</div>
+        <div style="font-size:0.72rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; margin-bottom:3px;">Sadece Verilen Kelimelerle Doğru Hali:</div>
         <div style="font-size:0.94rem; font-weight:800; color:#34D399; line-height:1.45;">${escapeHtml(data.corrected)}</div>
       </div>
 
@@ -736,6 +1023,73 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
     }
   }
 
+  // Metin içinde halihazırda '/' ile ayrılmış Sätze bilden formatı varsa doğrudan (AI kelime değiştirmeden) ayrıştırır
+  function parseDirectSlashExercises(rawText) {
+    const lines = String(rawText || '')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const directItems = [];
+    let pendingTopic = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const slashCount = (line.match(/\//g) || []).length;
+      if (slashCount >= 3) {
+        const cleanRaw = line
+          .split('/')
+          .map((t) => t.trim())
+          .filter(Boolean)
+          .join(' / ');
+        const topic = pendingTopic
+          ? pendingTopic.replace(/^\d+[\s.)-]*/, '').replace(/^\.+/, '').trim()
+          : `Cümle ${directItems.length + 1}`;
+        directItems.push({
+          id: `custom-direct-${Date.now()}-${directItems.length}`,
+          num: directItems.length + 1,
+          topic: topic || `Cümle ${directItems.length + 1}`,
+          rawWords: cleanRaw,
+          sampleAnswer: '',
+          grammarTip: 'Verilen tüm kelimeleri eksiksiz ve dışarıdan kelime eklemeden çekimleyerek kurun.'
+        });
+        pendingTopic = '';
+      } else {
+        pendingTopic = line;
+      }
+    }
+    return directItems;
+  }
+
+  // Belgeden üretilen rawWords ile sampleAnswer arasında 1'e 1 kelime uyumu sağlar (olmayan kelimeyi siler, eksik kelimeyi ekler)
+  function enforceStrictTokensOnExtractedItem(rawWords, sampleAnswer) {
+    if (!sampleAnswer) return rawWords;
+    const expandedSample = expandContractions(sampleAnswer);
+    const sampleTokens = cleanWordToken(expandedSample).split(' ').filter(Boolean);
+
+    let chunks = parseTokens(rawWords);
+    // 1. sampleAnswer içinde kökü hiç geçmeyen (AI tarafından uydurulmuş) kelimeleri rawWords'ten çıkar
+    chunks = chunks.filter((chunk) => {
+      const subTokens = cleanWordToken(chunk).split(' ').filter((w) => !GRAMMAR_ARTICLES.has(w));
+      const checkWords = subTokens.length ? subTokens : cleanWordToken(chunk).split(' ').filter(Boolean);
+      return checkWords.every((w) => {
+        const stems = buildStemsForWord(w);
+        return sampleTokens.some((sw) => doesSentenceWordMatchStem(sw, stems, w));
+      });
+    });
+
+    // 2. sampleAnswer içinde olup da rawWords'e konulmamış kelimeleri tespit et ve ekle
+    const dummyEx = { topic: '', rawWords: chunks.join(' / '), sampleAnswer };
+    const audit = auditWordUsage(dummyEx, sampleAnswer);
+    if (audit.extraWords.length > 0) {
+      audit.extraWords.forEach((missingFromRaw) => {
+        chunks.push(missingFromRaw);
+      });
+    }
+
+    return chunks.join(' / ');
+  }
+
   async function extractScrambledSentencesFromDoc() {
     if (state.busy) return;
     const text = ($('satz-extract-text-input')?.value || '').trim();
@@ -744,23 +1098,39 @@ GÖREV: Kullanıcının yazdığı Almanca cümleyi değerlendir.
       return;
     }
 
+    // Eğer kullanıcı doğrudan "/" ile ayrılmış hazır Sätze bilden listesi yapıştırdıysa AI'nın kelime eklemesine izin vermeden birebir yükle
+    if (text && !state.file) {
+      const directParsed = parseDirectSlashExercises(text);
+      if (directParsed.length >= 1) {
+        state.customExercises = directParsed;
+        saveCustomExercises();
+        state.sourceSet = 'custom';
+        state.currentIndex = 0;
+        setExtractStatus('');
+        toast(`${directParsed.length} adet cümle hiçbir kelime değiştirilmeden birebir yüklendi!`);
+        switchSatzTab('play');
+        return;
+      }
+    }
+
     state.busy = true;
     const btn = $('btn-satz-extract-generate');
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<span>Cümleler Dağıtılıyor &amp; Çekimsizleştiriliyor...</span>';
     }
-    setExtractStatus('Yapay zeka belgedeki cümleleri çekimsiz (yalın) ve karışık "Sätze bilden" formatına dönüştürüyor...');
+    setExtractStatus('Belgedeki cümleler dışarıdan kelime eklenmeden çekimsiz ve karışık hale getiriliyor...');
 
     try {
       const payload = {
         deckMode: 'quiz',
-        instruction: `BU BİR 'SÄTZE BILDEN' (DAĞINIK VE ÇEKİMSİZ KELİMELERDEN CÜMLE KURMA) ÜRETİM GÖREVİDİR.
-Belgedeki veya metindeki cümleleri incele (eğer yalnız konu veya kelimeler verildiyse B1-B2 seviyesinde zengin cümleler kur).
-Her madde için:
-1) lemma alanına: Cümlenin ana fiilini veya kalıbını yaz (Örn: "Maßnahmen treffen", "sich vor etwas hüten", "einbiegen in etwas").
-2) sourceSentence alanına: Cümledeki tüm kelimeleri ÇEKİMSİZ YALIN HALDE (İsimleri Nominativ tekil/çoğul artikeliyle örn. 'der Lehrer', fiilleri mastar Infinitiv halinde örn. 'wollen / schlagen', sıfatları eksiz yalın halde örn. 'fleißig / schön', edatları 'auf / wegen / in') ve KARIŞIK SIRADA '/' işaretiyle ayırarak yaz (Örn: "Der Lehrer / wollen / die Schülerin / fleißig / die Schulter / auf / schlagen / wegen / schön / die Handschrift").
-3) contextMeaning alanına: Bu kelimelerle kurulabilecek doğru ve çekimlenmiş tam Almanca cümleyi yaz.`
+        instruction: `BU BİR 'SÄTZE BILDEN' (BELGEDEKİ CÜMLELERİ KELİME EKLEMEDEN DAĞITMA) GÖREVİDİR.
+KESİN KURALLAR:
+1) Belgede veya metinde OLMAYAN hiçbir kelimeyi, sıfatı, zarfı veya cümleyi ASLA EKLEME ve UYDURMA! Neyse doğrudan o cümleyi al.
+2) Her madde için:
+   - lemma alanına: Cümlenin ana fiilini veya kalıbını yaz.
+   - contextMeaning alanına: Belgedeki orijinal Almanca cümleyi HİÇBİR KELİME EKLEMEDEN olduğu gibi yaz.
+   - sourceSentence alanına: SADECE contextMeaning içindeki kelimeleri çekimsiz yalın halde (isimleri yalın artikeliyle, fiilleri mastar halinde, sıfatları eksiz halde) '/' işaretiyle ayırarak karışık sırada yaz. Cümlede olmayan tek bir kelime bile ekleme!`
       };
       if (text) payload.text = text;
       if (state.file) payload.file = state.file;
@@ -775,7 +1145,6 @@ Her madde için:
         const sampleAnswer = cleanStr(w.back || w.contextMeaning || '');
         let rawWords = cleanStr(w.hint || w.sourceSentence || '');
 
-        // Eğer sourceSentence içinde '/' yoksa sampleAnswer'dan otomatik dağıt
         if (!rawWords.includes('/') && sampleAnswer) {
           rawWords = sampleAnswer
             .replace(/[.,!?;:"]/g, '')
@@ -783,6 +1152,9 @@ Her madde için:
             .filter(Boolean)
             .sort(() => Math.random() - 0.5)
             .join(' / ');
+        } else if (rawWords.includes('/') && sampleAnswer) {
+          // AI'nın cümlede olmayan kelime eklemesini kesin olarak filtrele
+          rawWords = enforceStrictTokensOnExtractedItem(rawWords, sampleAnswer);
         }
 
         return {
@@ -791,12 +1163,12 @@ Her madde için:
           topic,
           rawWords,
           sampleAnswer,
-          grammarTip: 'Belgeden üretilen cümle: Kelimeleri uygun artikel, hal (Kasus) ve fiil çekimleriyle anlamlı bir cümleye dönüştürün.'
+          grammarTip: 'Verilen tüm kelimeleri eksiksiz ve dışarıdan kelime eklemeden çekimleyerek anlamlı bir cümleye dönüştürün.'
         };
       }).filter((item) => item.rawWords && item.rawWords.includes('/'));
 
       if (!generated.length) {
-        throw new Error('Belgeden uygun cümle çıkarılamadı. Lütfen daha uzun bir metin veya belge deneyin.');
+        throw new Error('Belgeden uygun cümle çıkarılamadı. Lütfen geçerli Almanca cümleler içeren bir metin veya belge deneyin.');
       }
 
       state.customExercises = generated;
