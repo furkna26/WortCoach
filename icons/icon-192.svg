@@ -2,33 +2,43 @@
   <defs>
     <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#1D4ED8"/>
+      <stop offset="50%" stop-color="#2563EB"/>
       <stop offset="100%" stop-color="#3B82F6"/>
     </linearGradient>
-    <linearGradient id="goldStar" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="100%" stop-color="#E2E8F0"/>
+    <linearGradient id="crestGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#60A5FA" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#1E40AF" stop-opacity="0.1"/>
     </linearGradient>
+    <filter id="shieldShadow" x="-10%" y="-10%" width="125%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0284C7" flood-opacity="0.3"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.4"/>
+    </filter>
   </defs>
 
-  <!-- Arka Plan -->
-  <rect width="512" height="512" rx="128" fill="#FFFFFF"/>
-  <rect x="16" y="16" width="480" height="480" rx="116" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+  <!-- Kalkan Dış Işıltı / Kenarlık -->
+  <g filter="url(#shieldShadow)">
+    <path d="M256 36 C382 36 442 74 442 162 C442 322 334 430 256 466 C178 430 70 322 70 162 C70 74 130 36 256 36 Z" 
+          fill="url(#shieldGrad)" 
+          stroke="#93C5FD" 
+          stroke-width="5" 
+          stroke-opacity="0.45"/>
+    
+    <!-- İç Kalkan Hattı (Academic Inset Line) -->
+    <path d="M256 54 C364 54 420 86 420 164 C420 306 322 404 256 440 C190 404 92 306 92 164 C92 86 148 54 256 54 Z" 
+          fill="none" 
+          stroke="#FFFFFF" 
+          stroke-width="2.5" 
+          stroke-opacity="0.35" 
+          stroke-dasharray="8 4"/>
 
-  <!-- Merkez Kalkan (Arma / Güven & Başarı) -->
-  <path d="M256 60 C360 60 410 90 410 160 C410 290 320 380 256 410 C192 380 102 290 102 160 C102 90 152 60 256 60 Z" 
-        fill="url(#shieldGrad)"/>
+    <!-- Leitner Başarı Yıldızları / Taç (3 Seviye) -->
+    <circle cx="212" cy="106" r="11" fill="#FFFFFF" fill-opacity="0.95"/>
+    <circle cx="256" cy="90" r="15" fill="#FFFFFF"/>
+    <circle cx="300" cy="106" r="11" fill="#FFFFFF" fill-opacity="0.95"/>
 
-  <!-- Kalkan İçi W Harfi + Morfoloji Çatallanması -->
-  <path d="M170 150 L205 285 L235 185 L277 185 L307 285 L342 150 L380 150 L330 330 L285 330 L256 230 L227 330 L182 330 L132 150 Z" 
-        fill="#FFFFFF"/>
-
-  <!-- Başarı Tacı / 3 Leitner Kartı Simgesi -->
-  <circle cx="216" cy="115" r="9" fill="#FFFFFF" fill-opacity="0.9"/>
-  <circle cx="256" cy="100" r="12" fill="#FFFFFF"/>
-  <circle cx="296" cy="115" r="9" fill="#FFFFFF" fill-opacity="0.9"/>
-
-  <!-- Tipografi -->
-  <text x="256" y="462" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', sans-serif" font-weight="900" font-size="34" fill="#0F172A" letter-spacing="1">
-    WORT<tspan fill="#2563EB">COACH</tspan>
-  </text>
+    <!-- Kalkan İçi Monogram: Geometrik Akıllı 'W' -->
+    <path d="M166 160 L203 296 L234 195 L278 195 L309 296 L346 160 L386 160 L335 342 L288 342 L256 238 L224 342 L177 342 L126 160 Z" 
+          fill="#FFFFFF" 
+          filter="drop-shadow(0 3px 4px rgba(15,23,42,0.3))"/>
+  </g>
 </svg>

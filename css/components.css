@@ -1688,9 +1688,44 @@
 /* --------------------------------------------------------------------------
    Header Brand Subtitle
    -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   Header Brand Group & Academic Crest
+   -------------------------------------------------------------------------- */
 .brand-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.brand-crest-logo {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  flex-shrink: 0;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4));
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.brand-group:hover .brand-crest-logo {
+  transform: scale(1.06);
+}
+
+.brand-group:active .brand-crest-logo {
+  transform: scale(0.95);
+}
+
+.brand-text-block {
   display: flex;
   flex-direction: column;
+  justify-content: center;
 }
 
 .brand-subtitle {
@@ -6485,4 +6520,143 @@ body.coach-chat-focused .coach-chat-app-container {
   padding: 14px 10px !important;
   min-height: 60px !important;
   font-size: 0.95rem !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   Sätze bilden & Coach Modals (Staff-level Dark Mode Theme)
+   -------------------------------------------------------------------------- */
+.coach-modal-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  background: var(--bg-surface) !important;
+}
+
+.coach-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+
+.coach-avatar-badge {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 900 !important;
+  font-size: 1rem !important;
+  color: #ffffff !important;
+  letter-spacing: 0.04em !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
+  flex-shrink: 0 !important;
+}
+
+#satz-builder-title {
+  font-size: 1.22rem !important;
+  font-weight: 800 !important;
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+}
+
+.coach-subtitle {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  margin-top: 2px !important;
+}
+
+/* Textarea Dark Mode Override */
+.coach-source-textarea {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background: var(--bg-elevated, #10192d) !important;
+  border: 1px solid var(--border-medium, #253552) !important;
+  color: var(--text-primary, #f8fafc) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  font-family: inherit !important;
+  font-size: 0.96rem !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
+  outline: none !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.coach-source-textarea:focus {
+  border-color: var(--brand-blue, #3B82F6) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.coach-source-textarea::placeholder {
+  color: var(--text-muted, #64748b) !important;
+  font-weight: 500 !important;
+}
+
+/* Primary Action Button */
+.btn-coach-build-full {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  background: var(--brand-blue, #2563EB) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  padding: 11px 20px !important;
+  font-weight: 800 !important;
+  font-size: 0.92rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  text-decoration: none !important;
+}
+
+.btn-coach-build-full:hover:not(:disabled) {
+  background: var(--brand-blue-hover, #1D4ED8) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-coach-build-full:active:not(:disabled) {
+  transform: scale(0.98) !important;
+}
+
+.btn-coach-build-full:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* Interactive Word Chips */
+.satz-token-chip {
+  padding: 7px 12px !important;
+  border-radius: 10px !important;
+  background: var(--bg-surface, #141f33) !important;
+  border: 1px solid var(--border-medium, #253652) !important;
+  color: var(--text-primary, #f1f5f9) !important;
+  font-weight: 700 !important;
+  font-size: 0.86rem !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  user-select: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+.satz-token-chip:hover {
+  background: var(--bg-elevated, #1c2b45) !important;
+  border-color: var(--brand-blue, #3B82F6) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) !important;
+}
+
+.satz-token-chip:active {
+  transform: scale(0.96) !important;
 }
