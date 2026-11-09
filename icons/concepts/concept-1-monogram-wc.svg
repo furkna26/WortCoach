@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3A8A"/>
+      <stop offset="50%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <filter id="shadow1" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Arka Plan Squircle -->
+  <rect width="512" height="512" rx="128" fill="url(#bgGrad1)"/>
+
+  <!-- İç Panel Işığı -->
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="4"/>
+
+  <!-- Logo İkonu: W ve C'nin Kitap / Kanat Şeklinde Birleşimi -->
+  <g filter="url(#shadow1)">
+    <!-- W Sol Kanat / Sayfa -->
+    <path d="M128 160 L188 340 L236 210 L210 160 Z" fill="#FFFFFF" fill-opacity="0.85"/>
+    <!-- W Sağ Kanat / C ile Kesişim -->
+    <path d="M236 210 L284 340 L344 160 L296 160 L260 270 L236 210 Z" fill="#FFFFFF"/>
+    <!-- C Yayı (Coach Çemberi & Dinamik Büyüme) -->
+    <path d="M310 180 C365 180 400 215 400 270 C400 325 365 360 310 360 C265 360 235 335 224 298 L266 288 C273 310 290 322 312 322 C340 322 358 300 358 270 C358 240 340 218 312 218 C290 218 274 230 266 250 L224 240 C236 205 268 180 310 180 Z" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Tipografi / Marka İmzası -->
+  <text x="256" y="426" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', -apple-system, sans-serif" font-weight="900" font-size="34" fill="#FFFFFF" letter-spacing="1.5">
+    WORT<tspan fill="#93C5FD">COACH</tspan>
+  </text>
+  <circle cx="396" cy="414" r="5" fill="#60A5FA"/>
+</svg>

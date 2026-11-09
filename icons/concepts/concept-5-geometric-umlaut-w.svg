@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgDeepBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7"/>
+      <stop offset="50%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="128" fill="url(#bgDeepBlue)"/>
+
+  <!-- Merkez: Geometrik Minimalist W ve İç İçe Dinamik Dalgalar -->
+  <g transform="translate(256, 215)">
+    <!-- Kalın Geometrik W Hatları (Keskin ve Modern) -->
+    <path d="M-150 -90 L-100 80 L-50 -20 L0 80 L50 -20 L100 80 L150 -90 L105 -90 L75 10 L30 -85 L-30 -85 L-75 10 L-105 -90 Z" 
+          fill="#FFFFFF"/>
+
+    <!-- Ses / Telaffuz / İletişim Dalgaları (Coach Dinamiği) -->
+    <circle cx="0" cy="-35" r="16" fill="#38BDF8"/>
+    
+    <!-- İki Nokta (Almanca Umlaut / Çift Göz İmzası) -->
+    <circle cx="-35" cy="-125" r="14" fill="#FFFFFF"/>
+    <circle cx="35" cy="-125" r="14" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Tipografi -->
+  <text x="256" y="420" text-anchor="middle" font-family="'Plus Jakarta Sans', 'Segoe UI', sans-serif" font-weight="900" font-size="35" fill="#FFFFFF" letter-spacing="3">
+    WORTCOACH
+  </text>
+  <rect x="216" y="440" width="80" height="4" rx="2" fill="#38BDF8"/>
+</svg>
