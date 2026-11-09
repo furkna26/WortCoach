@@ -7,24 +7,13 @@
  * - Kesin Almanca (DE) Bayrak ve Dil Eşleme Koruması
  */
 
-// Tarayıcı beforeinstallprompt olayını asenkron veritabanı başlatmalarından ÖNCE yakala
-window.__deferredPwaPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  window.__deferredPwaPrompt = e;
-  if (window.wmApp) {
-    window.wmApp.deferredInstallPrompt = e;
-    window.wmApp.syncPWAInstallUI?.();
-  }
-});
-
 class WortCoachApp {
   constructor() {
     this.searchDebounceTimer = null;
     this.searchAbortController = null;
     this.modalDebounceTimer = null;
     this.modalAbortController = null;
-    this.deferredInstallPrompt = window.__deferredPwaPrompt || null;
+    this.deferredInstallPrompt = null;
     this.currentSearchEntry = null;
     this.activeTabId = 'tab-home';
     this.routeHistoryStack = [];
@@ -4513,102 +4502,22 @@ class WortCoachApp {
     }
   }
 
-  isRunningStandalone() {
-    return Boolean(
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-      (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches) ||
-      window.navigator.standalone === true
-    );
-  }
-
-  syncPWAInstallUI() {
-    const headerBtn = document.getElementById('btn-install-pwa');
-    const topBanner = document.getElementById('pwa-install-top-banner');
-    const standalone = this.isRunningStandalone();
-    const bannerDismissed = sessionStorage.getItem('wm_pwa_banner_dismissed') === '1';
-
-    if (standalone) {
-      if (headerBtn) {
-        headerBtn.classList.add('hidden');
-        headerBtn.style.display = 'none';
-      }
-      if (topBanner) {
-        topBanner.classList.add('hidden');
-        topBanner.style.display = 'none';
-      }
-    } else {
-      if (headerBtn) {
-        headerBtn.classList.remove('hidden');
-        headerBtn.style.display = 'inline-flex';
-      }
-      if (topBanner) {
-        if (bannerDismissed) {
-          topBanner.classList.add('hidden');
-          topBanner.style.display = 'none';
-        } else {
-          topBanner.classList.remove('hidden');
-          topBanner.style.display = 'flex';
-        }
-      }
-    }
-  }
-
-  async triggerPWAInstall() {
-    const promptEvent = this.deferredInstallPrompt || window.__deferredPwaPrompt;
-    if (promptEvent) {
-      try {
-        promptEvent.prompt();
-        const { outcome } = await promptEvent.userChoice;
-        this.deferredInstallPrompt = null;
-        window.__deferredPwaPrompt = null;
-        if (outcome === 'accepted') {
-          this.showToast('WortCoach cihazınıza kuruluyor...');
-          const headerBtn = document.getElementById('btn-install-pwa');
-          const topBanner = document.getElementById('pwa-install-top-banner');
-          if (headerBtn) headerBtn.style.display = 'none';
-          if (topBanner) topBanner.style.display = 'none';
-        }
-        return;
-      } catch (_) {}
-    }
-
-    // Tarayıcı yerel istemi henüz hazır değilse veya iOS/Safari kullanılıyorsa net kurulum rehberi göster
-    const ua = navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (isIOS) {
-      this.showToast('iOS/Safari: Alt menüdeki "Paylaş" butonuna basıp "Ana Ekrana Ekle" seçeneğine dokunun.');
-    } else {
-      this.showToast('Tarayıcınızın sağ üst menüsünden veya adres çubuğundaki "Uygulamayı Yükle / Ana Ekrana Ekle" simgesinden indirebilirsiniz.');
-    }
-  }
-
   bindPWAInstall() {
-    this.syncPWAInstallUI();
-
-    const headerBtn = document.getElementById('btn-install-pwa');
-    const homeBtn = document.getElementById('btn-home-install-pwa');
-    const dismissBtn = document.getElementById('btn-dismiss-pwa-banner');
-
-    headerBtn?.addEventListener('click', () => this.triggerPWAInstall());
-    homeBtn?.addEventListener('click', () => this.triggerPWAInstall());
-    dismissBtn?.addEventListener('click', () => {
-      sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
-      const topBanner = document.getElementById('pwa-install-top-banner');
-      if (topBanner) {
-        topBanner.classList.add('hidden');
-        topBanner.style.display = 'none';
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.deferredInstallPrompt = e;
+      const btn = document.getElementById('btn-install-pwa');
+      if (btn) {
+        btn.classList.remove('hidden');
+        btn.addEventListener('click', async () => {
+          this.deferredInstallPrompt.prompt();
+          const { outcome } = await this.deferredInstallPrompt.userChoice;
+          if (outcome === 'accepted') {
+            btn.classList.add('hidden');
+          }
+          this.deferredInstallPrompt = null;
+        });
       }
-    });
-
-    window.addEventListener('appinstalled', () => {
-      this.deferredInstallPrompt = null;
-      window.__deferredPwaPrompt = null;
-      this.syncPWAInstallUI();
-      const hBtn = document.getElementById('btn-install-pwa');
-      const tBanner = document.getElementById('pwa-install-top-banner');
-      if (hBtn) hBtn.style.display = 'none';
-      if (tBanner) tBanner.style.display = 'none';
-      this.showToast('WortCoach uygulama olarak başarıyla yüklendi!');
     });
   }
 

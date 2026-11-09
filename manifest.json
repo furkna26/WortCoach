@@ -1,7 +1,7 @@
 {
-  "name": "WortCoach — Akıllı Almanca Kelime & Sözlük Koçu",
+  "name": "WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu",
   "short_name": "WortCoach",
-  "description": "Çevrimdışı Almanca ve İngilizce morfolojik sözlük, fiil çekim motoru, çeviri ve Leitner SRS Flashcard uygulaması.",
+  "description": "Çevrimdışı öncelikli Almanca morfolojik sözlük, fiil çekim motoru, akustik fonetik telaffuz değerlendirmesi, Leitner aralıklı tekrarlama (SRS) ve gerçek zamanlı öğrenme uygulaması.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
