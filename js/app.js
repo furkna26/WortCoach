@@ -4508,42 +4508,59 @@ class WortCoachApp {
     const homeBtn = document.getElementById('btn-home-install-pwa');
     const dismissBtn = document.getElementById('btn-dismiss-pwa-banner');
 
-    const updateInstallButtons = () => {
-      const promptReady = Boolean(window.__deferredPwaPrompt || this.deferredInstallPrompt);
-      const isStandalone = Boolean(
-        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        window.navigator.standalone === true
-      );
-      const dismissed = sessionStorage.getItem('wm_pwa_banner_dismissed') === '1';
+    const isStandalone = () => Boolean(
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches) ||
+      window.navigator.standalone === true
+    );
 
-      if (promptReady && !isStandalone) {
-        headerBtn?.classList.remove('hidden');
-        if (homeBanner && !dismissed) {
+    const updateInstallButtons = () => {
+      if (isStandalone()) {
+        if (headerBtn) headerBtn.style.display = 'none';
+        if (homeBanner) homeBanner.style.display = 'none';
+        return;
+      }
+
+      const dismissed = sessionStorage.getItem('wm_pwa_banner_dismissed') === '1';
+      if (headerBtn) {
+        headerBtn.classList.remove('hidden');
+        headerBtn.style.display = 'inline-flex';
+      }
+      if (homeBanner) {
+        if (dismissed) {
+          homeBanner.style.display = 'none';
+        } else {
           homeBanner.classList.remove('hidden');
           homeBanner.style.display = 'flex';
-        }
-      } else {
-        headerBtn?.classList.add('hidden');
-        if (homeBanner) {
-          homeBanner.classList.add('hidden');
-          homeBanner.style.display = 'none';
         }
       }
     };
 
     const runDirectInstall = async () => {
       const promptEvent = window.__deferredPwaPrompt || this.deferredInstallPrompt;
-      if (!promptEvent) return;
-      try {
-        promptEvent.prompt();
-        const { outcome } = await promptEvent.userChoice;
-        window.__deferredPwaPrompt = null;
-        this.deferredInstallPrompt = null;
-        if (outcome === 'accepted') {
-          updateInstallButtons();
-          this.showToast('WortCoach uygulaması ve kısayolu oluşturuluyor...');
-        }
-      } catch (_) {}
+      if (promptEvent) {
+        try {
+          promptEvent.prompt();
+          const { outcome } = await promptEvent.userChoice;
+          if (outcome === 'accepted') {
+            window.__deferredPwaPrompt = null;
+            this.deferredInstallPrompt = null;
+            sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
+            updateInstallButtons();
+            this.showToast('WortCoach uygulaması ve kısayolu oluşturuluyor...');
+          }
+          return;
+        } catch (_) {}
+      }
+
+      // Tarayıcı yerel prompt'unu geciktiriyorsa veya Safari/iOS ise rehber toast göster
+      const ua = navigator.userAgent || '';
+      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        this.showToast('iOS/Safari: Paylaş ikonuna tıklayıp "Ana Ekrana Ekle"yi seçin.');
+      } else {
+        this.showToast('Tarayıcınızın adres çubuğundaki yükle butonundan veya sağ üst menüden tek tıkla yükleyebilirsiniz.');
+      }
     };
 
     if (window.__deferredPwaPrompt) {
@@ -4569,7 +4586,6 @@ class WortCoachApp {
     dismissBtn?.addEventListener('click', () => {
       sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
       if (homeBanner) {
-        homeBanner.classList.add('hidden');
         homeBanner.style.display = 'none';
       }
     });
@@ -4577,6 +4593,7 @@ class WortCoachApp {
     window.addEventListener('appinstalled', () => {
       window.__deferredPwaPrompt = null;
       this.deferredInstallPrompt = null;
+      sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
       updateInstallButtons();
       this.showToast('WortCoach başarıyla cihazınıza kuruldu.');
     });
