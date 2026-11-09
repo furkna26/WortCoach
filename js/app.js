@@ -4547,20 +4547,14 @@ class WortCoachApp {
             this.deferredInstallPrompt = null;
             sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
             updateInstallButtons();
-            this.showToast('WortCoach uygulaması ve kısayolu oluşturuluyor...');
+            this.showToast('WortCoach uygulaması kuruluyor...');
           }
           return;
         } catch (_) {}
       }
 
-      // Tarayıcı yerel prompt'unu geciktiriyorsa veya Safari/iOS ise rehber toast göster
-      const ua = navigator.userAgent || '';
-      const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      if (isIOS) {
-        this.showToast('iOS/Safari: Paylaş ikonuna tıklayıp "Ana Ekrana Ekle"yi seçin.');
-      } else {
-        this.showToast('Tarayıcınızın adres çubuğundaki yükle butonundan veya sağ üst menüden tek tıkla yükleyebilirsiniz.');
-      }
+      // beforeinstallprompt henüz tetiklenmediyse veya tarayıcı izin vermiyorsa
+      this.showToast('Uygulama kurulumu başlatılıyor...');
     };
 
     if (window.__deferredPwaPrompt) {
