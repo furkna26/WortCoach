@@ -126,12 +126,7 @@ class WortCoachApp {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-        navigator.serviceWorker.getRegistrations().then((regs) => {
-          regs.forEach((r) => r.update());
-        });
-      }
-      navigator.serviceWorker.register('./sw.js?v=3.6.1').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=3.8.5').then((reg) => reg.update()).catch(() => {});
     }
   }
 
@@ -4540,9 +4535,9 @@ class WortCoachApp {
       const promptEvent = window.__deferredPwaPrompt || this.deferredInstallPrompt;
       if (promptEvent) {
         try {
-          promptEvent.prompt();
-          const { outcome } = await promptEvent.userChoice;
-          if (outcome === 'accepted') {
+          await promptEvent.prompt();
+          const choice = await promptEvent.userChoice;
+          if (choice && choice.outcome === 'accepted') {
             window.__deferredPwaPrompt = null;
             this.deferredInstallPrompt = null;
             sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
@@ -4553,8 +4548,16 @@ class WortCoachApp {
         } catch (_) {}
       }
 
-      // beforeinstallprompt henüz tetiklenmediyse veya tarayıcı izin vermiyorsa
-      this.showToast('Uygulama kurulumu başlatılıyor...');
+      // beforeinstallprompt hazır değilse (örneğin uygulama zaten kurulu veya tarayıcı izin vermiyor)
+      const isAlreadyInstalled = Boolean(
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true
+      );
+      if (isAlreadyInstalled) {
+        this.showToast('WortCoach zaten cihazınızda uygulama olarak kurulu.');
+      } else {
+        this.showToast('Tarayıcınız doğrudan kurulum desteği sunmuyor veya uygulama zaten yüklü.');
+      }
     };
 
     if (window.__deferredPwaPrompt) {
