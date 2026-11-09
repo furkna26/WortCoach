@@ -1,4 +1,5 @@
 {
+  "id": "./index.html",
   "name": "WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu",
   "short_name": "WortCoach",
   "description": "Çevrimdışı öncelikli Almanca morfolojik sözlük, fiil çekim motoru, akustik fonetik telaffuz değerlendirmesi, Leitner aralıklı tekrarlama (SRS) ve gerçek zamanlı öğrenme uygulaması.",
@@ -12,16 +13,34 @@
   "categories": ["education", "productivity", "reference"],
   "icons": [
     {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
       "src": "icons/icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

@@ -4503,21 +4503,82 @@ class WortCoachApp {
   }
 
   bindPWAInstall() {
+    const headerBtn = document.getElementById('btn-install-pwa');
+    const homeBanner = document.getElementById('pwa-install-top-banner');
+    const homeBtn = document.getElementById('btn-home-install-pwa');
+    const dismissBtn = document.getElementById('btn-dismiss-pwa-banner');
+
+    const updateInstallButtons = () => {
+      const promptReady = Boolean(window.__deferredPwaPrompt || this.deferredInstallPrompt);
+      const isStandalone = Boolean(
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true
+      );
+      const dismissed = sessionStorage.getItem('wm_pwa_banner_dismissed') === '1';
+
+      if (promptReady && !isStandalone) {
+        headerBtn?.classList.remove('hidden');
+        if (homeBanner && !dismissed) {
+          homeBanner.classList.remove('hidden');
+          homeBanner.style.display = 'flex';
+        }
+      } else {
+        headerBtn?.classList.add('hidden');
+        if (homeBanner) {
+          homeBanner.classList.add('hidden');
+          homeBanner.style.display = 'none';
+        }
+      }
+    };
+
+    const runDirectInstall = async () => {
+      const promptEvent = window.__deferredPwaPrompt || this.deferredInstallPrompt;
+      if (!promptEvent) return;
+      try {
+        promptEvent.prompt();
+        const { outcome } = await promptEvent.userChoice;
+        window.__deferredPwaPrompt = null;
+        this.deferredInstallPrompt = null;
+        if (outcome === 'accepted') {
+          updateInstallButtons();
+          this.showToast('WortCoach uygulaması ve kısayolu oluşturuluyor...');
+        }
+      } catch (_) {}
+    };
+
+    if (window.__deferredPwaPrompt) {
+      this.deferredInstallPrompt = window.__deferredPwaPrompt;
+    }
+    updateInstallButtons();
+
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
+      window.__deferredPwaPrompt = e;
       this.deferredInstallPrompt = e;
-      const btn = document.getElementById('btn-install-pwa');
-      if (btn) {
-        btn.classList.remove('hidden');
-        btn.addEventListener('click', async () => {
-          this.deferredInstallPrompt.prompt();
-          const { outcome } = await this.deferredInstallPrompt.userChoice;
-          if (outcome === 'accepted') {
-            btn.classList.add('hidden');
-          }
-          this.deferredInstallPrompt = null;
-        });
+      updateInstallButtons();
+    });
+
+    document.addEventListener('pwa-install-available', () => {
+      this.deferredInstallPrompt = window.__deferredPwaPrompt;
+      updateInstallButtons();
+    });
+
+    headerBtn?.addEventListener('click', runDirectInstall);
+    homeBtn?.addEventListener('click', runDirectInstall);
+
+    dismissBtn?.addEventListener('click', () => {
+      sessionStorage.setItem('wm_pwa_banner_dismissed', '1');
+      if (homeBanner) {
+        homeBanner.classList.add('hidden');
+        homeBanner.style.display = 'none';
       }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      window.__deferredPwaPrompt = null;
+      this.deferredInstallPrompt = null;
+      updateInstallButtons();
+      this.showToast('WortCoach başarıyla cihazınıza kuruldu.');
     });
   }
 

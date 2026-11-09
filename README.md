@@ -1,230 +1,175 @@
-# WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme ve Aralıklı Tekrarlama Platformu
+# WortCoach — Morfolojik Almanca Sözlük, Akustik Fonetik Analiz ve İnteraktif Dil Edinimi Platformu
 
-WortCoach; Almanca (DE) kelime edinimi, morfolojik ve sentaktik çözümleme, akustik fonetik telaffuz değerlendirmesi, aralıklı tekrarlama (Leitner Spaced Repetition System) ve gerçek zamanlı çok oyunculu öğrenme süreçlerini tek bir çatı altında birleştiren, çevrimdışı öncelikli (Offline-First) bir İlerici Web Uygulamasıdır (Progressive Web Application — PWA).
+WortCoach; Almanca (DE) kelime edinimi, morfolojik ve sentaktik çözümleme, akustik fonetik telaffuz değerlendirmesi, aralıklı tekrarlama (Leitner Spaced Repetition System) ve eşzamanlı çok oyunculu öğrenme süreçlerini bütünleşik bir yapıda sunan kapsamlı bir dil edinimi platformudur.
 
-Sistem; tarayıcı içi ilişkisel indeksleme (IndexedDB), kenar bilişim tabanlı üretken yapay zeka vekil katmanı (Cloudflare Workers + Google Gemini 2.5 Flash), gerçek zamanlı veri eşzamanlama altyapısı (Supabase PostgreSQL & Realtime) ve tarayıcı içi sinyal işleme / derin öğrenme modellerini (Wav2Vec2 Neural CTC, Montreal Forced Aligner Viterbi HMM-GOP) bütünleşik bir mimaride çalıştırır.
+Bu doküman, uygulama içerisinde yer alan modüllerin dilbilimsel, pedagojik ve algoritmik çalışma prensiplerini detaylı olarak açıklamaktadır.
 
 ---
 
 ## İçindekiler
 
-1. [Sistem Mimarisi ve Çalışma Prensipleri](#1-sistem-mimarisi-ve-çalışma-prensipleri)
-2. [Temel Modüller ve Algoritmik Bileşenler](#2-temel-modüller-ve-algoritmik-bileşenler)
-3. [Veri Katmanı, Güvenlik ve Eşzamanlama Altyapısı](#3-veri-katmanı-güvenlik-ve-eşzamanlama-altyapısı)
-4. [Teknoloji Yığını ve Açık Veri Lisansları](#4-teknoloji-yığını-ve-açık-veri-lisansları)
-5. [Proje Dizin Yapısı](#5-proje-dizin-yapısı)
-6. [Kurulum, Yapılandırma ve Dağıtım](#6-kurulum-yapılandırma-ve-dağıtım)
+1. [Morfolojik Sözlük, Kök Çözümleme ve Gramer Zenginleştirme Modülü](#1-morfolojik-sözlük-kök-çözümleme-ve-gramer-zenginleştirme-modülü)
+2. [Akustik Fonetik ve Telaffuz Değerlendirme Modülü (Telaffuz Koçu)](#2-akustik-fonetik-ve-telaffuz-değerlendirme-modülü-telaffuz-koçu)
+3. [Leitner Aralıklı Tekrarlama Sistemi (Spaced Repetition System — SRS)](#3-leitner-aralıklı-tekrarlama-sistemi-spaced-repetition-system--srs)
+4. [Koç ile Deste Oluşturma Modülü (Kelime Destesi ve Quiz Destesi)](#4-koç-ile-deste-oluşturma-modülü-kelime-destesi-ve-quiz-destesi)
+5. [Sätze bilden — Sentaktik Cümle Kurma ve Kelime Kısıt Denetimi Modülü](#5-sätze-bilden--sentaktik-cümle-kurma-ve-kelime-kısıt-denetimi-modülü)
+6. [İnteraktif Alıştırma ve Oyun Modülleri](#6-interaktif-alıştırma-ve-oyun-modülleri)
+7. [Almanca Dil Koçu (Diyalog ve Dinamik Alıştırma Modülü)](#7-almanca-dil-koçu-diyalog-ve-dinamik-alıştırma-modülü)
+8. [Nöral Çeviri ve Akıllı Okuma Modülü](#8-nöral-çeviri-ve-akıllı-okuma-modülü)
+9. [Sosyal Öğrenme, Rekabetçi Düello, Ortak Deste ve ELO Derecelendirme Modülü](#9-sosyal-öğrenme-rekabetçi-düello-ortak-deste-ve-elo-derecelendirme-modülü)
 
 ---
 
-## 1. Sistem Mimarisi ve Çalışma Prensipleri
+## 1. Morfolojik Sözlük, Kök Çözümleme ve Gramer Zenginleştirme Modülü
 
-WortCoach, düşük gecikme süresi ve çevrimdışı erişilebilirlik sağlamak amacıyla üç katmanlı hibrit bir mimari üzerine inşa edilmiştir:
+Ana sayfa üzerinde yer alan arama ve sözlük motoru, girilen bir kelimeyi yalnızca yüzeysel çevirisiyle değil, tam morfolojik ve sentaktik envanteriyle çözümler.
 
-```
-+-----------------------------------------------------------------------------------+
-|                        İSTEMCİ KATMANI (Tarayıcı / PWA)                           |
-|  - IndexedDB (wmDB): Desteler, Kartlar, Leitner Kutu Durumları, Özel Anlamlar     |
-|  - Service Worker (sw.js): Network-First & Cache Fallback Önbellekleme            |
-|  - Morfoloji Motoru: Offline Sözlük + Wiktionary / OpenThesaurus / Tatoeba API    |
-|  - Akustik DSP & ONNX: Wav2Vec2 CTC Posterior + MFA Viterbi Zorlamalı Hizalama    |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                     +--------------------+--------------------+
-                     |                                         |
-                     v                                         v
-+----------------------------------------+   +--------------------------------------+
-|   KENAR VEKİL KATMANI (Edge Worker)    |   |   GERÇEK ZAMANLI VERİ KATMANI        |
-|   Cloudflare Workers (worker.js)       |   |   Supabase PostgreSQL & Realtime     |
-|  - CORS & Origin Doğrulaması           |   |  - Satır Düzeyinde Güvenlik (RLS)    |
-|  - IP Bazlı Kayan Pencere Hız Sınırı   |   |  - ELO Sıralama & Rekabetçi Odalar   |
-|  - Gemini 2.5 Flash Yapılandırılmış    |   |  - İşbirlikçi Deste Düzenleme        |
-|    JSON Şema Zorlaması (responseSchema)|   |  - Kulüp Ortak Desteleri & Web Push  |
-+----------------------------------------+   +--------------------------------------+
-```
+### 1.1. Kanonik Kök Çözümleme (Lemmatization ve Stemming)
+- **Çoğuldan Tekile İndirgeme:** Kullanıcı bir ismin çoğul halini (örneğin *Häuser*, *Bücher*, *Lehrerinnen*) arattığında sistem; *Umlaut* ses değişimlerini (`ä -> a`, `ö -> o`, `ü -> u`) ve çoğul soneklerini (`-e`, `-en`, `-er`, `-nen`, `-s`) analiz ederek kelimeyi kanonik tekil köküne (*Haus*, *Buch*, *Lehrerin*) ve doğru tanımlık artikeline (`der`, `die`, `das`) yönlendirir.
+- **Çekimli Fiilden Mastara İndirgeme:** Şimdiki zaman (*Präsens*), geçmiş zaman (*Präteritum*) veya ortaç (*Partizip II*) halinde aratılan fiiller (örneğin *erfasste*, *gegangen*, *nimmt*) otomatik olarak mastar (*Infinitiv*) köküne (*erfassen*, *gehen*, *nehmen*) bağlanır.
 
-### 1.1. İstemci Öncelikli Çevrimdışı Çalışma (Offline-First Execution)
-Uygulamanın çekirdek sözlük, fiil çekimi, kart yönetimi ve alıştırma modülleri herhangi bir ağ bağlantısına ihtiyaç duymaksızın tarayıcı içinde çalışır:
-- **Yerel Veritabanı (`js/db.js`):** Tarayıcı içi `IndexedDB` üzerinde `decks`, `cards`, `study_logs` ve `settings` nesne depolarını yönetir.
-- **Gömülü Morfolojik Veri Kümesi (`js/offlineDictionary.js`, `js/curatedPacks.js`):** CEFR A1 seviyesinden C1 seviyesine kadar binlerce Almanca kelimeyi; cinsiyet artikelleri (`der`, `die`, `das`), çoğul ekleri, fiil çekim kökleri ve Türkçe/İngilizce karşılıklarıyla yerel bellekte tutar.
-- **Hizmet Çalışanı (`sw.js`):** Statik uygulama kabuğunu (`CORE_ASSETS`) önbelleğe alır; yerel varlıklar için *Network-First with Cache Fallback*, harici dilbilimsel API çağrıları için *Network-Only Pass-through* stratejisi uygular.
+### 1.2. İsim ve Fiil Morfolojisi Tabloları
+- **İsim Envanteri (*Nomen*):** Her isim için cinsiyet artikeli (`der` Maskulin, `die` Feminin, `das` Neutrum), çoğul eki (*Pluralform*) ve CEFR seviye sınıflandırması (A1–C1) sunulur.
+- **Fiil Çekim Matrisi (*Stammformen*):** Fiiller için üç temel zaman kökü (*Präsens 3. tekil şahıs*, *Präteritum*, *Partizip II*), Perfekt yapısında kullanılan yardımcı fiil (`haben` veya `sein`), ayrılabilir ön ek (*trennbares Präfix*) durumu ve dönüşlülük (*Reflexivität: sich*) bilgisi iki sütunlu çekim tablosunda gösterilir.
 
-### 1.2. Kenar Bilişim ve Yapay Zeka Vekil Sunucusu (`worker/worker.js`)
-İstemci tarafında hiçbir API anahtarı barındırılmaz. Tüm büyük dil modeli (LLM) ve çok modlu belge analizi istekleri Cloudflare Workers üzerinde çalışan vekil sunucu üzerinden yürütülür:
-- **Şema Zorlamalı Çıktı Denetimi (`responseSchema`):** Google Gemini (`gemini-2.5-flash`) modelinden dönen yanıtlar deterministik JSON şemalarına (`DECK_SCHEMA`, `ANALYZE_SCHEMA`, `COACH_CHAT_SCHEMA`) zorlanır.
-- **Çok Modlu Belge İşleme (Multimodal Ingestion):** PDF belgeleri, görseller (JPEG/PNG/WebP), DOCX (`Mammoth.js` ile istemcide ayrıştırılan ham metin) ve düz metin girdileri doğrudan analiz edilerek yapılandırılmış veri kümelerine dönüştürülür.
+### 1.3. Edat-Hal Yönetimi (*Rektion*), Nüans ve Kelime Ailesi Analizi
+- **Rektion (Fiil ve Sıfatların Yönettiği Edat ve Haller):** Fiilin veya sıfatın hangi edat ve hangi ismin haliyle (*Akkusativ, Dativ, Genitiv*) kullanıldığını (örneğin *sich hüten vor + Dativ*, *warten auf + Akkusativ*) yapılandırılmış rozetlerle belirtir.
+- **Kullanım Düzeyi (*Stilebene*) ve Karıştırılan Kelimeler (*Verwechslungsgefahr*):** Kelimenin akademik (*bildungssprachlich*), resmi (*gehoben*) veya günlük konuşma diline (*umgangssprachlich*) ait olduğunu işaretler; yazılışı veya anlamı birbirine yakın kelimeler arasındaki farkları açıklar.
+- **Eş Anlamlılar (*Synonyme*) ve Kelime Ailesi (*Wortfamilie*):** OpenThesaurus entegrasyonu ile kelimenin eş anlamlılarını ve aynı kökten türeyen kelimeleri tıklanabilir çipler halinde listeler.
+- **Çoklu Anlam Seçimi ve Özel Anlam Ekleme:** Kullanıcı, sözlükte listelenen Türkçe ve İngilizce anlamlardan dilediklerini seçerek veya kendi özel anlam notunu (`+ Anlam Ekle`) girerek kelimeyi bağlamsal örnek cümleleriyle birlikte doğrudan hedef destesine kaydedebilir.
 
 ---
 
-## 2. Temel Modüller ve Algoritmik Bileşenler
+## 2. Akustik Fonetik ve Telaffuz Değerlendirme Modülü (Telaffuz Koçu)
 
-### 2.1. Hesaplamalı Morfoloji, Sözlük ve Gramer Zenginleştirme (`js/dictionary.js`, `js/verbHelper.js`, `js/grammarEnrichment.js`)
-Kullanıcının aradığı çekimlenmiş veya çoğul bir kelimeyi kanonik sözlük köküne (*Lemma*) indirgeyen çok aşamalı bir çözümleme hattı içerir:
-1. **Kanonik Kök Çözümleme (Lemmatization & Stemming):**
-   - Çoğul isim aramaları (*Umlaut* değişimleri ve `-e`, `-en`, `-er`, `-nen`, `-s` sonekleri dahil) otomatik olarak tekil (*Singular*) forma ve doğru tanımlık artikeline (`der`, `die`, `das`) eşlenir.
-   - Çekimlenmiş fiil formları (*Präsens*, *Präteritum*, *Partizip II*) mastar (*Infinitiv*) köküne bağlanır.
-2. **Fiil Morfolojisi (`js/verbHelper.js`):**
-   - Fiillerin üç temel zaman kökünü (*Stammformen*: *Präsens 3. tekil şahıs*, *Präteritum*, *Partizip II*), yardımcı fiil seçimini (`haben` / `sein`), ayrılabilir ön ek (*trennbares Präfix*) yapısını ve dönüşlülük (*Reflexivität: sich*) durumunu tablolaştırır.
-3. **Gramer Zenginleştirme ve Edat Yönetimi (`js/grammarEnrichment.js`):**
-   - Fiil ve sıfatların yönettiği hal ve edat kalıplarını (*Rektion*: örn. *warten auf + Akkusativ*, *sich hüten vor + Dativ*, *wegen + Genitiv*), dil kullanım katmanlarını (*Stilebene*: *gehoben*, *umgangssprachlich*, *bildungssprachlich*) ve sıklıkla karıştırılan kelimeleri (*Verwechslungsgefahr*) tespit eder.
-4. **Canlı Açık Veri Federasyonu:**
-   - Yerel sözlük sonuçları eşzamanlı olarak **Wiktionary REST/MediaWiki API**, **OpenThesaurus API** (*Synonyme* ve *Wortfamilie* ağacı) ve **Tatoeba Corpus API** (bağlamsal örnek cümleler) ile zenginleştirilir.
+Telaffuz Koçu, kullanıcının mikrofon aracılığıyla seslendirdiği Almanca kelimeleri veya tam örnek cümleleri akustik sinyal işleme ve derin öğrenme modelleriyle hece ve fonem (sesbirim) düzeyinde değerlendirir.
 
-### 2.2. Aralıklı Tekrarlama Sistemi — Leitner SRS (`js/study.js`, `js/stats.js`)
-Bellek kalıcılığını maksimize etmek için 5 kutulu Leitner algoritması uygulanmıştır:
-- **Kutu 1 (Yeni / Zorlanan Kartlar):** Günlük tekrar periyodu (1 gün).
-- **Kutu 2:** 2 günlük tekrar aralığı.
-- **Kutu 3:** 4 günlük tekrar aralığı.
-- **Kutu 4:** 7 günlük tekrar aralığı.
-- **Kutu 5 (Uzun Süreli Bellek):** 14 günlük tekrar aralığı.
-- Kart bazlı doğruluk oranı, tepki süresi (milisaniye) ve günlük seri (*Streak*) metrikleri yerel ve bulut profilinde izlenir.
+### 2.1. Fonetik Haritalama ve Türkçe Okunuş Rehberi
+- Hedef kelime veya cümle önce hecelerine ayrılır ve her hecenin Uluslararası Fonetik Alfabe (IPA) karşılığı çıkarılır.
+- Almancaya özgü ses dizilimleri (*ch*, *sch*, *sp*, *st*, *eu/äu*, *ei*, *ie*, uzun ünlüler ve *Umlaut* sesleri) analiz edilerek Türkçedeki en yakın ses değerleriyle adım adım okunuş rehberi ve artikülasyon ipuçları oluşturulur.
 
-### 2.3. Akustik Fonetik ve Telaffuz Değerlendirme Motoru (`js/pronunciation.js`)
-Kullanıcının mikrofon aracılığıyla seslendirdiği Almanca kelime ve cümleleri fonem ve hece düzeyinde değerlendiren dört farklı motor seçeneği sunar:
-1. **Hibrit Ensemble Motoru (`HYBRID_ENSEMBLE`):** MFA Viterbi hizalaması, Wav2Vec2 CTC olasılık dağılımı ve spektral akustik DSP metriklerini ağırlıklı olarak birleştirir.
-2. **Wav2Vec2 Neural CTC Posterior (`WAV2VEC2_CTC`):** Tarayıcı içinde WebAssembly / ONNX Runtime üzerinden çalışan derin öğrenme modeliyle ses çerçevelerinin fonem olasılık dağılımlarını (*Connectionist Temporal Classification*) hesaplar.
-3. **Montreal Forced Aligner — MFA Viterbi HMM-GOP (`MFA_FORCED_ALIGN`):** Hedef kelimenin Uluslararası Fonetik Alfabe (IPA) dizilimini akustik çerçevelerle Viterbi dinamik programlama algoritması üzerinden zorlamalı olarak hizalar (*Forced Alignment*); her fonemin başlangıç-bitiş milisaniye aralığını (`startMs`–`endMs`) ve *Goodness of Pronunciation (GOP)* skorunu üretir.
-4. **Microsoft Azure Speech GOP (`AZURE_CLOUD`):** İsteğe bağlı olarak kullanıcının kendi Azure Speech API anahtarıyla bulut tabanlı referans telaffuz değerlendirmesi yapar.
+### 2.2. Dört Katmanlı Akustik Değerlendirme Motoru
+Kullanıcı, telaffuz analizinde aşağıdaki dört farklı motordan birini seçebilir:
+1. **Hibrit Ensemble Motoru (MFA Viterbi + Wav2Vec2 CTC + Akustik DSP):** Zorlamalı hizalama, nöral akustik olasılık dağılımı ve spektral enerji analizini birleştirerek en dengeli puanlamayı üretir.
+2. **Wav2Vec2 Neural CTC Posterior Motoru:** Tarayıcı içinde çalışan derin öğrenme modeli aracılığıyla ses çerçevelerinin fonem olasılık dağılımlarını (*Connectionist Temporal Classification*) hesaplar.
+3. **Montreal Forced Aligner (MFA Viterbi HMM-GOP) Motoru:** Hedef kelimenin IPA fonem dizilimini kullanıcının ses kaydıyla Viterbi dinamik programlama algoritması üzerinden zorlamalı olarak hizalar (*Forced Alignment*). Her bir fonemin ses kaydı içinde hangi milisaniye aralığında (`startMs–endMs`) söylendiğini ve *Goodness of Pronunciation (GOP)* doğruluk oranını tespit eder.
+4. **Microsoft Azure Speech GOP Motoru:** Bulut tabanlı referans akustik model üzerinden telaffuz değerlendirmesi gerçekleştirir.
 
-Sistem; Almancaya özgü fonetik yapıları (*Ich-Laut* `/ç/`, *Ach-Laut* `/x/`, *Uvular-R* `/ʁ/`, uzun/kısa ünlüler, *Umlaut* yuvarlaklaştırmaları `/yː/`, `/øː/` ve kelime sonu ötümsüzleşmesi *Auslautverhärtung*) analiz ederek Türkçe telaffuz rehberi ve düzeltici geri bildirim üretir.
+### 2.3. Çok Boyutlu Skorlama ve Akustik Geri Bildirim
+Her ses kaydı sonunda üç temel metrik hesaplanır:
+- **Fonem Doğruluğu (*Accuracy*):** Harf ve sesbirimlerin hedef IPA fonemleriyle akustik örtüşme yüzdesi.
+- **Prozodi ve Vurgu (*Prosody*):** Kelime içi birincil hece vurgusunun (*Wortakzent*) ve perde (*Pitch*) konturunun doğruluğu.
+- **Akıcılık (*Fluency*):** Konuşma hızı, heceler arası süreklilik ve duraksama oranı.
 
-### 2.4. Koç İle Deste Oluşturma: Kelime Destesi ve Quiz Destesi (`js/deckBuilder.js`)
-Yüklenen ders notları, kitap sayfaları (PDF, DOCX, TXT veya fotoğraf/görsel) iki ayrı çalışma modunda işlenir:
-1. **Kelime Destesi Modu (`word`):** Metindeki Almanca kelimeleri yalın (*Lemma*) hallerine dönüştürür; artikel, çoğul eki, sözcük türü (`NOUN`, `VERB`, `ADJ`, `ADV`, `PHRASE`), Türkçe karşılık ve belgeden alınan ek ipuçlarıyla birlikte kelime kartlarına çevirir.
-2. **Quiz Destesi Modu (`quiz`):** Kelime çevirisi yapmaz; belgedeki olgusal, kavramsal veya tarihsel/coğrafi bilgileri doğrudan **Soru (Ön Yüz)**, **Cevap (Arka Yüz)** ve **Ek Bilgi (İpuçları ve Bağlamsal Detaylar)** formatında bilgi kartlarına dönüştürür. Oluşturulan Quiz desteleri hem kart tekrarında hem de çoktan seçmeli oyunlarda ve AI Dil Koçu sohbetlerinde doğrudan kullanılabilir.
-
-### 2.5. Sätze bilden — Dağınık ve Çekimsiz Kelimelerden Cümle Kurma (`js/satzBuilder.js`)
-İleri seviye (B1–C1) Almanca söz dizimi (*Wortstellung*) ve morfolojik çekim pratiği için tasarlanmış yazma tabanlı bir modüldür:
-- **Çalışma Prensibi:** Kullanıcıya bir hedef fiil/deyim kalıbı (örn. *jemandem auf die Schulter klopfen*, *sich vor etwas hüten*, *Maßnahmen treffen*) ile birlikte cümleyi oluşturan tüm kelimeler çekimsiz, yalın/mastar (*Nominativ / Infinitiv*) halde ve `/` işaretiyle ayrılmış karışık sırada verilir.
-- **Sıkı Kelime Kısıt Denetçisi (`auditWordUsage`):**
-  - **Eksik Kelime Denetimi (`missingWords`):** Verilen listedeki her bir öğenin (düzensiz fiil kök değişimleri, ayrılabilen fiil önekleri, `-el/-er` sıfat düşmeleri ve `im/am/beim/zum/zur` edat kaynaşmaları dahil) kurulan cümlede kullanılıp kullanılmadığını deterministik olarak denetler. Verilen kelimelerden herhangi biri kullanılmadığında cümle doğru kabul edilmez.
-  - **Olmayan Kelime Yasağı (`extraWords` & `sanitizeAiSuggestedSentence`):** Kullanıcının veya yapay zekanın verilen kelime havuzu dışından cümleye ekstra kelime (listede bulunmayan zarf, bağlaç, sıfat veya fiil) eklemesini engeller.
-- **Esnek Söz Dizimi Değerlendirmesi:** Almancada aynı kelime kümesiyle birden fazla geçerli öge dizilimi (*Vorfeld / Mittelfeld* yer değiştirmeleri) ve zaman çekimi mümkün olduğundan, kelime kısıtlarını sağlayan cümleler yapay zeka tarafından gramer, hal (*Nominativ, Akkusativ, Dativ, Genitiv*) ve sıfat çekimi (*Adjektivdeklination*) açısından değerlendirilir.
-- **Belgeden / Metinden Cümle Dağıtıcı (`extractScrambledSentencesFromDoc`):** Kullanıcının yüklediği belge veya metindeki cümleleri dışarıdan kelime eklemeden yalın/mastar bileşenlerine ayırıp karıştırarak yeni *Sätze bilden* egzersiz setleri üretir.
-
-### 2.6. İnteraktif Oyunlar ve Alıştırmalar (`js/game.js`)
-- **Kablo ile Anlam Eşleştirme (`CABLE_MATCH`):** SVG katmanı üzerinde dinamik kübik Bézier eğrileriyle Almanca kelimeleri Türkçe anlamlarına veya Quiz sorularını cevaplarına bağlayan görsel eşleştirme oyunu.
-- **7 Temel Dilbilgisi ve Kelime Testi:** Artikel Testi (`ARTICLE`), Fiil Çekim Quiz (`VERB`), İsim Çoğul Testi (`NOUN`), Kelime Anlam Testi (`MEANING`), Ters Çeviri (`REVERSE`), Boşluk Doldurma (`SENTENCE_CLOZE`) ve Karma Sınav (`MIXED`).
-
-### 2.7. Almanca Dil Koçu (`js/coach.js`) ve Akıllı Okuma (`js/translator.js`)
-- **AI Dil Koçu (`#tab-coach`):** Kullanıcının CEFR seviyesine (A1–C1) göre gramer sorularını yanıtlayan, yüklenen belgeleri analiz eden ve sohbet içinde etkileşimli alıştırmalar (*Cloze Test*, *Gramer Analizi*, *Eşleştirme*, *Quiz Soruları*) üreten diyalog modülü.
-- **Akıllı Okuma (`#tab-reader`):** PDF, DOCX ve metin dosyalarını satır ve kelime bazında tıklanabilir bir okuma arayüzüne dönüştürür; metin içinde tıklanan herhangi bir kelimenin morfolojik analizini ve bağlamsal çevirisini anında gösterir ve tek tıkla hedef desteye kaydeder.
+Hatalı veya düşük puanlı fonemler renk kodlarıyla (yeşil, sarı, kırmızı) işaretlenir ve hangi sesin nasıl düzeltilmesi gerektiğine dair spesifik artikülasyon geri bildirimi sunulur.
 
 ---
 
-## 3. Veri Katmanı, Güvenlik ve Eşzamanlama Altyapısı
+## 3. Leitner Aralıklı Tekrarlama Sistemi (Spaced Repetition System — SRS)
 
-### 3.1. Sosyal Özellikler, Rekabetçi Düello ve ELO Sistemi (`js/social.js`, `supabase/schema.sql`)
-Supabase PostgreSQL ve Realtime Broadcast kanalları üzerinden aşağıdaki çok oyunculu işlevler yürütülür:
-- **Canlı Rekabetçi Düello ve Kahoot Odaları:** 6 haneli PIN kodu ile oluşturulan eşzamanlı yarışma odaları, anlık skor tablosu ve tepki süresine dayalı puanlama.
-- ** İşbirlikçi Ortak Deste Düzenleme (`COL-XXXX`):** Birden fazla kullanıcının aynı anda ortak bir kelime veya quiz destesine kart eklemesi ve kendi yerel kütüphanelerine aktarması.
-- **Akademik Çalışma Kulüpleri:** Kulüp içi ortak desteler, üye sıralamaları ve gerçek zamanlı sohbet.
-- **ELO Derecelendirme Algoritması:** Soru zorluğu, tepki süresi ve kombo serilerine göre dinamik ELO puanı ve lig terfi sistemi (*Bronz, Gümüş, Altın, Platin, Elmas, Usta*).
-- **Web Push Bildirimleri:** Service Worker `push` ve `notificationclick` olayları üzerinden düello davetlerine doğrudan bildirim üzerinden katılma veya reddetme desteği.
+Öğrenilen kelimelerin ve bilgi kartlarının kısa süreli bellekten uzun süreli belleğe aktarılması için 5 aşamalı Leitner aralıklı tekrarlama algoritması kullanılır.
 
-### 3.2. Otomatik Veritabanı Sürekliliği (Keep-Alive Pipeline)
-Ücretsiz katman bulut veritabanlarının hareketsizlik nedeniyle duraklatılmasını önlemek amacıyla `.github/workflows/supabase-keepalive.yml` altında tanımlı GitHub Actions iş akışı, her 72 saatte bir REST API üzerinden hafif bir sağlık sorgusu (`HEAD / SELECT`) çalıştırarak veritabanını aktif tutar.
+### 3.1. Dinamik Kutu ve Tekrar Periyotları
+Her kart, kullanıcının hatırlama başarısına göre 1 ile 5 arasındaki kutular arasında hareket eder:
+- **Kutu 1:** Yeni eklenen veya yanlış yanıtlanan kartlar (Tekrar aralığı: **1 gün**).
+- **Kutu 2:** İlk tekrarı başarılı olan kartlar (Tekrar aralığı: **2 gün**).
+- **Kutu 3:** Orta düzeyde pekişmiş kartlar (Tekrar aralığı: **4 gün**).
+- **Kutu 4:** Güçlü bellek izine sahip kartlar (Tekrar aralığı: **7 gün**).
+- **Kutu 5:** Uzun süreli belleğe yerleşmiş kartlar (Tekrar aralığı: **14 gün**).
 
----
-
-## 4. Teknoloji Yığını ve Açık Veri Lisansları
-
-| Katman | Teknoloji / Standart | Kullanım Amacı |
-| :--- | :--- | :--- |
-| **İstemci Çekirdeği** | Vanilla JavaScript (ES2022+), HTML5, CSS3 | Çerçevesiz (Zero-Framework), yüksek performanslı SPA/PWA mimarisi |
-| **Yerel Depolama** | IndexedDB (`wmDB`) & Web Storage API | Çevrimdışı kart, deste, Leitner SRS ve kullanıcı ayarları yönetimi |
-| **Çevrimdışı Ağ Katmanı** | Service Worker API & Web App Manifest | Çevrimdışı çalışma, varlık önbellekleme ve Web Push bildirimleri |
-| **Kenar Bilişim (Edge)** | Cloudflare Workers (`worker/worker.js`) | API anahtarı izolasyonu, CORS koruması, hız sınırlama ve şema doğrulaması |
-| **Üretken Yapay Zeka** | Google Gemini API (`gemini-2.5-flash`) | Çok modlu belge/görsel analizi, deste üretimi, gramer ve cümle değerlendirmesi |
-| **Bulut Veritabanı** | Supabase (PostgreSQL, Auth, Realtime) | Kullanıcı profilleri, ELO liderlik tablosu, canlı düello ve ortak desteler |
-| **Fonetik & Akustik DSP** | Web Audio API, Wav2Vec2 ONNX, MFA Viterbi | Hece/fonem bazlı telaffuz değerlendirmesi ve milisaniye hizalaması |
-| **Belge Ayrıştırma** | Mozilla `PDF.js` (v3.11) & `Mammoth.js` (v1.6) | İstemci taraflı PDF ve DOCX metin çıkarımı |
-| **Sözlük & Morfoloji** | Wiktionary API (CC BY-SA 4.0) | Kanonik artikel, çoğul eki, IPA ve fiil çekim doğrulaması |
-| **Eş Anlamlılar Ağı** | OpenThesaurus API (LGPL) | *Synonyme* (eş anlamlılar) ve *Wortfamilie* (kelime ailesi) verileri |
-| **Örnek Cümle Derlemi** | Tatoeba Corpus (CC BY 2.0 FR) | Doğrulanmış Almanca-Türkçe/İngilizce örnek cümle çiftleri |
+### 3.2. Çalışma Akışı ve Bilişsel Takip
+- Kullanıcı bir kartı doğru hatırladığında kart bir üst kutuya terfi eder ve bir sonraki tekrar tarihi ilgili kutunun gün aralığına göre ileri taşınır.
+- Yanlış yanıtlanan kartlar anında **Kutu 1** düzeyine geri döner ve ertesi gün tekrar çalışma kuyruğuna dahil edilir.
+- Ana sayfa üzerindeki gösterge paneli; o gün tekrar zamanı gelmiş (*Due*) kart sayısını, günlük hedef ilerlemesini ve kesintisiz çalışma serisini (*Streak*) gerçek zamanlı olarak takip eder.
 
 ---
 
-## 5. Proje Dizin Yapısı
+## 4. Koç ile Deste Oluşturma Modülü (Kelime Destesi ve Quiz Destesi)
 
-```text
-WortCoach/
-├── index.html                  # Ana uygulama kabuğu, görünümler (Tabs) ve modal şablonları
-├── manifest.json               # PWA uygulama bildirimi (Standalone ekran ve ikon tanımları)
-├── sw.js                       # Service Worker (Önbellek yönetimi ve Web Push dinleyicileri)
-├── server.py                   # Yerel geliştirme için çok iş parçacıklı HTTP sunucusu
-├── css/
-│   ├── app.css                 # Ana düzen, karanlık/aydınlık tema değişkenleri ve tipografi
-│   └── components.css          # Kartlar, modallar, oyun arenası ve bileşen stilleri
-├── js/
-│   ├── config.js               # Çalışma zamanı yapılandırması ve API uç noktası tanımları
-│   ├── db.js                   # IndexedDB (wmDB) veri erişim katmanı
-│   ├── offlineDictionary.js    # Çevrimdışı morfolojik Almanca-Türkçe sözlük veritabanı
-│   ├── dictionary.js           # Kök çözümleme, canlı Wiktionary/Tatoeba/OpenThesaurus federasyonu
-│   ├── verbHelper.js           # Fiil çekim tabloları ve düzensiz fiil kök motoru
-│   ├── grammarEnrichment.js    # Rektion (edat/hal), Stilebene ve nüans zenginleştirme modülü
-│   ├── curatedPacks.js         # Hazır CEFR (A1-C1) kelime paketleri
-│   ├── seeder.js               # İlk kurulum veritabanı tohumlama modülü
-│   ├── study.js                # 5 kutulu Leitner aralıklı tekrarlama (SRS) motoru
-│   ├── game.js                 # Kablo eşleştirme ve 7 temel gramer/kelime quiz motoru
-│   ├── satzBuilder.js          # Sätze bilden cümle kurma oyunu, sıkı kelime denetçisi ve belge dağıtıcı
-│   ├── deckBuilder.js          # Yapay zeka destekli Kelime Destesi ve Quiz Destesi üretim modülü
-│   ├── coach.js                # Yapay zeka destekli Almanca Dil Koçu sohbet ve alıştırma motoru
-│   ├── pronunciation.js        # Wav2Vec2 CTC, MFA Viterbi ve Akustik DSP telaffuz analizörü
-│   ├── translator.js           # Nöral çeviri ve Akıllı Okuma (PDF/DOCX/Metin) modülü
-│   ├── tts.js                  # Web SpeechSynthesis Almanca seslendirme yöneticisi
-│   ├── stats.js                # Öğrenme istatistikleri ve performans analitiği
-│   ├── social.js               # Supabase kimlik doğrulama, ELO, canlı düello, kulüp ve ortak deste modülü
-│   └── app.js                  # Ana uygulama orkestratörü, yönlendirici (Router) ve UI denetleyicisi
-├── worker/
-│   ├── worker.js               # Cloudflare Worker Gemini API vekil sunucusu ve JSON şema denetleyicisi
-│   ├── wrangler.toml           # Cloudflare Worker dağıtım yapılandırması
-│   └── README.md               # Kenar vekil sunucusu teknik dokümantasyonu
-├── supabase/
-│   └── schema.sql              # PostgreSQL tabloları, RLS güvenlik politikaları ve RPC fonksiyonları
-└── .github/
-    └── workflows/
-        └── supabase-keepalive.yml # Veritabanı sürekliliğini sağlayan zamanlanmış GitHub Actions işi
-```
+Bu modül, kullanıcının yüklediği ders materyallerini (PDF belgeleri, Word `.docx` dosyaları, `.txt` metinleri, kitap/defter fotoğrafları veya doğrudan yapıştırılan metinler) analiz ederek iki farklı yapıda çalışma destesine dönüştürür:
+
+### 4.1. Kelime Destesi Modu
+- Yüklenen belgedeki Almanca kelimeleri tespit eder ve her birini çekimsiz sözlük köküne (*Lemma*) dönüştürür.
+- İsimler için doğru artikeli ve çoğul ekini, fiiller için mastar halini ve sözcük türünü (`NOUN`, `VERB`, `ADJ`, `ADV`, `PHRASE`) belirler.
+- Kartın ön yüzüne Almanca kelimeyi, arka yüzüne Türkçe anlamını ve alt bilgi alanına belgeden çıkarılan bağlamsal ipuçlarını veya örnek cümleyi yerleştirir.
+
+### 4.2. Quiz Destesi Modu (Soru - Cevap - Ek Bilgi)
+- Kelime çevirisi yapmaz; yüklenen belgedeki olgusal, kavramsal, tarihsel veya coğrafi bilgileri doğrudan soru-cevap kartlarına dönüştürür.
+- **Ön Yüz (Soru):** Belgedeki bilgiyi ölçen net soru veya kavram (örneğin bir eyalet adı, tarihsel bir olay veya felsefi bir soru).
+- **Arka Yüz (Cevap):** Sorunun belgedeki doğrudan ve net cevabı (örneğin eyaletin başkenti veya ilgili filozofun adı).
+- **Ek Bilgi (İpuçları ve Bağlamsal Detaylar):** Belgede ilgili kavramla bağlantılı geçen ek istatistikler, tarihler veya tamamlayıcı bilgiler (örneğin nüfus bilgisi, dönem özellikleri veya eser adları) kartın ipucu alanına otomatik olarak eklenir.
 
 ---
 
-## 6. Kurulum, Yapılandırma ve Dağıtım
+## 5. Sätze bilden — Sentaktik Cümle Kurma ve Kelime Kısıt Denetimi Modülü
 
-### 6.1. Yerel Geliştirme Ortamında Çalıştırma
-Uygulama herhangi bir derleme (build/bundler) adımına ihtiyaç duymaz. Service Worker ve ES modüllerinin doğru çalışması için yerel bir HTTP sunucusu üzerinden sunulması yeterlidir:
+*Sätze bilden* modülü, dağınık ve çekimsiz olarak verilen kelimelerden kurallı, çekimlenmiş Almanca cümleler inşa etme becerisini geliştirmek üzere tasarlanmış yazma tabanlı bir çalışma sistemidir.
 
-```bash
-# Depoyu klonlayın
-git clone https://github.com/furkna26/WortCoach.git
-cd WortCoach
+### 5.1. Çalışma Yapısı ve 27 Yerleşik Egzersiz
+- Kullanıcıya bir hedef fiil veya deyim kalıbı (örneğin *jemandem auf die Schulter klopfen*, *einbiegen in etwas*, *Maßnahmen treffen*, *sich vor etwas hüten*, *sich tief über etwas beugen*) ve `/` işaretiyle ayrılmış dağınık, çekimsiz kelimeler verilir:
+  - İsimler yalın (*Nominativ*) halde,
+  - Fiiller mastar (*Infinitiv*) halde,
+  - Sıfatlar eksiz yalın halde,
+  - Edatlar çekimsiz halde sunulur.
+- Kullanıcı, tıklanabilir kelime çiplerinden yararlanarak veya doğrudan yazarak kelimeleri uygun sıraya dizer; fiil çekimlerini (*Konjugation*), ismin hallerini (*Nominativ, Akkusativ, Dativ, Genitiv*) ve sıfat tamlaması eklerini (*Adjektivdeklination*) uygulayarak tam cümleyi yazar.
+- Sistem içerisinde B1–C1 seviyesinde 27 adet kapsamlı hazır egzersiz yer alır.
 
-# Python tabanlı yerel geliştirme sunucusunu başlatın (Varsayılan port: 3000)
-python server.py 3000
-```
+### 5.2. Sıkı Kelime Kısıt Denetçisi
+Kurulan cümlenin değerlendirilmesinde iki temel kısıt deterministik olarak denetlenir:
+1. **Tüm Verilen Kelimeleri Kullanma Zorunluluğu:** Verilen `/` ayrılmış listedeki her bir kelimenin (düzensiz fiil kök değişimleri, ayrılabilen fiil önekleri, `-el/-er` sıfat düşmeleri ve `im`, `am`, `beim`, `zum`, `zur` gibi edat-artikel kaynaşmaları dahil) cümlede kullanılıp kullanılmadığı kontrol edilir. Verilen kelimelerden herhangi biri kullanılmamışsa sistem eksik kelimeleri listeler ve cümleyi doğru kabul etmez.
+2. **Listede Olmayan Kelime Ekleme Yasağı:** Kullanıcının veya değerlendirme motorunun verilen kelime listesi dışından cümleye ekstra kelime (listede bulunmayan zarf, sıfat, bağlaç veya fiil) eklemesi engellenir.
 
-Tarayıcınızdan `http://localhost:3000` adresine giderek uygulamayı çalıştırabilirsiniz.
+### 5.3. Çoklu Doğru Cevap ve Söz Dizimi (*Wortstellung*) Değerlendirmesi
+Almancada aynı kelime kümesiyle birden fazla geçerli söz dizimi (*Vorfeld / Mittelfeld* yer değiştirmeleri), zaman çekimi (*Präsens, Präteritum, Perfekt*) ve sıfat-isim eşleştirmesi kurulabilir. Değerlendirme motoru, kelime kısıtlarını eksiksiz sağlayan tüm gramerce doğru alternatif dizilimleri doğru kabul eder; `0–100` arası puan, cümlenin kusursuz hali, alternatif bir doğru dizilim ve detaylı Türkçe gramer analizi sunar.
 
-### 6.2. Cloudflare Worker (Yapay Zeka Vekil Sunucusu) Dağıtımı
-Gemini API anahtarı istemci koduna yazılmaz; yalnızca Cloudflare Worker üzerinde şifreli ortam değişkeni (*Secret*) olarak tanımlanır:
-
-```bash
-cd worker
-npx wrangler login
-npx wrangler secret put GEMINI_KEY
-npx wrangler deploy
-```
-
-`worker/wrangler.toml` dosyasındaki `ALLOWED_ORIGIN` değişkeni, yalnızca yetkili alan adlarından gelen isteklere izin verecek şekilde yapılandırılır.
-
-### 6.3. Supabase Veritabanı Kurulumu
-Çok oyunculu düello, kulüp ve ortak deste özelliklerini kendi Supabase projenizde etkinleştirmek için:
-1. Supabase SQL Editor üzerinde `supabase/schema.sql` dosyasını çalıştırarak tabloları, indeksleri ve Satır Düzeyinde Güvenlik (RLS) politikalarını oluşturun.
-2. `js/social.js` içindeki `SUPABASE_URL` ve `SUPABASE_ANON_KEY` sabitlerini kendi proje bilgilerinizle güncelleyin.
+### 5.4. Belgeden / Metinden Cümle Dağıtıcı
+Kullanıcı kendi ders notunu, PDF/DOCX belgesini veya metnini yüklediğinde sistem metindeki Almanca cümleleri seçer; dışarıdan hiçbir kelime eklemeden cümlenin kendi kelimelerini yalın/mastar (*Nominativ / Infinitiv*) hallerine indirger ve `/` ile ayırıp rastgele karıştırarak doğrudan oynanabilir yeni bir *Sätze bilden* egzersiz setine dönüştürür.
 
 ---
 
-## Lisans ve Atıf
+## 6. İnteraktif Alıştırma ve Oyun Modülleri
 
-- Uygulama kaynak kodu açık kaynaklı eğitim ve araştırma amaçlı geliştirilmiştir.
-- Sözlük morfoloji verileri **Wiktionary (Creative Commons Attribution-ShareAlike 4.0 International — CC BY-SA 4.0)**, örnek cümle derlemleri **Tatoeba (CC BY 2.0 FR)** ve eş anlamlı kelime ağları **OpenThesaurus (LGPL)** lisansları kapsamında kullanılmaktadır.
+Çalış sekmesi altında, kullanıcının seçtiği bir veya birden fazla destedeki kartları dinamik soru havuzuna dönüştüren sekiz farklı interaktif oyun yer alır:
+
+1. **Kablo ile Anlam Eşleştirme:** Sol sütundaki Almanca kelimeleri (veya Quiz sorularını) sağ sütundaki Türkçe anlamlarına (veya cevaplarına) renkli kübik Bézier kablolarıyla bağlama üzerine kurulu görsel eşleştirme oyunu.
+2. **Artikel Testi:** İsimlerin doğru tanımlık artikelini (`der`, `die`, `das`) bulmaya yönelik hızlı refleks testi.
+3. **Fiil Çekim Quiz:** Fiillerin *Präsens*, *Präteritum*, *Partizip II* ve yardımcı fiil (`hat` / `ist`) çekimlerini ölçen morfoloji testi.
+4. **İsim Çoğul Testi:** Tekil verilen isimlerin doğru çoğul (*Plural*) formunu seçmeye dayalı alıştırma.
+5. **Kelime Anlam Testi:** Almanca kelimenin Türkçe karşılığını veya Quiz sorusunun doğru cevabını çoktan seçmeli şıklar arasından bulma testi.
+6. **Ters Çeviri:** Türkçe anlamı verilen kavramın doğru Almanca karşılığını bulma testi.
+7. **Cümle Boşluk Doldurma (*Cloze Test*):** Örnek cümle içerisinden çıkarılan hedef kelimeyi bağlama göre doğru tamamlama alıştırması.
+8. **Karma Sınav:** Tüm soru tiplerini tek bir oturumda harmanlayan kapsamlı değerlendirme modu.
+
+Tüm oyunlar **Süresiz** modda veya **Zamanla Yarış** (30 saniye, 1 dakika, 2 dakika, 3 dakika) modunda oynanabilir; ardışık doğru yanıtlar seri kombo çarpanı (x2.5 kata kadar) kazandırır.
+
+---
+
+## 7. Almanca Dil Koçu (Diyalog ve Dinamik Alıştırma Modülü)
+
+Almanca Dil Koçu, kullanıcının seçtiği CEFR seviyesine (A1–C1) göre çalışan etkileşimli bir dilbilgisi ve çalışma asistanıdır:
+- **Gramer ve Belge İnceleme:** Kullanıcının sorduğu gramer kurallarını, cümle yapılarını veya sohbet ekranına yüklediği PDF, DOCX ve görsel belgeleri analiz ederek Türkçe açıklamalarla yanıtlar.
+- **Sohbet İçi Dinamik Alıştırma Üretimi:** Konuşulan konu veya yüklenen belge üzerinden anında tam ekran oynanabilen **Boşluk Doldurma (*Cloze*)**, **Gramer Analizi**, **Kelime Eşleştirme** ve **Çoktan Seçmeli Quiz** alıştırmaları üretir.
+
+---
+
+## 8. Nöral Çeviri ve Akıllı Okuma Modülü
+
+### 8.1. Çok Dilli Bağlamsal Çeviri
+- Almanca (`DE`), Türkçe (`TR`) ve İngilizce (`EN`) dilleri arasında çift yönlü çeviri sağlar.
+- Çevrilen ifadeyi sesli telaffuz (TTS) ile dinleme ve tek tıkla yeni bir kelime kartı olarak desteye ekleme imkanı sunar.
+
+### 8.2. Akıllı Okuma ve Belge İnceleme
+- Kullanıcının yüklediği PDF, DOCX veya metin belgelerini etkileşimli bir okuma ekranına dönüştürür.
+- Metin içerisindeki her bir kelime tıklanabilir yapıdadır: Kullanıcı okuma yaparken bilmediği bir kelimeye tıkladığında alt panelde kelimenin kanonik kökü, artikeli, Türkçe anlamı ve tüm cümlenin çevirisi anında açılır; kullanıcı okumayı bölmeden kelimeyi seçtiği desteye kaydedebilir.
+
+---
+
+## 9. Sosyal Öğrenme, Rekabetçi Düello, Ortak Deste ve ELO Derecelendirme Modülü
+
+Bireysel çalışmaları topluluk etkileşimiyle destekleyen çok oyunculu modüller şunlardır:
+
+- **Canlı Çok Oyunculu Bilgi Yarışması (PIN Kodlu Odalar):** Bir kullanıcının kendi destesinden veya genel havuzdan oluşturduğu 6 haneli oda PIN kodu ile birden fazla katılımcının aynı anda zamana karşı yarıştığı canlı sınav odaları.
+- **Birebir Rekabetçi Düello:** Arkadaş listesindeki kullanıcılarla gerçek zamanlı kelime ve bilgi düelloları.
+- **İşbirlikçi Ortak Deste Çalışması (`COL-XXXX`):** Oluşturulan işbirliği kodu üzerinden birden fazla kullanıcının aynı anda ortak bir desteye kelime veya soru kartı eklemesi ve tamamlanan desteyi kendi kütüphanelerine kaydetmesi.
+- **Çalışma Kulüpleri ve Topluluk Kütüphanesi:** Kulüp üyelerinin ortak desteler oluşturabildiği, kendi aralarında sohbet edebildiği ve topluluk tarafından paylaşılan açık desteleri kendi cihazlarına indirebildiği paylaşım ağı.
+- **Dinamik ELO ve Lig Sistemi:** Alıştırmalar, oyunlar ve canlı düellolardaki doğruluk oranı, yanıt süresi ve kelime zorluğuna göre hesaplanan ELO puanı ile *Bronz, Gümüş, Altın, Platin, Elmas* ve *Usta* liglerinde kademe ilerlemesi.
