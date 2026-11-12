@@ -126,7 +126,12 @@ class WortCoachApp {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.8.5').then((reg) => reg.update()).catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=3.8.9').then((reg) => {
+        reg.update();
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      }).catch(() => {});
     }
   }
 
