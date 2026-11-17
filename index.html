@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.8.9" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.8.9" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.8.9" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.8.9" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.8.9" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.8.9" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.8.9" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.8.9" />
+  <link rel="manifest" href="manifest.json?v=3.9.0" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.9.0" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.9.0" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.9.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.9.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.9.0" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.9.0" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.9.0" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.8.9" />
-  <link rel="stylesheet" href="css/components.css?v=3.8.9" />
+  <link rel="stylesheet" href="css/app.css?v=3.9.0" />
+  <link rel="stylesheet" href="css/components.css?v=3.9.0" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2701,6 +2701,15 @@
           </button>
         </div>
 
+        <!-- Aydınlatma Metni & Veri Paylaşımı -->
+        <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
+          <div style="font-size:0.86rem; font-weight:800; color:var(--text-primary); margin-bottom:4px;">Gizlilik &amp; Yapay Zeka Veri Paylaşımı</div>
+          <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:10px;">Supabase bulut kaydı ve Google Gemini Flash API veri aktarımı hakkında KVKK / GDPR aydınlatma metnini inceleyin.</p>
+          <button type="button" id="btn-open-settings-privacy" class="btn-secondary" style="width:100%; border-radius:var(--radius-md);">
+            <span>Aydınlatma Metnini Görüntüle</span>
+          </button>
+        </div>
+
         <!-- Doğrulanmış Kaynak Lisansları -->
         <div style="font-size:0.75rem; color:var(--text-muted); line-height:1.45; border-top:1px solid var(--border-subtle); padding-top:12px;">
           Morfoloji ve artikeller <strong style="color:var(--text-primary)">Wiktionary (CC BY-SA 4.0)</strong>, örnek cümleler <strong style="color:var(--text-primary)">Tatoeba (CC BY 2.0 FR)</strong>, çeviriler <strong style="color:var(--text-primary)">DeepL &amp; Google Neural MT</strong> standartlarıyla sağlanır.
@@ -3059,11 +3068,67 @@
           <label for="auth-reg-password-confirm">Şifreyi Doğrula</label>
           <input type="password" id="auth-reg-password-confirm" class="form-control" placeholder="Şifrenizi tekrar yazın..." required autocomplete="new-password" />
         </div>
+        <div class="auth-privacy-summary">
+          <div class="auth-privacy-title">Veri İşleme ve Yapay Zeka Bilgilendirmesi</div>
+          Hesap, istatistik ve bulut desteleriniz <strong>Supabase</strong> veritabanında saklanır. AI Koç, Deste Oluşturucu, Görsel/PDF OCR ve Sätze bilden kontrollerinde girdiğiniz metin, cümle ve belgeler <strong>Cloudflare Worker</strong> üzerinden <strong>Google Gemini Flash API</strong> servisine iletilir. Kayıt aşamasında kişisel e-posta/kimlik bilgisi kullanmayınız.
+        </div>
+        <div class="auth-consent-row">
+          <input type="checkbox" id="auth-reg-consent" class="auth-consent-checkbox" required />
+          <label for="auth-reg-consent" class="auth-consent-label">
+            <button type="button" id="btn-open-privacy-modal" class="auth-consent-link">KVKK &amp; GDPR Aydınlatma Metni</button>'ni okudum; hesap verilerimin <strong>Supabase</strong>'de saklanmasını ve yapay zeka özelliklerinde girdiğim içeriklerin <strong>Google Gemini Flash</strong> ile paylaşılmasını kabul ediyorum.
+          </label>
+        </div>
         <div id="auth-reg-error" class="auth-error-msg hidden"></div>
         <button type="button" id="btn-submit-register" class="btn-coach-build-full" style="margin-top:8px;">
           <span>Kayıt Ol</span>
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: KVKK & GDPR AYDINLATMA METNİ VE YAPAY ZEKA VERİ PAYLAŞIMI (modal-privacy-notice) -->
+  <div id="modal-privacy-notice" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="privacy-modal-title">
+    <div class="prof-auth-box privacy-modal-box">
+      <div class="prof-modal-header">
+        <div class="prof-modal-title" id="privacy-modal-title">Aydınlatma Metni ve Veri Gizliliği</div>
+        <button type="button" id="btn-close-privacy-modal" class="prof-close-btn" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div class="privacy-modal-body">
+        <div class="privacy-section">
+          <h4>1. Uygulama Kapsamı ve Hesap Verileri</h4>
+          <p>WortCoach, Almanca kelime ve dilbilgisi öğrenimi için geliştirilmiş bir eğitim uygulamasıdır. Kayıt olurken yalnızca seçtiğiniz takma <strong>kullanıcı adı</strong> ve şifreniz talep edilir (kimlik doğrulama altyapısı için bu addan dahili teknik tanımlayıcı üretilir).</p>
+          <p>Hesabınızla ilişkili olarak profiliniz, otomatik atanan arkadaş kodunuz, ELO/lig puanınız, günlük çalışma istatistikleriniz, arkadaşlık istekleriniz ve buluta eşitlediğiniz desteler <strong>Supabase</strong> (PostgreSQL ve Auth) bulut veritabanında saklanır. Kelime kartlarınız ayrıca çevrimdışı erişim için tarayıcınızın yerel belleğinde (IndexedDB / localStorage) tutulur.</p>
+        </div>
+
+        <div class="privacy-section">
+          <h4>2. Google Gemini Flash API ile Yapay Zeka Veri Paylaşımı</h4>
+          <p><strong>AI Koç sohbeti</strong>, <strong>AI Deste / Quiz Oluşturucu</strong>, <strong>Görsel/PDF OCR Okuyucu</strong> ve <strong>Sätze bilden cümle kontrolü</strong> özelliklerini kullandığınızda; girdiğiniz metinler, kurduğunuz Almanca cümleler, son sohbet geçmişi (en fazla 6 mesaj), çalışma seviyesi (A1-C2) ve yüklediğiniz görsel veya PDF belgeleri işlenmek üzere aracı sunucumuz (<strong>Cloudflare Worker</strong>) üzerinden yurt dışında bulunan <strong>Google Gemini Flash API (Google LLC)</strong> sunucularına aktarılır.</p>
+          <p>Bu içerikler yapay zeka yanıtı üretilmesi amacıyla işlenir; yapay zeka özelliklerini kullanmadığınız sürece kelime kartlarınız Google Gemini sunucularına gönderilmez.</p>
+        </div>
+
+        <div class="privacy-section">
+          <h4>3. Diğer Üçüncü Taraf Servisler ve Yerel Ses İşleme</h4>
+          <p>Sözlük aramaları ve cümle çevirileri sırasında yalnızca sorguladığınız kelime veya metin <strong>Wiktionary</strong>, <strong>OpenThesaurus</strong>, <strong>Google Translate</strong> ve <strong>MyMemory</strong> servislerine iletilir. Çok oyunculu odalar (Kulüpler, 1v1, Kahoot, Ortak Çalışma), kötüye kullanım engelleme (rate limit) ve anlık bildirim abonelikleri için <strong>Cloudflare Workers &amp; KV</strong> kullanılır.</p>
+          <p>Telaffuz Koçu'nda mikrofon kaydınız varsayılan olarak <strong>yalnızca tarayıcınız içinde</strong> (MFA / Wav2Vec2 ONNX) analiz edilir. Yalnızca Ayarlar menüsünden kendi API anahtarınızla "Microsoft Azure Speech GOP" seçeneğini aktif ederseniz ses kaydınız Microsoft Azure sunucularına gönderilir.</p>
+        </div>
+
+        <div class="privacy-warning-box">
+          <strong>Hassas Veri Yasağı:</strong> Lütfen kullanıcı adı, AI Koç, Deste Oluşturucu, OCR yükleyici veya herkese açık topluluk alanlarına T.C. kimlik numarası, pasaport, telefon, kredi kartı/finansal bilgi, sağlık verisi, parola veya üçüncü kişilere ait gizli belgeler girmeyiniz ve yüklemeyiniz.
+        </div>
+
+        <div class="privacy-section">
+          <h4>4. Saklama, Gizlilik Tercihleri ve Haklarınız (KVKK m. 11 / GDPR)</h4>
+          <p>Profil ayarlarından deste görünürlüğünüzü <strong>Gizli (Sadece Ben)</strong> olarak sınırlayabilir, destelerinizi uygulama içinden silebilir ve cihazınızdaki yerel verileri tarayıcı/uygulama verilerini temizleyerek kaldırabilirsiniz. Bulut hesabınızın veya kayıtlı verilerinizin tamamen silinmesine yönelik taleplerinizi WortCoach geliştirici deposu (github.com/furkna26/WortCoach) üzerinden iletebilirsiniz.</p>
+        </div>
+      </div>
+
+      <div class="privacy-modal-footer">
+        <button type="button" id="btn-privacy-dismiss" class="btn-secondary-compact" style="padding:10px 16px;">Kapat</button>
+        <button type="button" id="btn-privacy-accept" class="btn-coach-build-full" style="padding:10px 18px;">Okudum, Onaylıyorum</button>
+      </div>
     </div>
   </div>
 
@@ -3774,25 +3839,25 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.8.9"></script>
-  <script src="js/db.js?v=3.8.9"></script>
-  <script src="js/verbHelper.js?v=3.8.9"></script>
-  <script src="js/grammarEnrichment.js?v=3.8.9"></script>
-  <script src="js/offlineDictionary.js?v=3.8.9"></script>
-  <script src="js/dictionary.js?v=3.8.9"></script>
-  <script src="js/curatedPacks.js?v=3.8.9"></script>
-  <script src="js/seeder.js?v=3.8.9"></script>
-  <script src="js/tts.js?v=3.8.9"></script>
-  <script src="js/pronunciation.js?v=3.8.9"></script>
-  <script src="js/translator.js?v=3.8.9"></script>
-  <script src="js/game.js?v=3.8.9"></script>
-  <script src="js/study.js?v=3.8.9"></script>
-  <script src="js/stats.js?v=3.8.9"></script>
-  <script src="js/coach.js?v=3.8.9"></script>
-  <script src="js/deckBuilder.js?v=3.8.9"></script>
-  <script src="js/satzBuilder.js?v=3.8.9"></script>
-  <script src="js/social.js?v=3.8.9"></script>
-  <script src="js/app.js?v=3.8.9"></script>
+  <script src="js/config.js?v=3.9.0"></script>
+  <script src="js/db.js?v=3.9.0"></script>
+  <script src="js/verbHelper.js?v=3.9.0"></script>
+  <script src="js/grammarEnrichment.js?v=3.9.0"></script>
+  <script src="js/offlineDictionary.js?v=3.9.0"></script>
+  <script src="js/dictionary.js?v=3.9.0"></script>
+  <script src="js/curatedPacks.js?v=3.9.0"></script>
+  <script src="js/seeder.js?v=3.9.0"></script>
+  <script src="js/tts.js?v=3.9.0"></script>
+  <script src="js/pronunciation.js?v=3.9.0"></script>
+  <script src="js/translator.js?v=3.9.0"></script>
+  <script src="js/game.js?v=3.9.0"></script>
+  <script src="js/study.js?v=3.9.0"></script>
+  <script src="js/stats.js?v=3.9.0"></script>
+  <script src="js/coach.js?v=3.9.0"></script>
+  <script src="js/deckBuilder.js?v=3.9.0"></script>
+  <script src="js/satzBuilder.js?v=3.9.0"></script>
+  <script src="js/social.js?v=3.9.0"></script>
+  <script src="js/app.js?v=3.9.0"></script>
 </body>
 </html>
 

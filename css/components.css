@@ -6660,3 +6660,134 @@ body.coach-chat-focused .coach-chat-app-container {
 .satz-token-chip:active {
   transform: scale(0.96) !important;
 }
+
+/* ==========================================================================
+   KAYIT AYDINLATMA METNİ & AÇIK RIZA STİLLERİ
+   ========================================================================== */
+.auth-privacy-summary {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.76rem;
+  line-height: 1.48;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.auth-privacy-summary strong {
+  color: var(--text-primary, #f8fafc);
+}
+
+.auth-privacy-title {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #60a5fa;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+
+.auth-consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elevated, #10192d);
+  border: 1px solid var(--border-medium, #253552);
+  border-radius: 12px;
+}
+
+.auth-consent-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--brand-blue, #2563EB);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.auth-consent-label {
+  font-size: 0.77rem;
+  line-height: 1.45;
+  color: var(--text-secondary, #cbd5e1);
+  cursor: pointer;
+}
+
+.auth-consent-label strong {
+  color: var(--text-primary, #f8fafc);
+}
+
+.auth-consent-link {
+  display: inline;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #60a5fa;
+  font-size: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.auth-consent-link:hover {
+  color: #93c5fd;
+}
+
+.privacy-modal-box {
+  max-width: 560px !important;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.privacy-modal-body {
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.privacy-section {
+  background: var(--bg-elevated, #10192d);
+  border: 1px solid var(--border-subtle, #1e293b);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.privacy-section h4 {
+  margin: 0 0 6px 0;
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: var(--text-primary, #f8fafc);
+}
+
+.privacy-section p {
+  margin: 0;
+  font-size: 0.79rem;
+  line-height: 1.52;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.privacy-section p + p {
+  margin-top: 6px;
+}
+
+.privacy-warning-box {
+  background: rgba(245, 158, 11, 0.09);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 0.78rem;
+  line-height: 1.48;
+  color: #fcd34d;
+}
+
+.privacy-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle, #1e293b);
+}
+

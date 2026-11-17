@@ -452,3 +452,97 @@ create policy "Decks manage own"
   on public.decks for all
   using (auth.uid() = owner_id)
   with check (auth.uid() = owner_id);
+
+-- ----------------------------------------------------------------------------
+-- CLUBS, CLUB MEMBERS & CLUB DECKS RLS
+-- ----------------------------------------------------------------------------
+alter table public.clubs enable row level security;
+alter table public.club_members enable row level security;
+alter table public.club_decks enable row level security;
+
+-- Kulüpleri oturum açmış kullanıcılar listeleyebilir; yalnızca kurucusu değiştirebilir/silebilir
+drop policy if exists "Clubs read authenticated" on public.clubs;
+create policy "Clubs read authenticated"
+  on public.clubs for select
+  using (auth.uid() is not null);
+
+drop policy if exists "Clubs manage own" on public.clubs;
+create policy "Clubs manage own"
+  on public.clubs for all
+  using (auth.uid() = owner_id)
+  with check (auth.uid() = owner_id);
+
+-- Kulüp üyeliklerini kullanıcının kendisi veya kulüp kurucusu görebilir
+drop policy if exists "Club members read own or owner" on public.club_members;
+create policy "Club members read own or owner"
+  on public.club_members for select
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from public.clubs c
+       where c.id = club_members.club_id
+         and c.owner_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Club members insert self" on public.club_members;
+create policy "Club members insert self"
+  on public.club_members for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Club members delete self or owner" on public.club_members;
+create policy "Club members delete self or owner"
+  on public.club_members for delete
+  using (
+    auth.uid() = user_id
+    or exists (
+      select 1 from public.clubs c
+       where c.id = club_members.club_id
+         and c.owner_id = auth.uid()
+    )
+  );
+
+-- Kulüp destelerini yalnızca kulüp kurucusu veya kulüp üyeleri okuyabilir/ekleyebilir
+drop policy if exists "Club decks read members" on public.club_decks;
+create policy "Club decks read members"
+  on public.club_decks for select
+  using (
+    exists (
+      select 1 from public.clubs c
+       where c.id = club_decks.club_id
+         and c.owner_id = auth.uid()
+    )
+    or exists (
+      select 1 from public.club_members cm
+       where cm.club_id = club_decks.club_id
+         and cm.user_id = auth.uid()
+    )
+  );
+
+drop policy if exists "Club decks manage members" on public.club_decks;
+create policy "Club decks manage members"
+  on public.club_decks for all
+  using (
+    exists (
+      select 1 from public.clubs c
+       where c.id = club_decks.club_id
+         and c.owner_id = auth.uid()
+    )
+    or exists (
+      select 1 from public.club_members cm
+       where cm.club_id = club_decks.club_id
+         and cm.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.clubs c
+       where c.id = club_decks.club_id
+         and c.owner_id = auth.uid()
+    )
+    or exists (
+      select 1 from public.club_members cm
+       where cm.club_id = club_decks.club_id
+         and cm.user_id = auth.uid()
+    )
+  );

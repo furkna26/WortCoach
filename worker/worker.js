@@ -565,12 +565,17 @@ async function handleDatabaseApi(path, body, env, c) {
       }, 200, c.headers);
     }
 
-    // 1. Kayıt Ol (Admin API ile onaysız direkt aktif etme)
+    // 1. Kayıt Ol (Admin API ile onaysız direkt aktif etme + Açık Rıza Kaydı)
     if (path === '/api/auth/register') {
       const username = clean(body.username, 30);
       const password = String(body.password || '');
+      const consentAccepted = body.consentAccepted === true;
+      const consentVersion = clean(body.consentVersion, 30) || '2026-11-17';
       if (!username || username.length < 3 || password.length < 6) {
         return json({ error: 'Kullanıcı adı en az 3, şifre en az 6 karakter olmalıdır.' }, 400, c.headers);
+      }
+      if (!consentAccepted) {
+        return json({ error: 'Kayıt işlemi için Aydınlatma Metni ve yapay zeka veri işleme onayı zorunludur.' }, 400, c.headers);
       }
 
       // Supabase Admin API çağrısı
@@ -580,7 +585,12 @@ async function handleDatabaseApi(path, body, env, c) {
           email: `${username}@gmail.com`,
           password,
           email_confirm: true,
-          user_metadata: { username }
+          user_metadata: {
+            username,
+            privacy_consent_accepted: true,
+            privacy_consent_version: consentVersion,
+            privacy_consent_at: new Date().toISOString()
+          }
         })
       });
 

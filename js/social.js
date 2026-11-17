@@ -2603,16 +2603,31 @@
     // =========================================================================
     // BASİT AUTH & OTURUM
     // =========================================================================
-    async signUpWithUsername(username, password, passwordConfirm) {
+    async signUpWithUsername(username, password, passwordConfirm, consentAccepted = false) {
       const cleanUser = (username || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (cleanUser.length < 3) throw new Error('Kullanıcı adı en az 3 karakter olmalı (harf, rakam, alt çizgi).');
       if (!password || password.length < 6) throw new Error('Şifre en az 6 karakter olmalıdır.');
       if (password !== passwordConfirm) throw new Error('Şifreler birbiriyle eşleşmiyor.');
+      if (!consentAccepted) {
+        throw new Error('Kayıt olabilmek için KVKK & GDPR Aydınlatma Metni ve Google Gemini Flash / Supabase veri işleme onayını işaretlemeniz gerekmektedir.');
+      }
 
-      const data = await this.apiCall('auth/register', { username: cleanUser, password });
+      const consentVersion = '2026-11-17';
+      const data = await this.apiCall('auth/register', {
+        username: cleanUser,
+        password,
+        consentAccepted: true,
+        consentVersion
+      });
       if (data.ok && data.session) {
         localStorage.setItem(this.sessionKey, JSON.stringify(data.session));
         localStorage.setItem(this.profileKey, JSON.stringify(data.profile));
+        localStorage.setItem('wortcoach_privacy_consent', JSON.stringify({
+          version: consentVersion,
+          accepted: true,
+          acceptedAt: new Date().toISOString(),
+          username: cleanUser
+        }));
         this.user = data.session.user;
         this.profile = data.profile;
         this.updateUI();
@@ -3683,13 +3698,23 @@
         const u = $('auth-reg-username')?.value;
         const p = $('auth-reg-password')?.value;
         const pc = $('auth-reg-password-confirm')?.value;
+        const consentChecked = !!($('auth-reg-consent')?.checked);
         const errEl = $('auth-reg-error');
         if (errEl) errEl.classList.add('hidden');
+
+        if (!consentChecked) {
+          if (errEl) {
+            errEl.textContent = 'Devam etmek için Aydınlatma Metni ve Google Gemini Flash / Supabase veri paylaşımı onay kutusunu işaretlemelisiniz.';
+            errEl.classList.remove('hidden');
+          }
+          $('auth-reg-consent')?.focus();
+          return;
+        }
 
         try {
           $('btn-submit-register').disabled = true;
           $('btn-submit-register').textContent = 'Kayıt Yapılıyor...';
-          await this.signUpWithUsername(u, p, pc);
+          await this.signUpWithUsername(u, p, pc, consentChecked);
           $('modal-auth')?.classList.add('hidden');
           if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('Hesabınız oluşturuldu ve giriş yapıldı.');
         } catch (err) {
@@ -3700,6 +3725,44 @@
         } finally {
           $('btn-submit-register').disabled = false;
           $('btn-submit-register').textContent = 'Kayıt Ol';
+        }
+      });
+
+      const openPrivacyModal = (fromSettings = false) => {
+        if (fromSettings) {
+          $('modal-settings')?.classList.add('hidden');
+        }
+        $('modal-privacy-notice')?.classList.remove('hidden');
+      };
+      const closePrivacyModal = () => {
+        $('modal-privacy-notice')?.classList.add('hidden');
+      };
+
+      $('btn-open-privacy-modal')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openPrivacyModal(false);
+      });
+      $('btn-open-settings-privacy')?.addEventListener('click', () => openPrivacyModal(true));
+      $('btn-close-privacy-modal')?.addEventListener('click', closePrivacyModal);
+      $('btn-privacy-dismiss')?.addEventListener('click', closePrivacyModal);
+      $('btn-privacy-accept')?.addEventListener('click', () => {
+        const cb = $('auth-reg-consent');
+        if (cb) cb.checked = true;
+        $('auth-reg-error')?.classList.add('hidden');
+        localStorage.setItem('wortcoach_privacy_consent', JSON.stringify({
+          version: '2026-11-17',
+          accepted: true,
+          acceptedAt: new Date().toISOString()
+        }));
+        closePrivacyModal();
+      });
+      $('modal-privacy-notice')?.addEventListener('click', (e) => {
+        if (e.target === $('modal-privacy-notice')) closePrivacyModal();
+      });
+      $('auth-reg-consent')?.addEventListener('change', () => {
+        if ($('auth-reg-consent')?.checked) {
+          $('auth-reg-error')?.classList.add('hidden');
         }
       });
     }
