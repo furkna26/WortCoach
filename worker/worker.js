@@ -316,8 +316,9 @@ function isOriginAllowed(origin, env) {
   if ((scheme === 'http:' || scheme === 'https:') && (host === 'localhost' || host === '127.0.0.1' || host === '[::1]')) {
     return true;
   }
-  if (env && env.ALLOWED_ORIGINS) {
-    const extra = String(env.ALLOWED_ORIGINS).split(',').map(s => s.trim()).filter(Boolean);
+  const extraRaw = env && (env.ALLOWED_ORIGINS || env.ALLOWED_ORIGIN);
+  if (extraRaw) {
+    const extra = String(extraRaw).split(',').map(s => s.trim()).filter(Boolean);
     if (extra.includes(origin) || extra.includes(parsed.origin)) return true;
   }
   return false;
