@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.9.0" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.9.0" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.9.0" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.9.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.9.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.9.0" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.9.0" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.9.0" />
+  <link rel="manifest" href="manifest.json?v=3.9.1" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.9.1" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.9.1" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.9.1" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.9.1" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.9.1" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.9.1" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.9.1" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.9.0" />
-  <link rel="stylesheet" href="css/components.css?v=3.9.0" />
+  <link rel="stylesheet" href="css/app.css?v=3.9.1" />
+  <link rel="stylesheet" href="css/components.css?v=3.9.1" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2027,31 +2027,31 @@
              ================================================================== -->
         <div id="pane-social-arena" class="social-pane hidden">
           <!-- Bilgilendirici Başlık Kartı -->
-          <div class="social-card-box" style="margin-bottom:14px; background:linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(37,99,235,0.06) 100%); border-color:var(--brand-blue);">
+          <div class="social-card-box arena-hero-card">
             <div style="font-weight:900; font-size:1.05rem; color:var(--text-primary); margin-bottom:4px;">Rekabet Modu (Canlı Quiz)</div>
-            <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.4;">
-              İster arkadaşınızla 1v1 kapışın, ister sınıf arkadaşlarınızla aynı anda yarışın. Odayı kurduktan sonra arkadaş listenizden davet gönderebilir ya da PIN kodunu paylaşabilirsiniz. Asla yapay zeka botu yer almaz; tamamen eşzamanlı ve canlıdır.
+            <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.45;">
+              İster arkadaşınızla 1v1 kapışın, ister sınıf arkadaşlarınızla aynı anda yarışın. Odayı kurduktan sonra arkadaş listenizden davet gönderebilir ya da PIN kodunu paylaşabilirsiniz. Yapay zeka botu yoktur; tamamen eşzamanlı ve canlıdır.
             </div>
           </div>
 
           <!-- Müsabaka Odası Aç (Oda Sahibi / Host) -->
           <div class="social-card-box" style="margin-bottom:14px;">
-            <div style="font-weight:800; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">Müsabaka Odası Kur (Host)</div>
-            <label style="font-size:0.75rem; color:var(--text-muted); display:block; margin-bottom:4px;">Yarışılacak Desteyi Seçin:</label>
-            <select id="arena-kahoot-deck-select" class="form-control" style="margin-bottom:10px;"></select>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div style="font-weight:800; font-size:0.95rem; margin-bottom:8px; color:var(--text-primary);">Müsabaka Odası Kur (Host)</div>
+            <label for="arena-kahoot-deck-select" style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:5px;">Yarışılacak Desteyi Seçin:</label>
+            <select id="arena-kahoot-deck-select" class="form-control" style="margin-bottom:12px;"></select>
+
+            <div class="arena-form-grid">
               <div>
-                <label style="font-size:0.72rem; color:var(--text-muted); display:block; margin-bottom:2px;">Soru Başı Süre:</label>
-                <select id="arena-kahoot-duration-select" class="dock-select" style="width:100%; padding:8px;">
+                <label for="arena-kahoot-duration-select" style="font-size:0.74rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Soru Başı Süre:</label>
+                <select id="arena-kahoot-duration-select" class="form-control">
                   <option value="10">10 Saniye</option>
                   <option value="15" selected>15 Saniye</option>
                   <option value="20">20 Saniye</option>
                 </select>
               </div>
               <div>
-                <label style="font-size:0.72rem; color:var(--text-muted); display:block; margin-bottom:2px;">Soru Sayısı:</label>
-                <select id="arena-kahoot-count-select" class="dock-select" style="width:100%; padding:8px;">
+                <label for="arena-kahoot-count-select" style="font-size:0.74rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">Soru Sayısı:</label>
+                <select id="arena-kahoot-count-select" class="form-control">
                   <option value="5">5 Soru</option>
                   <option value="10" selected>10 Soru</option>
                   <option value="15">15 Soru</option>
@@ -2059,18 +2059,18 @@
               </div>
             </div>
 
-            <button type="button" id="btn-create-kahoot-room" class="btn-primary-compact" style="width:100%; padding:12px; font-weight:800; font-size:0.9rem; background:var(--brand-blue); border-color:var(--brand-blue);">
+            <button type="button" id="btn-create-kahoot-room" class="btn-coach-build-full" style="width:100%;">
               <span>Müsabaka Odasını Kur ve Lobiye Geç</span>
             </button>
           </div>
 
           <!-- PIN Koduyla Katıl (Yarışmacı) -->
           <div class="social-card-box">
-            <div style="font-weight:800; font-size:0.95rem; margin-bottom:6px; color:var(--text-primary);">PIN Koduyla Katıl (Yarışmacı)</div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">Arkadaşınızın veya öğretmeninizin paylaştığı 6 haneli oda PIN kodunu girin:</div>
-            <div style="display:flex; gap:8px;">
-              <input type="text" id="input-arena-kahoot-pin" class="form-control" placeholder="6 Haneli PIN..." style="flex:1; letter-spacing:1px; font-weight:700;" />
-              <button type="button" id="btn-join-kahoot-room" class="btn-primary-compact" style="padding:0 20px; font-weight:800;">Odaya Gir</button>
+            <div style="font-weight:800; font-size:0.95rem; margin-bottom:4px; color:var(--text-primary);">PIN Koduyla Katıl (Yarışmacı)</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">Arkadaşınızın veya öğretmeninizin paylaştığı oda PIN kodunu girin (Örn: 123456 veya VS-1234):</div>
+            <div class="arena-pin-join-row">
+              <input type="text" id="input-arena-kahoot-pin" class="form-control" placeholder="PIN (Örn: 482910)..." maxlength="12" />
+              <button type="button" id="btn-join-kahoot-room" class="btn-primary-compact" style="padding:0 22px; min-height:44px; font-weight:800;">Odaya Gir</button>
             </div>
           </div>
         </div>
@@ -3557,11 +3557,11 @@
 
   <!-- MODAL: 1v1 / ZAMANA KARŞI DÜELLO MAÇ OYUNU (modal-arena-1v1-game) -->
   <div id="modal-arena-1v1-game" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true">
-    <div class="modal-sheet" style="max-width:540px; height:92vh; display:flex; flex-direction:column; padding:18px;">
-      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <div class="modal-sheet">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
         <div>
           <span class="badge" style="background:#EF4444; color:#fff; font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">Canlı Düello</span>
-          <h3 style="font-size:1.15rem; font-weight:900; margin:2px 0 0;" id="arena-1v1-match-title">Zamana Karşı Kapışma</h3>
+          <h3 style="font-size:1.15rem; font-weight:900; margin:4px 0 0;" id="arena-1v1-match-title">Zamana Karşı Kapışma</h3>
         </div>
         <button type="button" id="btn-close-1v1-game" class="icon-btn-ghost" aria-label="Ayrıl">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
@@ -3569,15 +3569,15 @@
       </div>
 
       <!-- FAZ 1: DÜELLO LOBİ EKRANI -->
-      <div id="arena-1v1-phase-lobby" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-        <div style="text-align:center; padding:16px 0;">
-          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">KATILIM PIN KODU</div>
-          <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:14px;">
-            <div id="arena-1v1-pin-display" style="font-size:1.8rem; font-weight:900; letter-spacing:2px; color:var(--brand-blue); background:var(--bg-surface); padding:8px 18px; border-radius:12px; border:2px dashed var(--border-medium);">VS-0000</div>
+      <div id="arena-1v1-phase-lobby">
+        <div style="text-align:center; padding:12px 0;">
+          <div style="font-size:0.78rem; font-weight:800; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:4px;">KATILIM PIN KODU</div>
+          <div class="arena-pin-banner">
+            <div id="arena-1v1-pin-display" class="arena-pin-code-box">VS-0000</div>
             <button type="button" id="btn-copy-1v1-pin" class="btn-primary-compact" style="padding:10px 14px; font-size:0.85rem;" title="Kodu Kopyala">Kopyala</button>
           </div>
-          
-          <div style="margin:12px 0;">
+
+          <div style="margin:10px 0;">
             <button type="button" id="btn-open-invite-friend-1v1" class="btn-primary-compact" style="background:#10B981; border-color:#10B981; padding:10px 18px; font-weight:700;">
               <span>Arkadaşını Davet Et</span>
             </button>
@@ -3591,47 +3591,49 @@
           </div>
         </div>
 
-        <div style="padding-top:16px;">
+        <div style="padding-top:10px; flex-shrink:0;">
           <div id="arena-1v1-guest-waiting-msg" class="hidden" style="text-align:center; font-size:0.88rem; color:var(--text-muted); padding:12px; background:var(--bg-surface); border-radius:12px; margin-bottom:10px;">
             Oda sahibinin oyunu başlatması bekleniyor...
           </div>
-          <button type="button" id="btn-start-1v1-lobby-match" class="btn-coach-build-full" style="background:#EF4444; font-size:1.05rem; padding:14px;">
+          <button type="button" id="btn-start-1v1-lobby-match" class="btn-coach-build-full" style="width:100%; background:#EF4444; font-size:1rem; padding:14px;">
             <span>Kapışmayı Başlat</span>
           </button>
         </div>
       </div>
 
       <!-- FAZ 2: OYUN / SORULAR EKRANI -->
-      <div id="arena-1v1-phase-game" class="hidden" style="flex:1; display:flex; flex-direction:column;">
-        <!-- Maç Bilgi / Sayaç / Skor Şeridi -->
-        <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:14px; padding:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div style="font-size:0.72rem; color:var(--text-muted);">SİZİN SKORUNUZ</div>
-            <div id="arena-1v1-my-score" style="font-size:1.3rem; font-weight:900; color:var(--brand-blue);">0</div>
+      <div id="arena-1v1-phase-game" class="hidden">
+        <div>
+          <!-- Maç Bilgi / Sayaç / Skor Şeridi -->
+          <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:14px; padding:12px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:0.72rem; color:var(--text-muted);">SİZİN SKORUNUZ</div>
+              <div id="arena-1v1-my-score" style="font-size:1.3rem; font-weight:900; color:var(--brand-blue);">0</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:0.72rem; color:var(--text-muted);">KALAN SÜRE</div>
+              <div id="arena-1v1-timer" style="font-size:1.4rem; font-weight:900; color:#EF4444;">60s</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.72rem; color:var(--text-muted);">SORU</div>
+              <div id="arena-1v1-q-counter" style="font-size:1.2rem; font-weight:800; color:var(--text-primary);">1 / 10</div>
+            </div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:0.72rem; color:var(--text-muted);">KALAN SÜRE</div>
-            <div id="arena-1v1-timer" style="font-size:1.4rem; font-weight:900; color:#EF4444;">60s</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:0.72rem; color:var(--text-muted);">SORU</div>
-            <div id="arena-1v1-q-counter" style="font-size:1.2rem; font-weight:800; color:var(--text-primary);">1 / 10</div>
-          </div>
-        </div>
 
-        <!-- Soru Alanı -->
-        <div id="arena-1v1-question-box" style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px;">
-          <div id="arena-1v1-word-pos" style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Nomen</div>
-          <div id="arena-1v1-word-lemma" style="font-size:1.8rem; font-weight:900; color:var(--text-primary); margin:6px 0;">das Haus</div>
-          <div id="arena-1v1-word-sentence" style="font-size:0.85rem; color:var(--text-secondary); font-style:italic;">Hier ist mein Haus.</div>
+          <!-- Soru Alanı -->
+          <div id="arena-1v1-question-box" class="arena-question-card" style="margin-bottom:14px;">
+            <div id="arena-1v1-word-pos" style="font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Nomen</div>
+            <div id="arena-1v1-word-lemma" style="font-size:1.8rem; font-weight:900; color:var(--text-primary); margin:6px 0;">das Haus</div>
+            <div id="arena-1v1-word-sentence" style="font-size:0.85rem; color:var(--text-secondary); font-style:italic;">Hier ist mein Haus.</div>
+          </div>
         </div>
 
         <!-- 4 Seçenek Butonu -->
-        <div id="arena-1v1-options-grid" style="display:grid; grid-template-columns:1fr; gap:10px; margin-bottom:14px;"></div>
+        <div id="arena-1v1-options-grid" style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:auto;"></div>
       </div>
 
       <!-- FAZ 3: MAÇ BİTİŞ & PODYUM KARTI -->
-      <div id="arena-1v1-results-box" class="hidden" style="text-align:center; padding:20px; background:var(--bg-surface); border-radius:18px; border:1px solid var(--border-medium); margin-top:auto; margin-bottom:auto;">
+      <div id="arena-1v1-results-box" class="hidden" style="text-align:center; padding:22px; background:var(--bg-surface); border-radius:18px; border:1px solid var(--border-medium); margin:auto 0;">
         <div style="font-size:1.4rem; font-weight:900; color:var(--text-primary); margin-bottom:6px;" id="arena-1v1-winner-text">Maç Tamamlandı!</div>
         <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:14px;" id="arena-1v1-elo-result">+25 Puan Kazandınız!</div>
         <div style="display:flex; justify-content:center; gap:24px; margin-bottom:18px;">
@@ -3648,7 +3650,7 @@
             <div id="arena-1v1-final-pts" style="font-size:1.4rem; font-weight:900; color:var(--brand-blue);">0</div>
           </div>
         </div>
-        <button type="button" id="btn-finish-1v1-game" class="btn-coach-build-full">
+        <button type="button" id="btn-finish-1v1-game" class="btn-coach-build-full" style="width:100%;">
           <span>Arenaya Dön</span>
         </button>
       </div>
@@ -3673,12 +3675,12 @@
 
   <!-- MODAL: KAHOOT TARZI CANLI GRUP OYUNU (modal-arena-kahoot-game) -->
   <div id="modal-arena-kahoot-game" class="modal-backdrop full-page-screen hidden" role="dialog" aria-modal="true">
-    <div class="modal-sheet" style="max-width:600px; height:94vh; display:flex; flex-direction:column; padding:18px;">
+    <div class="modal-sheet">
       <!-- Kahoot Başlık & Kapatma -->
-      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="background:var(--brand-blue); color:#fff; font-weight:900; font-size:0.8rem; padding:4px 10px; border-radius:8px;">REKABET CANLI</span>
-          <span id="kahoot-room-pin-display" style="font-size:1rem; font-weight:900; color:var(--text-primary); letter-spacing:1px;">PIN: 000000</span>
+          <span style="background:var(--brand-blue); color:#fff; font-weight:900; font-size:0.76rem; padding:4px 10px; border-radius:8px;">REKABET CANLI</span>
+          <span id="kahoot-room-pin-display" style="font-size:0.95rem; font-weight:900; color:var(--text-primary); letter-spacing:1px;">PIN: 000000</span>
         </div>
         <button type="button" id="btn-close-kahoot-game" class="icon-btn-ghost" aria-label="Ayrıl">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
@@ -3686,112 +3688,115 @@
       </div>
 
       <!-- FAZ 1: LOBİ EKRANI -->
-      <div id="kahoot-phase-lobby" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
-        <div style="text-align:center; padding:16px 0;">
-          <div style="font-size:1.3rem; font-weight:900; color:var(--text-primary); margin-bottom:4px;" id="kahoot-lobby-deck-title">Almanca Kelime Yarışması</div>
+      <div id="kahoot-phase-lobby">
+        <div style="text-align:center; padding:8px 0;">
+          <div style="font-size:1.28rem; font-weight:900; color:var(--text-primary); margin-bottom:4px;" id="kahoot-lobby-deck-title">Almanca Kelime Yarışması</div>
           <div style="font-size:0.82rem; color:var(--text-muted);">Diğer yarışmacılar bu PIN ile odaya bekleniyor...</div>
-          <div style="margin:12px 0;">
-            <button type="button" id="btn-open-invite-friend-kahoot" class="btn-primary-compact" style="background:#10B981; border-color:#10B981; padding:8px 16px; font-weight:700;">
+
+          <div class="arena-pin-banner">
+            <div id="kahoot-lobby-pin-box" class="arena-pin-code-box">000000</div>
+            <button type="button" id="btn-copy-kahoot-pin" class="btn-primary-compact" style="padding:10px 14px; font-size:0.85rem;" title="Kodu Kopyala">Kopyala</button>
+          </div>
+
+          <div style="margin:10px 0;">
+            <button type="button" id="btn-open-invite-friend-kahoot" class="btn-primary-compact" style="background:#10B981; border-color:#10B981; padding:9px 16px; font-weight:700;">
               <span>Arkadaşını Davet Et</span>
             </button>
           </div>
-          <div style="margin-top:14px;">
-            <div style="font-size:0.8rem; font-weight:700; color:var(--text-secondary); margin-bottom:8px;">Odadaki Oyuncular (<span id="kahoot-player-count">1</span>)</div>
-            <div id="kahoot-players-chip-list" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center;"></div>
+
+          <div style="margin-top:16px;">
+            <div style="font-size:0.82rem; font-weight:800; color:var(--text-secondary); margin-bottom:10px;">Odadaki Oyuncular (<span id="kahoot-player-count">1</span>)</div>
+            <div id="kahoot-players-chip-list" style="display:flex; flex-wrap:wrap; gap:8px; justify-content:center; min-height:36px;"></div>
           </div>
         </div>
 
-        <div style="padding-top:16px;">
+        <div style="padding-top:10px; flex-shrink:0;">
           <div id="kahoot-guest-waiting-msg" class="hidden" style="text-align:center; font-size:0.88rem; color:var(--text-muted); padding:12px; background:var(--bg-surface); border-radius:12px; margin-bottom:10px;">
             Oda sahibinin oyunu başlatması bekleniyor...
           </div>
-          <button type="button" id="btn-start-kahoot-match" class="btn-coach-build-full" style="background:#8B5CF6; font-size:1.05rem; padding:14px;">
+          <button type="button" id="btn-start-kahoot-match" class="btn-coach-build-full" style="width:100%; background:#8B5CF6; font-size:1rem; padding:14px;">
             <span>Oyunu Başlat</span>
           </button>
         </div>
       </div>
 
       <!-- FAZ 2: SORU EKRANI (4 RENKLİ KAHOOT BUTONU) -->
-      <div id="kahoot-phase-question" class="hidden" style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+      <div id="kahoot-phase-question" class="hidden">
         <!-- Zaman Sayacı ve Soru Başlığı -->
         <div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <span id="kahoot-q-index" style="font-size:0.85rem; font-weight:800; color:var(--text-muted);">Soru 1 / 10</span>
-            <span id="kahoot-countdown-badge" style="font-size:1.3rem; font-weight:900; color:#EF4444; background:rgba(239,68,68,0.15); padding:2px 12px; border-radius:12px;">15s</span>
+            <span id="kahoot-countdown-badge" style="font-size:1.25rem; font-weight:900; color:#EF4444; background:rgba(239,68,68,0.15); padding:4px 14px; border-radius:12px;">15s</span>
           </div>
-          <div style="background:var(--bg-card); border:2px solid var(--border-medium); border-radius:16px; padding:20px; text-align:center; margin-bottom:14px;">
-            <div id="kahoot-q-lemma" style="font-size:1.9rem; font-weight:900; color:var(--text-primary);">der Apfel</div>
-            <div id="kahoot-q-sentence" style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; font-style:italic;">Ich esse einen Apfel.</div>
+          <div class="arena-question-card">
+            <div id="kahoot-q-lemma" style="font-size:1.85rem; font-weight:900; color:var(--text-primary); word-break:break-word;">der Apfel</div>
+            <div id="kahoot-q-sentence" style="font-size:0.86rem; color:var(--text-secondary); margin-top:6px; font-style:italic;">Ich esse einen Apfel.</div>
           </div>
         </div>
 
         <!-- 4 Renkli Kahoot Şıkları -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
-          <!-- Kırmızı Seçenek (Üçgen) -->
-          <button type="button" class="kahoot-btn btn-kahoot-red" data-opt-idx="0" style="background:#E11D48; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(225,29,72,0.35);">
-            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">▲ A</div>
+        <div class="kahoot-options-grid">
+          <button type="button" class="kahoot-btn btn-kahoot-red" data-opt-idx="0">
+            <div class="kahoot-btn-shape">▲ A</div>
             <span class="kahoot-opt-text">Seçenek 1</span>
           </button>
 
-          <!-- Mavi Seçenek (Eşkenar Dörtgen) -->
-          <button type="button" class="kahoot-btn btn-kahoot-blue" data-opt-idx="1" style="background:#2563EB; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(37,99,235,0.35);">
-            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">◆ B</div>
+          <button type="button" class="kahoot-btn btn-kahoot-blue" data-opt-idx="1">
+            <div class="kahoot-btn-shape">◆ B</div>
             <span class="kahoot-opt-text">Seçenek 2</span>
           </button>
 
-          <!-- Sarı Seçenek (Daire) -->
-          <button type="button" class="kahoot-btn btn-kahoot-yellow" data-opt-idx="2" style="background:#D97706; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(217,119,6,0.35);">
-            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">● C</div>
+          <button type="button" class="kahoot-btn btn-kahoot-yellow" data-opt-idx="2">
+            <div class="kahoot-btn-shape">● C</div>
             <span class="kahoot-opt-text">Seçenek 3</span>
           </button>
 
-          <!-- Yeşil Seçenek (Kare) -->
-          <button type="button" class="kahoot-btn btn-kahoot-green" data-opt-idx="3" style="background:#059669; color:#fff; border:none; border-radius:14px; padding:18px 12px; font-weight:800; font-size:0.95rem; cursor:pointer; text-align:center; box-shadow:0 4px 12px rgba(5,150,105,0.35);">
-            <div style="font-size:0.8rem; opacity:0.85; margin-bottom:2px;">■ D</div>
+          <button type="button" class="kahoot-btn btn-kahoot-green" data-opt-idx="3">
+            <div class="kahoot-btn-shape">■ D</div>
             <span class="kahoot-opt-text">Seçenek 4</span>
           </button>
         </div>
       </div>
 
       <!-- FAZ 3: ARA LİDERLİK TABLOSU (Her Soru Sonrası) -->
-      <div id="kahoot-phase-intermediate" class="hidden" style="flex:1; display:flex; flex-direction:column; justify-content:space-between; text-align:center;">
+      <div id="kahoot-phase-intermediate" class="hidden" style="text-align:center;">
         <div>
-          <div id="kahoot-answer-feedback" style="font-size:1.4rem; font-weight:900; margin:16px 0;">Doğru Cevap!</div>
+          <div id="kahoot-answer-feedback" style="font-size:1.4rem; font-weight:900; margin:12px 0;">Doğru Cevap!</div>
           <div class="section-subheading" style="text-align:left; margin-bottom:8px;">Anlık Puan Sıralaması</div>
-          <div id="kahoot-intermediate-leaderboard" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="kahoot-intermediate-leaderboard" class="kahoot-leaderboard-scroll"></div>
         </div>
-        <button type="button" id="btn-kahoot-next-question" class="btn-coach-build-full" style="background:#8B5CF6;">
+        <button type="button" id="btn-kahoot-next-question" class="btn-coach-build-full" style="width:100%; background:#8B5CF6; flex-shrink:0;">
           <span>Sonraki Soru</span>
         </button>
       </div>
 
       <!-- FAZ 4: FİNAL PODYUM EKRANI (1., 2., 3.) -->
-      <div id="kahoot-phase-podium" class="hidden" style="flex:1; display:flex; flex-direction:column; justify-content:space-between; text-align:center;">
+      <div id="kahoot-phase-podium" class="hidden" style="text-align:center;">
         <div>
-          <div style="font-size:1.5rem; font-weight:900; color:var(--text-primary); margin:10px 0;">Rekabet Podyumu</div>
-          <div style="display:flex; justify-content:center; align-items:flex-end; gap:12px; height:200px; margin:20px 0;">
+          <div style="font-size:1.5rem; font-weight:900; color:var(--text-primary); margin:8px 0;">Rekabet Podyumu</div>
+          <div class="kahoot-podium-stage">
             <!-- 2. Sıra (Gümüş) -->
-            <div style="display:flex; flex-direction:column; align-items:center;">
-              <div id="podium-2nd-name" style="font-size:0.85rem; font-weight:800; margin-bottom:4px;">-</div>
-              <div id="podium-2nd-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">0 Puan</div>
-              <div style="width:75px; height:100px; background:#9CA3AF; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.4rem; color:#fff;">2</div>
+            <div class="kahoot-podium-col">
+              <div id="podium-2nd-name" class="kahoot-podium-name">-</div>
+              <div id="podium-2nd-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">0 Puan</div>
+              <div class="kahoot-podium-bar" style="height:105px; background:#9CA3AF; font-size:1.4rem;">2</div>
             </div>
             <!-- 1. Sıra (Altın) -->
-            <div style="display:flex; flex-direction:column; align-items:center;">
-              <div id="podium-1st-name" style="font-size:0.95rem; font-weight:900; color:#F59E0B; margin-bottom:4px;">-</div>
-              <div id="podium-1st-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">0 Puan</div>
-              <div style="width:85px; height:140px; background:#F59E0B; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.8rem; color:#fff;">1</div>
+            <div class="kahoot-podium-col">
+              <div id="podium-1st-name" class="kahoot-podium-name" style="font-size:0.95rem; font-weight:900; color:#F59E0B;">-</div>
+              <div id="podium-1st-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">0 Puan</div>
+              <div class="kahoot-podium-bar" style="height:145px; background:#F59E0B; font-size:1.8rem;">1</div>
             </div>
             <!-- 3. Sıra (Bronz) -->
-            <div style="display:flex; flex-direction:column; align-items:center;">
-              <div id="podium-3rd-name" style="font-size:0.85rem; font-weight:800; margin-bottom:4px;">-</div>
-              <div id="podium-3rd-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">0 Puan</div>
-              <div style="width:75px; height:75px; background:#CD7F32; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.3rem; color:#fff;">3</div>
+            <div class="kahoot-podium-col">
+              <div id="podium-3rd-name" class="kahoot-podium-name">-</div>
+              <div id="podium-3rd-score" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">0 Puan</div>
+              <div class="kahoot-podium-bar" style="height:80px; background:#CD7F32; font-size:1.3rem;">3</div>
             </div>
           </div>
         </div>
 
-        <button type="button" id="btn-finish-kahoot-game" class="btn-coach-build-full">
+        <button type="button" id="btn-finish-kahoot-game" class="btn-coach-build-full" style="width:100%; flex-shrink:0;">
           <span>Sosyal Merkeze Dön</span>
         </button>
       </div>
@@ -3839,25 +3844,25 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.9.0"></script>
-  <script src="js/db.js?v=3.9.0"></script>
-  <script src="js/verbHelper.js?v=3.9.0"></script>
-  <script src="js/grammarEnrichment.js?v=3.9.0"></script>
-  <script src="js/offlineDictionary.js?v=3.9.0"></script>
-  <script src="js/dictionary.js?v=3.9.0"></script>
-  <script src="js/curatedPacks.js?v=3.9.0"></script>
-  <script src="js/seeder.js?v=3.9.0"></script>
-  <script src="js/tts.js?v=3.9.0"></script>
-  <script src="js/pronunciation.js?v=3.9.0"></script>
-  <script src="js/translator.js?v=3.9.0"></script>
-  <script src="js/game.js?v=3.9.0"></script>
-  <script src="js/study.js?v=3.9.0"></script>
-  <script src="js/stats.js?v=3.9.0"></script>
-  <script src="js/coach.js?v=3.9.0"></script>
-  <script src="js/deckBuilder.js?v=3.9.0"></script>
-  <script src="js/satzBuilder.js?v=3.9.0"></script>
-  <script src="js/social.js?v=3.9.0"></script>
-  <script src="js/app.js?v=3.9.0"></script>
+  <script src="js/config.js?v=3.9.1"></script>
+  <script src="js/db.js?v=3.9.1"></script>
+  <script src="js/verbHelper.js?v=3.9.1"></script>
+  <script src="js/grammarEnrichment.js?v=3.9.1"></script>
+  <script src="js/offlineDictionary.js?v=3.9.1"></script>
+  <script src="js/dictionary.js?v=3.9.1"></script>
+  <script src="js/curatedPacks.js?v=3.9.1"></script>
+  <script src="js/seeder.js?v=3.9.1"></script>
+  <script src="js/tts.js?v=3.9.1"></script>
+  <script src="js/pronunciation.js?v=3.9.1"></script>
+  <script src="js/translator.js?v=3.9.1"></script>
+  <script src="js/game.js?v=3.9.1"></script>
+  <script src="js/study.js?v=3.9.1"></script>
+  <script src="js/stats.js?v=3.9.1"></script>
+  <script src="js/coach.js?v=3.9.1"></script>
+  <script src="js/deckBuilder.js?v=3.9.1"></script>
+  <script src="js/satzBuilder.js?v=3.9.1"></script>
+  <script src="js/social.js?v=3.9.1"></script>
+  <script src="js/app.js?v=3.9.1"></script>
 </body>
 </html>
 

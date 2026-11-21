@@ -1367,6 +1367,7 @@
       if (waitingMsg) waitingMsg.classList.toggle('hidden', !!isHost);
 
       this.render1v1LobbyPlayers();
+      document.body.classList.add('arena-game-active');
       modal.classList.remove('hidden');
 
       // 2 Saniyelik Canlı Lobi Polling Döngüsü (Sunucu KV ile senkronizasyon)
@@ -1597,11 +1598,12 @@
 
     async joinKahootRoom(pin) {
       const cleanPin = (pin || '').trim().toUpperCase();
-      if (!cleanPin) throw new Error('Lütfen 6 haneli oda PIN kodunu girin.');
+      if (!cleanPin) throw new Error('Lütfen oda PIN kodunu girin.');
 
       let words = [];
       let deckTitle = 'Kahoot Canlı Quiz';
       let duration = 15;
+      let joinedRoom = null;
 
       try {
         const res = await this.apiCall('multiplayer/room/join', {
@@ -1610,6 +1612,7 @@
           playerName: this.getActiveProfile().username
         });
         if (res.ok && res.room) {
+          joinedRoom = res.room;
           words = res.room.words || [];
           deckTitle = res.room.deckTitle || deckTitle;
           duration = res.room.questionDurationSec || 15;
@@ -1619,7 +1622,11 @@
       }
 
       if (words.length < 4) throw new Error('Oda bulunamadı veya kelime verisi eksik.');
-      this.initKahootView(cleanPin, deckTitle, words, duration, false);
+      if (joinedRoom && joinedRoom.type === '1v1') {
+        this.init1v1Lobby(joinedRoom, false);
+        return;
+      }
+      this.initKahootView((joinedRoom && joinedRoom.pin) || cleanPin, deckTitle, words, duration, false);
     }
 
     initKahootView(pin, deckTitle, words, duration, isHost) {
@@ -1643,6 +1650,7 @@
       if (!modal) return;
 
       if ($('kahoot-room-pin-display')) $('kahoot-room-pin-display').textContent = `PIN: ${pin}`;
+      if ($('kahoot-lobby-pin-box')) $('kahoot-lobby-pin-box').textContent = pin;
       if ($('kahoot-lobby-deck-title')) $('kahoot-lobby-deck-title').textContent = deckTitle;
 
       const startBtn = $('btn-start-kahoot-match');
@@ -1834,6 +1842,7 @@
     handleKahootAnswer(selectedMeaning) {
       const st = this.kahootState;
       if (st.timerId) clearInterval(st.timerId);
+      document.querySelectorAll('#modal-arena-kahoot-game .kahoot-btn').forEach(b => { b.disabled = true; });
 
       const q = st.words[st.currentIndex];
       const isCorrect = selectedMeaning === q.contextMeaning;
@@ -3452,6 +3461,15 @@
         if (pin) this.openInviteFriendMatchModal(pin, 'kahoot', this.kahootState?.deckTitle || 'Deste');
       });
 
+      $('btn-copy-kahoot-pin')?.addEventListener('click', () => {
+        const pin = this.kahootState?.pin || $('kahoot-lobby-pin-box')?.textContent;
+        if (pin) {
+          navigator.clipboard?.writeText(pin.trim()).then(() => {
+            if (window.wmApp && window.wmApp.showToast) window.wmApp.showToast('PIN kodu kopyalandı.');
+          });
+        }
+      });
+
       $('btn-close-invite-friend-match')?.addEventListener('click', () => {
         $('modal-invite-friend-match')?.classList.add('hidden');
       });
@@ -3466,11 +3484,13 @@
           if (this.match1v1Timer) clearInterval(this.match1v1Timer);
           this.match1v1PollTimer = null;
           this.match1v1Timer = null;
+          document.body.classList.remove('arena-game-active');
           $('modal-arena-1v1-game')?.classList.add('hidden');
         }
       });
 
       $('btn-finish-1v1-game')?.addEventListener('click', () => {
+        document.body.classList.remove('arena-game-active');
         $('modal-arena-1v1-game')?.classList.add('hidden');
         this.refreshProfileView();
       });
