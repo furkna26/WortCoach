@@ -126,7 +126,7 @@ class WortCoachApp {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.9.1').then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=3.9.2').then((reg) => {
         reg.update();
         if (reg.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -1321,6 +1321,7 @@ class WortCoachApp {
     const modalGrammarRow = document.getElementById('reader-modal-grammar-row');
     const modalBannerContainer = document.getElementById('reader-modal-banner-container');
     const modalTrChips = document.getElementById('reader-modal-tr-chips');
+    const modalEnChips = document.getElementById('reader-modal-en-chips');
     const modalDeckSelect = document.getElementById('reader-target-deck');
     const btnCloseReaderModal = document.getElementById('btn-close-reader-modal');
     const btnReadFromWord = document.getElementById('btn-read-from-selected-word');
@@ -1334,6 +1335,8 @@ class WortCoachApp {
     let currentSelectedPipelineResult = null;
     let isPipelinePending = false;
     let activePipelinePromise = null;
+    let readerLookupAbortCtrl = null;
+    let readerLookupSeq = 0;
 
     const sampleTexts = {
       sample_a1: `Guten Tag! Mein Name ist Lukas und ich wohne in Berlin. Jeden Tag stehe ich um sieben Uhr auf und trinke einen heißen Kaffee mit Milch. Danach fahre ich mit der U-Bahn zur Arbeit. Ich lerne gern Deutsch und treffe meine Freunde am Abend im Park.`,
@@ -1568,6 +1571,11 @@ class WortCoachApp {
 
     // --- 4. KELİME MODALI & ETKİLEŞİM ---
     const closeReaderModal = () => {
+      readerLookupSeq += 1;
+      if (readerLookupAbortCtrl) {
+        readerLookupAbortCtrl.abort();
+        readerLookupAbortCtrl = null;
+      }
       modalReader?.classList.add('hidden');
       readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
     };
@@ -1622,30 +1630,58 @@ class WortCoachApp {
       );
     });
 
+    const escapeHtmlAttr = (s) => String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const renderReaderEnChips = (enList = []) => {
+      if (!modalEnChips) return;
+      const items = (Array.isArray(enList) ? enList : []).map((s) => String(s || '').trim()).filter(Boolean);
+      if (items.length === 0) {
+        modalEnChips.innerHTML = '<span style="font-size:0.78rem; color:var(--text-muted);">İngilizce karşılık bulunamadı.</span>';
+        return;
+      }
+      modalEnChips.innerHTML = items.map((t, idx) => `
+        <div class="meaning-chip ${idx < 2 ? 'selected' : ''}" data-val="${escapeHtmlAttr(t)}">
+          <span class="meaning-chip-check">${idx < 2 ? '✓' : ''}</span>
+          <span class="meaning-chip-text">${escapeHtmlAttr(t)}</span>
+        </div>
+      `).join('');
+
+      modalEnChips.querySelectorAll('.meaning-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chip.classList.toggle('selected');
+          const chk = chip.querySelector('.meaning-chip-check');
+          if (chk) chk.textContent = chip.classList.contains('selected') ? '✓' : '';
+        });
+      });
+    };
+
     // --- 5. KART EKLEME (TARAMA BİTMEDEN EKLENİRSE ARKA PLANDA ÇÖZÜMLEME DESTEĞİ) ---
     btnReaderSaveCard?.addEventListener('click', async () => {
       if (!currentSelectedTokenWord) return;
       const targetDeckId = Number(modalDeckSelect?.value || 1);
       const wordOrPhrase = currentSelectedTokenWord;
 
-      // Kullanıcı tarama devam ederken ("Anlamlar aranıyor...") ekle butonuna bastıysa:
+      // Kullanıcı tarama devam ederken ekle butonuna bastıysa:
       if (isPipelinePending && activePipelinePromise) {
         modalReader?.classList.add('hidden');
-        clearSelectedTokens();
-        this.showToast(`"${wordOrPhrase}" taranıyor, tamamlandığında arka planda desteye eklenecek...`);
+        readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
+        this.showToast(`"${wordOrPhrase}" çevriliyor, tamamlandığında desteye eklenecek...`);
 
-        // Arka planda taramayı tamamlayıp karta ekle
         activePipelinePromise.then(async (res) => {
           let finalTr = '';
+          let finalEn = '';
           let article = null;
           let pos = wordOrPhrase.includes(' ') ? 'PHRASE' : 'OTHER';
 
-          if (res && (res.status === 'exact' || res.status === 'stem')) {
-            finalTr = res.entry?.meaningsTr || res.entry?.tr || '';
+          if (res) {
+            finalTr = res.entry?.meaningsTr || res.translatedText || '';
+            finalEn = res.entry?.meaningsEn || res.translatedEnText || '';
             article = res.entry?.article || null;
             pos = res.entry?.partOfSpeech || pos;
-          } else if (res && res.status === 'deepl_fallback') {
-            finalTr = res.translatedText || '';
           }
 
           if (!finalTr || finalTr === 'Çeviri bulunamadı') {
@@ -1662,6 +1698,7 @@ class WortCoachApp {
             article,
             partOfSpeech: pos,
             meaningsTr: finalTr || wordOrPhrase,
+            meaningsEn: finalEn || '',
             targetLanguage: 'de',
             source: 'smart_reader'
           });
@@ -1671,11 +1708,12 @@ class WortCoachApp {
               germanWord: wordOrPhrase,
               article,
               partOfSpeech: pos,
-              meaningsTr: finalTr
+              meaningsTr: finalTr,
+              meaningsEn: finalEn
             });
           }
 
-          this.showToast(`"${wordOrPhrase}" arka planda taranarak desteye kaydedildi.`);
+          this.showToast(`"${wordOrPhrase}" desteye kaydedildi.`);
           await this.renderDecksTab?.();
           await this.renderCardsTab?.();
         }).catch((err) => {
@@ -1685,19 +1723,24 @@ class WortCoachApp {
         return;
       }
 
-      // Normal Akış: Tarama zaten bitmiş ve anlam seçilmiş
-      const selectedMeanings = Array.from(modalTrChips.querySelectorAll('.meaning-chip.selected'))
+      // Normal Akış: Anlamlar yüklenmiş ve seçilmiş
+      const selectedMeanings = Array.from(modalTrChips?.querySelectorAll('.meaning-chip.selected') || [])
         .map((c) => c.getAttribute('data-val') || c.innerText.replace(/^\s*/, '').trim())
         .filter(Boolean);
 
       if (selectedMeanings.length === 0) {
-        this.showToast('Lütfen en az bir anlam seçin.');
+        this.showToast('Lütfen en az bir Türkçe anlam seçin.');
         return;
       }
+
+      const selectedEnMeanings = Array.from(modalEnChips?.querySelectorAll('.meaning-chip.selected') || [])
+        .map((c) => c.getAttribute('data-val') || c.innerText.replace(/^\s*/, '').trim())
+        .filter(Boolean);
 
       const article = currentSelectedPipelineResult?.entry?.article || null;
       const pos = currentSelectedPipelineResult?.entry?.partOfSpeech || (wordOrPhrase.includes(' ') ? 'PHRASE' : 'OTHER');
       const finalTr = selectedMeanings.join(', ');
+      const finalEn = selectedEnMeanings.join(', ');
 
       await window.wmDB.createCard({
         deckId: targetDeckId,
@@ -1705,6 +1748,7 @@ class WortCoachApp {
         article,
         partOfSpeech: pos,
         meaningsTr: finalTr,
+        meaningsEn: finalEn,
         targetLanguage: 'de',
         source: 'smart_reader'
       });
@@ -1714,7 +1758,8 @@ class WortCoachApp {
           germanWord: wordOrPhrase,
           article,
           partOfSpeech: pos,
-          meaningsTr: finalTr
+          meaningsTr: finalTr,
+          meaningsEn: finalEn
         });
       }
 
@@ -1724,10 +1769,66 @@ class WortCoachApp {
       await this.renderCardsTab?.();
     });
 
-    // --- 6. HEDEF KELİME VEYA KALIP İÇİN MODAL AÇICI ---
+    const renderReaderGrammarRow = (ent, cleanTarget, stemNoteText = '') => {
+      if (!modalGrammarRow) return;
+      const posStr = ent?.partOfSpeech || (cleanTarget.includes(' ') ? 'Kalıp' : 'Kelime');
+      const stemNote = stemNoteText ? `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60A5FA;">Kök: ${escapeHtmlAttr(stemNoteText)}</span>` : '';
+      const rNuance = ent && window.detectGermanTags ? window.detectGermanTags(ent) : [];
+      const rNuanceHtml = rNuance.map((t) => `<span class="badge-nuance ${t.className}" style="color:${t.color}; background-color:${t.bg}; border:1px solid ${t.border}; font-size:0.75rem; padding:2px 6px;">${t.label}</span>`).join(' ');
+      const rCefrBadge = ent?.cefr ? `<span class="badge badge-cefr" style="background:rgba(99,102,241,0.15); color:#A5B4FC; border:1px solid rgba(99,102,241,0.3); font-size:0.75rem; font-weight:700; padding:2px 6px;">${String(ent.cefr).toUpperCase()}</span>` : '';
+      modalGrammarRow.innerHTML = `<span class="badge badge-pos-${ent?.partOfSpeech || 'OTHER'}">${posStr}</span> ${rCefrBadge} ${stemNote} ${rNuanceHtml}`;
+    };
+
+    const renderReaderTrChips = (trList = [], cleanTarget = '') => {
+      if (!modalTrChips) return;
+      const userCustoms = this.getCustomMeaningsForWord(cleanTarget);
+      const merged = [...(Array.isArray(trList) ? trList : [])];
+      for (const uc of userCustoms) {
+        if (uc && !merged.some((p) => p.toLowerCase() === uc.toLowerCase())) {
+          merged.push(uc);
+        }
+      }
+
+      if (merged.length === 0) {
+        modalTrChips.innerHTML = `<span style="font-size:0.8rem; color:var(--text-muted);">Çeviri alınamadı.</span>
+          <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
+          <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
+            <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
+            <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
+            <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
+          </div>`;
+        bindReaderModalMeaningChips(cleanTarget);
+        return;
+      }
+
+      modalTrChips.innerHTML = merged.map((t, idx) => `
+        <div class="meaning-chip ${idx === 0 ? 'selected' : ''}" data-val="${escapeHtmlAttr(t)}">
+          <span class="meaning-chip-check">${idx === 0 ? '✓' : ''}</span>
+          <span class="meaning-chip-text">${escapeHtmlAttr(t)}</span>
+        </div>
+      `).join('') + `
+        <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
+        <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
+          <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
+          <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
+          <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
+        </div>
+      `;
+
+      bindReaderModalMeaningChips(cleanTarget);
+    };
+
+    // --- 6. HEDEF KELİME VEYA KALIP İÇİN ANLIK GOOGLE TRANSLATE + EN MODAL AÇICI ---
     const openReaderModalForTarget = async (wordOrPhrase, offset = 0) => {
       const cleanTarget = (wordOrPhrase || '').trim();
       if (!cleanTarget) return;
+
+      if (readerLookupAbortCtrl) {
+        readerLookupAbortCtrl.abort();
+      }
+      readerLookupAbortCtrl = new AbortController();
+      const mySeq = ++readerLookupSeq;
+      const mySignal = readerLookupAbortCtrl.signal;
 
       currentSelectedTokenWord = cleanTarget;
       currentSelectedTokenOffset = offset;
@@ -1736,150 +1837,104 @@ class WortCoachApp {
 
       if (modalWordTitle) modalWordTitle.textContent = cleanTarget;
       if (modalArticleBadge) modalArticleBadge.innerHTML = '';
-      if (modalGrammarRow) modalGrammarRow.innerHTML = '<span style="font-size:0.78rem; color:var(--text-muted);">Sözlük taranıyor...</span>';
-      if (modalBannerContainer) modalBannerContainer.innerHTML = '';
-      if (modalTrChips) modalTrChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Anlamlar aranıyor...</span>';
+      if (modalBannerContainer) modalBannerContainer.innerHTML = '<div class="reader-source-badge">Google Translate (Canlı Çeviri)</div>';
 
-      const decks = await window.wmDB.getAllDecks();
-      if (modalDeckSelect) {
-        modalDeckSelect.innerHTML = decks.map((d) => `<option value="${d.id}">${d.name}</option>`).join('');
+      // 0ms Senkron ön izleme (varsa yerel artikel + anlamları beklemeden göster)
+      const instantEntry = window.DictionaryService?.synthesizeInstantEntry
+        ? window.DictionaryService.synthesizeInstantEntry(cleanTarget)
+        : null;
+      if (instantEntry?.article && modalArticleBadge) {
+        const st = window.getArticleStyle ? window.getArticleStyle(instantEntry.article) : null;
+        modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${instantEntry.article.toLowerCase()}">${instantEntry.article.toUpperCase()}</span>`;
+      }
+      renderReaderGrammarRow(instantEntry, cleanTarget);
+
+      const instantTr = (instantEntry?.meaningsTr || '').split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+      const instantEn = (instantEntry?.meaningsEn || '').split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+      if (instantTr.length > 0) {
+        renderReaderTrChips(instantTr, cleanTarget);
+      } else if (modalTrChips) {
+        modalTrChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Google Çeviri yükleniyor...</span>';
+      }
+      if (instantEn.length > 0) {
+        renderReaderEnChips(instantEn);
+      } else if (modalEnChips) {
+        modalEnChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">İngilizce karşılıklar alınıyor...</span>';
       }
 
       modalReader?.classList.remove('hidden');
 
-      activePipelinePromise = window.executeSmartSearchPipeline(cleanTarget);
+      window.wmDB.getAllDecks().then((decks) => {
+        if (mySeq !== readerLookupSeq || !modalDeckSelect) return;
+        modalDeckSelect.innerHTML = (decks || []).map((d) => `<option value="${d.id}">${escapeHtmlAttr(d.name)}</option>`).join('');
+      }).catch(() => {});
+
+      const fastPromise = (window.DictionaryService && typeof window.DictionaryService.fastGoogleReaderLookup === 'function')
+        ? window.DictionaryService.fastGoogleReaderLookup(cleanTarget, mySignal)
+        : window.executeSmartSearchPipeline?.(cleanTarget, mySignal);
+      activePipelinePromise = fastPromise;
 
       try {
-        const res = await activePipelinePromise;
+        const res = await fastPromise;
+        if (mySeq !== readerLookupSeq || mySignal.aborted) return;
+
         isPipelinePending = false;
         currentSelectedPipelineResult = res;
 
         if (!res) {
-          if (modalGrammarRow) modalGrammarRow.innerHTML = `<span class="badge" style="background:#242B3A; color:#9CA3AF;">${cleanTarget.includes(' ') ? 'Kalıp' : 'Kelime'}</span>`;
-          if (modalTrChips) modalTrChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Anlam bulunamadı.</span>';
+          if (modalTrChips) modalTrChips.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">Çeviri alınamadı.</span>';
+          if (modalEnChips) modalEnChips.innerHTML = '<span style="font-size:0.78rem; color:var(--text-muted);">İngilizce karşılık bulunamadı.</span>';
           return;
         }
 
-        if (res.status === 'exact' || res.status === 'stem') {
-          const ent = res.entry;
-          const art = ent.article || '';
-          if (art && modalArticleBadge) {
-            const st = window.getArticleStyle ? window.getArticleStyle(art) : null;
-            modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${art.toLowerCase()}">${art.toUpperCase()}</span>`;
-          }
-
-          if (modalGrammarRow) {
-            const posStr = ent.partOfSpeech || (cleanTarget.includes(' ') ? 'Kalıp' : 'Kelime');
-            const stemNote = res.stem ? `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60A5FA;">Kök: ${res.stem}</span>` : '';
-            const rNuance = window.detectGermanTags ? window.detectGermanTags(ent) : [];
-            const rNuanceHtml = rNuance.map((t) => `<span class="badge-nuance ${t.className}" style="color:${t.color}; background-color:${t.bg}; border:1px solid ${t.border}; font-size:0.75rem; padding:2px 6px;">${t.label}</span>`).join(' ');
-            const rCefrBadge = ent.cefr ? `<span class="badge badge-cefr" style="background:rgba(99,102,241,0.15); color:#A5B4FC; border:1px solid rgba(99,102,241,0.3); font-size:0.75rem; font-weight:700; padding:2px 6px;">${String(ent.cefr).toUpperCase()}</span>` : '';
-            modalGrammarRow.innerHTML = `<span class="badge badge-pos-${ent.partOfSpeech || 'OTHER'}">${posStr}</span> ${rCefrBadge} ${stemNote} ${rNuanceHtml}`;
-          }
-
-          const rawTr = ent.meaningsTr || ent.tr || '';
-          const trParts = rawTr.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
-          if (trParts.length === 0) trParts.push('Genel Karşılık');
-
-          const userCustoms = this.getCustomMeaningsForWord(cleanTarget);
-          for (const uc of userCustoms) {
-            if (!trParts.some((p) => p.toLowerCase() === uc.toLowerCase())) {
-              trParts.push(uc);
-            }
-          }
-
-          if (modalTrChips) {
-            modalTrChips.innerHTML = trParts.map((t, idx) => `
-              <div class="meaning-chip ${idx === 0 ? 'selected' : ''}" data-val="${t.replace(/"/g, '&quot;')}">
-                <span class="meaning-chip-check">${idx === 0 ? '✓' : ''}</span>
-                <span class="meaning-chip-text">${t}</span>
-              </div>
-            `).join('') + `
-              <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
-              <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
-                <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
-                <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
-                <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
-              </div>
-            `;
-
-            bindReaderModalMeaningChips(cleanTarget);
-          }
-        } else if (res.status === 'deepl_fallback') {
-          if (modalBannerContainer) {
-            const dymHtml = res.similarWords && res.similarWords.length > 0
-              ? `<div class="did-you-mean-bar" style="margin-bottom:8px;">
-                  <span class="dym-label" style="font-size:0.75rem;">Bunu mu demek istediniz:</span>
-                  <div class="did-you-mean-chips">
-                    ${res.similarWords.map((w) => `<button type="button" class="btn-dym-chip" data-word="${w}">${w}</button>`).join('')}
-                  </div>
-                 </div>`
-              : '';
-
-            modalBannerContainer.innerHTML = `
-              <div class="deepl-fallback-banner" style="padding:7px 10px; font-size:0.78rem; margin-bottom:8px;">
-                <span>Yerel sözlükte bulunamadı · DeepL ile Çevrildi</span>
-              </div>
-              ${dymHtml}
-            `;
-
-            modalBannerContainer.querySelectorAll('.btn-dym-chip').forEach((b) => {
-              b.addEventListener('click', () => {
-                const simWord = b.getAttribute('data-word');
-                if (simWord) openReaderModalForTarget(simWord, offset);
-              });
-            });
-          }
-
-          if (modalGrammarRow) {
-            modalGrammarRow.innerHTML = `<span class="badge" style="background:#242B3A; color:#9CA3AF;">${cleanTarget.includes(' ') ? 'Kalıp Çevirisi' : 'Otomatik Çeviri'}</span>`;
-          }
-
-          const transTr = res.translatedText || 'Çeviri bulunamadı';
-          const parts = transTr.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
-          if (parts.length === 0) parts.push(transTr);
-
-          if (modalTrChips) {
-            modalTrChips.innerHTML = parts.map((t) => `
-              <div class="meaning-chip selected" data-val="${t.replace(/"/g, '&quot;')}">
-                <span class="meaning-chip-check">✓</span>
-                <span class="meaning-chip-text">${t}</span>
-              </div>
-            `).join('') + `
-              <button type="button" class="btn-add-custom-meaning" id="btn-reader-add-custom">+ Anlam Ekle</button>
-              <div class="custom-meaning-inline-box hidden" id="reader-custom-box">
-                <input type="text" id="input-reader-custom" class="custom-meaning-inline-input" placeholder="Özel anlam..." maxlength="50" />
-                <button type="button" id="btn-reader-confirm-custom" class="btn-confirm-custom-meaning" title="Ekle">✓</button>
-                <button type="button" id="btn-reader-cancel-custom" class="btn-cancel-custom-meaning" title="İptal">✕</button>
-              </div>
-            `;
-
-            bindReaderModalMeaningChips(cleanTarget);
-          }
+        const ent = res.entry || instantEntry;
+        const art = ent?.article || '';
+        if (art && modalArticleBadge) {
+          const st = window.getArticleStyle ? window.getArticleStyle(art) : null;
+          modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${art.toLowerCase()}">${art.toUpperCase()}</span>`;
         }
+
+        if (modalBannerContainer && res.sourceLabel) {
+          modalBannerContainer.innerHTML = `<div class="reader-source-badge">${escapeHtmlAttr(res.sourceLabel)}</div>`;
+        }
+
+        renderReaderGrammarRow(ent, cleanTarget, res.stem || '');
+
+        const trList = Array.isArray(res.trList) && res.trList.length > 0
+          ? res.trList
+          : (ent?.meaningsTr || res.translatedText || '').split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+        renderReaderTrChips(trList, cleanTarget);
+
+        const enList = Array.isArray(res.enList) && res.enList.length > 0
+          ? res.enList
+          : (ent?.meaningsEn || res.translatedEnText || '').split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
+        renderReaderEnChips(enList);
       } catch (err) {
+        if (err?.name === 'AbortError' || mySeq !== readerLookupSeq) return;
         isPipelinePending = false;
-        console.error("Reader token resolution failed:", err);
+        console.error('Reader Google lookup failed:', err);
       }
     };
 
-    // --- 7. TEK TIKLAMAYLA ANLAM GÖRÜNTÜLEME (INSTANT SINGLE-TAP LOOKUP) ---
+    // --- 7. TEK TIKLAMAYLA ANLAM GÖRÜNTÜLEME (OLAY DELEGASYONU İLE 0ms RENDER) ---
+    let isReaderDelegationBound = false;
     const bindReaderTokens = () => {
-      readerDisplay?.querySelectorAll('.reader-token').forEach((tokenEl) => {
-        tokenEl.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+      if (!readerDisplay || isReaderDelegationBound) return;
+      isReaderDelegationBound = true;
+      readerDisplay.addEventListener('click', (e) => {
+        const tokenEl = e.target?.closest?.('.reader-token');
+        if (!tokenEl || !readerDisplay.contains(tokenEl)) return;
+        e.preventDefault();
+        e.stopPropagation();
 
-          // Tıklanan kelimeyi görsel olarak belirginleştir
-          readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
-          tokenEl.classList.add('active-inspect');
+        readerDisplay.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
+        tokenEl.classList.add('active-inspect');
 
-          const word = tokenEl.getAttribute('data-word');
-          const offset = parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
-          if (word) {
-            openReaderModalForTarget(word, offset);
-          }
-        });
+        const word = tokenEl.getAttribute('data-word');
+        const offset = parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
+        if (word) {
+          openReaderModalForTarget(word, offset);
+        }
       });
     };
 

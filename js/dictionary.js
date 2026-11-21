@@ -1059,6 +1059,200 @@ class DictionaryService {
     return null;
   }
 
+  static _readerLookupCache = new Map();
+
+  static _extractGoogleMeanings(data, rawQuery = '') {
+    const out = [];
+    const seen = new Set();
+    const qLower = String(rawQuery || '').trim().toLowerCase();
+    const pushTerm = (term) => {
+      const clean = String(term || '').replace(/\s+/g, ' ').trim();
+      if (!clean) return;
+      const key = clean.toLowerCase();
+      if (key === qLower || seen.has(key)) return;
+      seen.add(key);
+      out.push(clean);
+    };
+
+    if (Array.isArray(data?.[0])) {
+      const primary = data[0].map((x) => (Array.isArray(x) ? x[0] || '' : '')).join('').trim();
+      pushTerm(primary);
+    }
+
+    if (Array.isArray(data?.[1])) {
+      for (const group of data[1]) {
+        if (Array.isArray(group?.[1])) {
+          for (const term of group[1]) {
+            pushTerm(term);
+          }
+        }
+        if (Array.isArray(group?.[2])) {
+          for (const entryRow of group[2]) {
+            if (entryRow?.[0]) pushTerm(entryRow[0]);
+          }
+        }
+      }
+    }
+
+    // POS ipucu (Google dt=bd grup başlığından)
+    let detectedPos = '';
+    const rawPos = String(data?.[1]?.[0]?.[0] || '').toLowerCase();
+    if (/isim|noun|substantiv|ad\b/.test(rawPos)) detectedPos = 'NOUN';
+    else if (/fiil|verb/.test(rawPos)) detectedPos = 'VERB';
+    else if (/sıfat|adjective|adjektiv/.test(rawPos)) detectedPos = 'ADJECTIVE';
+
+    return { terms: out, detectedPos };
+  }
+
+  static async _fetchGoogleRichPair(text, sl, tl, signal) {
+    const clean = String(text || '').trim();
+    if (!clean) return { terms: [], detectedPos: '' };
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2400);
+    const onParentAbort = () => ctrl.abort();
+    if (signal) {
+      if (signal.aborted) {
+        clearTimeout(timer);
+        return { terms: [], detectedPos: '' };
+      }
+      signal.addEventListener('abort', onParentAbort, { once: true });
+    }
+
+    try {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&dt=bd&q=${encodeURIComponent(clean)}`;
+      const resp = await fetch(url, { signal: ctrl.signal });
+      if (resp.ok) {
+        const data = await resp.json().catch(() => null);
+        const parsed = this._extractGoogleMeanings(data, clean);
+        if (parsed.terms.length > 0) return parsed;
+      }
+    } catch (e) {
+      if (signal?.aborted) throw e;
+    } finally {
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', onParentAbort);
+    }
+
+    // Hızlı Worker /api/translate fallback (yalnızca Google engellenir veya zaman aşımına uğrarsa)
+    if (!signal?.aborted) {
+      try {
+        const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ q: clean, sl, tl }),
+          signal
+        }).then((r) => r.json()).catch(() => null);
+        if (pRes && pRes.translation && pRes.translation.toLowerCase() !== clean.toLowerCase()) {
+          return { terms: [pRes.translation.trim()], detectedPos: '' };
+        }
+      } catch (_) {}
+    }
+
+    return { terms: [], detectedPos: '' };
+  }
+
+  /**
+   * Akıllı Okuyucu için 0ms yerel + paralel direkt Google Translate (TR + EN, çoklu anlam) motoru.
+   */
+  static async fastGoogleReaderLookup(rawQuery, signal) {
+    const clean = String(rawQuery || '').trim();
+    if (!clean) return null;
+
+    const cacheKey = clean.toLowerCase();
+    if (DictionaryService._readerLookupCache.has(cacheKey)) {
+      return DictionaryService._readerLookupCache.get(cacheKey);
+    }
+
+    // 1. 0ms Senkron yerel gramer + sözlük kontrolü (kök adayları dahil)
+    const normFn = typeof window.normalizeGermanSearch === 'function' ? window.normalizeGermanSearch : (s) => s.toLowerCase();
+    const stemFn = typeof window.stemGermanCandidates === 'function' ? window.stemGermanCandidates : () => [];
+    const candidates = [cacheKey, ...stemFn(clean)];
+    let localEntry = null;
+    let matchedStem = '';
+
+    for (const cand of candidates) {
+      const hit = this.findOfflineEntry(cand) || this.findOfflineEntry(normFn(cand));
+      if (hit) {
+        localEntry = this.synthesizeInstantEntry(hit.germanWord || cand);
+        if (cand !== cacheKey) matchedStem = localEntry.germanWord || cand;
+        break;
+      }
+    }
+
+    const baseEntry = localEntry || this.synthesizeInstantEntry(clean);
+    if (clean.includes(' ')) {
+      baseEntry.partOfSpeech = 'PHRASE';
+      baseEntry.article = '';
+    }
+
+    // 2. Doğrudan Google Translate (de -> tr ve de -> en aynı anda, dt=t&dt=bd ile çoklu anlam)
+    const [trResult, enResult] = await Promise.all([
+      this._fetchGoogleRichPair(clean, 'de', 'tr', signal).catch(() => ({ terms: [], detectedPos: '' })),
+      this._fetchGoogleRichPair(clean, 'de', 'en', signal).catch(() => ({ terms: [], detectedPos: '' }))
+    ]);
+
+    if (signal?.aborted) return null;
+
+    // 3. Yerel anlamlar + Google çoklu anlamlarını tekrarsız birleştir
+    const mergeUnique = (lists, limit) => {
+      const out = [];
+      const seen = new Set();
+      for (const arr of lists) {
+        for (const item of arr) {
+          const t = String(item || '').trim();
+          if (!t) continue;
+          const k = t.toLowerCase();
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push(t);
+          if (out.length >= limit) return out;
+        }
+      }
+      return out;
+    };
+
+    const localTrList = (baseEntry.meaningsTr || baseEntry.tr || '')
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const localEnList = (baseEntry.meaningsEn || baseEntry.en || '')
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const trList = mergeUnique([trResult.terms, localTrList], 12);
+    const enList = mergeUnique([enResult.terms, localEnList], 10);
+
+    if ((!baseEntry.partOfSpeech || baseEntry.partOfSpeech === 'OTHER') && !clean.includes(' ')) {
+      baseEntry.partOfSpeech = trResult.detectedPos || enResult.detectedPos || baseEntry.partOfSpeech || 'OTHER';
+    }
+
+    const entry = {
+      ...baseEntry,
+      meaningsTr: trList.join(', '),
+      meaningsEn: enList.join(', '),
+    };
+
+    const result = {
+      status: trResult.terms.length > 0 || enResult.terms.length > 0 ? 'google_direct' : (localEntry ? 'exact' : 'google_direct'),
+      sourceLabel: localEntry ? 'Google Translate + Yerel Sözlük' : 'Google Translate (Canlı)',
+      entry,
+      stem: matchedStem,
+      trList,
+      enList,
+      translatedText: trList[0] || '',
+      translatedEnText: enList[0] || '',
+      originalQuery: clean,
+    };
+
+    if (trList.length > 0 || enList.length > 0) {
+      DictionaryService._readerLookupCache.set(cacheKey, result);
+    }
+
+    return result;
+  }
+
   static async translateGermanToTr(text, signal) {
     if (!text) return null;
     const clean = text.trim();

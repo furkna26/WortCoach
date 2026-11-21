@@ -4395,11 +4395,41 @@
   background: #131825;
   border: 1px solid #283144;
   border-radius: 20px;
-  max-width: 520px;
+  max-width: 540px;
   width: 95%;
-  max-height: 85vh;
+  max-height: 88vh;
+  max-height: 88dvh;
   overflow-y: auto;
   padding: 20px;
+}
+
+.reader-en-chips {
+  margin-top: 2px;
+}
+
+.reader-en-chips .meaning-chip.selected,
+.reader-en-chips .meaning-chip.chip-selected {
+  background-color: rgba(16, 185, 129, 0.14);
+  border-color: #10B981;
+  color: #ECFDF5;
+}
+
+.reader-en-chips .meaning-chip-check {
+  color: #34D399;
+}
+
+.reader-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #93C5FD;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  margin-bottom: 6px;
 }
 
 .reader-modal-header {

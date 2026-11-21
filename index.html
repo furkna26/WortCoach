@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.9.1" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.9.1" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.9.1" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.9.1" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.9.1" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.9.1" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.9.1" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.9.1" />
+  <link rel="manifest" href="manifest.json?v=3.9.2" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.9.2" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.9.2" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.9.2" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.9.2" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.9.2" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.9.2" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.9.2" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900;1000&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.9.1" />
-  <link rel="stylesheet" href="css/components.css?v=3.9.1" />
+  <link rel="stylesheet" href="css/app.css?v=3.9.2" />
+  <link rel="stylesheet" href="css/components.css?v=3.9.2" />
   
   <!-- PDF & DOCX İstemci Taraflı Belge Ayrıştırıcı Kütüphaneleri -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -2919,6 +2919,13 @@
       </div>
       <div class="meaning-chips-container" id="reader-modal-tr-chips"></div>
 
+      <!-- İngilizce Karşılıklar (EN) -->
+      <div class="sec-row-header" style="margin-top: 12px;">
+        <span>İNGİLİZCE KARŞILIKLAR (EN)</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Çoklu seçim</span>
+      </div>
+      <div class="meaning-chips-container reader-en-chips" id="reader-modal-en-chips"></div>
+
       <!-- Hedef Deste ve Kaydet -->
       <div class="target-deck-row" style="margin-top: 14px;">
         <label class="target-deck-label" for="reader-target-deck">HEDEF DESTE</label>
@@ -3844,25 +3851,25 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script src="js/config.js?v=3.9.1"></script>
-  <script src="js/db.js?v=3.9.1"></script>
-  <script src="js/verbHelper.js?v=3.9.1"></script>
-  <script src="js/grammarEnrichment.js?v=3.9.1"></script>
-  <script src="js/offlineDictionary.js?v=3.9.1"></script>
-  <script src="js/dictionary.js?v=3.9.1"></script>
-  <script src="js/curatedPacks.js?v=3.9.1"></script>
-  <script src="js/seeder.js?v=3.9.1"></script>
-  <script src="js/tts.js?v=3.9.1"></script>
-  <script src="js/pronunciation.js?v=3.9.1"></script>
-  <script src="js/translator.js?v=3.9.1"></script>
-  <script src="js/game.js?v=3.9.1"></script>
-  <script src="js/study.js?v=3.9.1"></script>
-  <script src="js/stats.js?v=3.9.1"></script>
-  <script src="js/coach.js?v=3.9.1"></script>
-  <script src="js/deckBuilder.js?v=3.9.1"></script>
-  <script src="js/satzBuilder.js?v=3.9.1"></script>
-  <script src="js/social.js?v=3.9.1"></script>
-  <script src="js/app.js?v=3.9.1"></script>
+  <script src="js/config.js?v=3.9.2"></script>
+  <script src="js/db.js?v=3.9.2"></script>
+  <script src="js/verbHelper.js?v=3.9.2"></script>
+  <script src="js/grammarEnrichment.js?v=3.9.2"></script>
+  <script src="js/offlineDictionary.js?v=3.9.2"></script>
+  <script src="js/dictionary.js?v=3.9.2"></script>
+  <script src="js/curatedPacks.js?v=3.9.2"></script>
+  <script src="js/seeder.js?v=3.9.2"></script>
+  <script src="js/tts.js?v=3.9.2"></script>
+  <script src="js/pronunciation.js?v=3.9.2"></script>
+  <script src="js/translator.js?v=3.9.2"></script>
+  <script src="js/game.js?v=3.9.2"></script>
+  <script src="js/study.js?v=3.9.2"></script>
+  <script src="js/stats.js?v=3.9.2"></script>
+  <script src="js/coach.js?v=3.9.2"></script>
+  <script src="js/deckBuilder.js?v=3.9.2"></script>
+  <script src="js/satzBuilder.js?v=3.9.2"></script>
+  <script src="js/social.js?v=3.9.2"></script>
+  <script src="js/app.js?v=3.9.2"></script>
 </body>
 </html>
 
