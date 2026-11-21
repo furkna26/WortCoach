@@ -121,14 +121,76 @@
       }, 1200);
     }
 
-    // Backend Proxy Çağrısı (Tarayıcıda anahtar bulundurmaz)
-    async apiCall(endpoint, payload = {}) {
+    getSavedSession() {
+      try {
+        return JSON.parse(localStorage.getItem(this.sessionKey));
+      } catch (_) {
+        return null;
+      }
+    }
+
+    getAccessToken() {
+      const s = this.getSavedSession();
+      return (s && typeof s.access_token === 'string') ? s.access_token : '';
+    }
+
+    getRefreshToken() {
+      const s = this.getSavedSession();
+      return (s && typeof s.refresh_token === 'string') ? s.refresh_token : '';
+    }
+
+    async refreshAuthSession() {
+      if (this._refreshPromise) return this._refreshPromise;
+      const refreshToken = this.getRefreshToken();
+      if (!refreshToken) return null;
+
       const apiBase = (window.WORTCOACH_CONFIG && window.WORTCOACH_CONFIG.COACH_API) || 'https://wortcoach-proxy.mosmandurmaz26.workers.dev';
+      this._refreshPromise = (async () => {
+        try {
+          const res = await fetch(`${apiBase}/api/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.ok && data.session && data.session.access_token) {
+            localStorage.setItem(this.sessionKey, JSON.stringify(data.session));
+            if (data.session.user) this.user = data.session.user;
+            return data.session.access_token;
+          }
+          return null;
+        } catch (_) {
+          return null;
+        } finally {
+          this._refreshPromise = null;
+        }
+      })();
+      return this._refreshPromise;
+    }
+
+    // Backend Proxy Çağrısı (Tarayıcıda anahtar bulundurmaz, JWT Bearer destekli)
+    async apiCall(endpoint, payload = {}, _retried = false) {
+      const apiBase = (window.WORTCOACH_CONFIG && window.WORTCOACH_CONFIG.COACH_API) || 'https://wortcoach-proxy.mosmandurmaz26.workers.dev';
+      const headers = { 'Content-Type': 'application/json' };
+      const token = this.getAccessToken();
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${apiBase}/api/${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(payload)
       });
+
+      const isAuthRoute = endpoint === 'auth/login' || endpoint === 'auth/register' || endpoint === 'auth/refresh';
+      if (res.status === 401 && !_retried && !isAuthRoute && this.getRefreshToken()) {
+        const nextToken = await this.refreshAuthSession();
+        if (nextToken) {
+          return this.apiCall(endpoint, payload, true);
+        }
+      }
+
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || 'İşlem gerçekleştirilemedi.');
@@ -1122,7 +1184,7 @@
         deckId,
         card: cardData,
         username: prof.username,
-        userId: prof.id || this.user?.id
+        userId: (this.user && this.user.id) || prof.id
       });
     }
 
@@ -1371,7 +1433,11 @@
       modal.classList.remove('hidden');
 
       // 2 Saniyelik Canlı Lobi Polling Döngüsü (Sunucu KV ile senkronizasyon)
+      this._1v1PollingInFlight = false;
       this.match1v1PollTimer = setInterval(async () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        if (this._1v1PollingInFlight) return;
+        this._1v1PollingInFlight = true;
         try {
           const res = await this.apiCall('multiplayer/room/state', { pin: room.pin });
           if (res.ok && res.room) {
@@ -1396,7 +1462,10 @@
               this.start1v1ActualGame(updatedRoom.words || this.match1v1State.words);
             }
           }
-        } catch (_) {}
+        } catch (_) {
+        } finally {
+          this._1v1PollingInFlight = false;
+        }
       }, 2000);
     }
 
@@ -1665,7 +1734,11 @@
       modal.classList.remove('hidden');
 
       // 1.8 Saniyelik Canlı Senkronizasyon & Polling Döngüsü
+      this._kahootPollingInFlight = false;
       this.kahootPollTimer = setInterval(async () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
+        if (this._kahootPollingInFlight) return;
+        this._kahootPollingInFlight = true;
         try {
           const res = await this.apiCall('multiplayer/room/state', { pin });
           if (res.ok && res.room) {
@@ -1711,7 +1784,10 @@
               }
             }
           }
-        } catch (_) {}
+        } catch (_) {
+        } finally {
+          this._kahootPollingInFlight = false;
+        }
       }, 1800);
     }
 
@@ -2823,11 +2899,12 @@
         const reg = await navigator.serviceWorker.ready;
         if (!reg.pushManager) return;
 
-        // Service Worker'a aktif kullanıcı ID'sini aktar (kapalıyken okuyabilmesi için)
+        // Service Worker'a aktif kullanıcı ID'sini ve JWT tokenını aktar (kapalıyken okuyabilmesi için)
         if (navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'STORE_PUSH_USER',
-            userId: this.user.id
+            userId: this.user.id,
+            accessToken: this.getAccessToken()
           });
         }
 
@@ -2861,8 +2938,8 @@
             const reg = await navigator.serviceWorker.ready;
             if (reg && reg.showNotification) {
               return await reg.showNotification(title, {
-                icon: 'icons/icon-192.svg',
-                badge: 'icons/icon-192.svg',
+                icon: 'icons/icon-192.png',
+                badge: 'icons/icon-192.png',
                 vibrate: [200, 100, 200],
                 ...options
               });
@@ -3014,9 +3091,16 @@
       if (this.inboxPollTimer) clearInterval(this.inboxPollTimer);
       this.knownInboxItemIds = new Set();
       this.isFirstInboxCheck = true;
+      this._inboxPollingInFlight = false;
+      this._lastInboxPollAt = 0;
 
-      this.inboxPollTimer = setInterval(async () => {
+      const runInboxCheck = async () => {
         if (!this.isCloudConnected()) return;
+        if (typeof document !== 'undefined' && document.hidden) return;
+        if (this._inboxPollingInFlight) return;
+
+        this._inboxPollingInFlight = true;
+        this._lastInboxPollAt = Date.now();
         try {
           const res = await this.apiCall('decks/inbox/get', { userId: this.user.id });
           const items = Array.isArray(res.gifts) ? res.gifts : [];
@@ -3070,8 +3154,22 @@
           if (hasNew) {
             await this.renderIncomingDeckGifts();
           }
-        } catch (_) {}
-      }, 3500);
+        } catch (_) {
+        } finally {
+          this._inboxPollingInFlight = false;
+        }
+      };
+
+      if (!this._inboxVisibilityBound && typeof document !== 'undefined') {
+        this._inboxVisibilityBound = true;
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden && Date.now() - (this._lastInboxPollAt || 0) >= 5000) {
+            runInboxCheck();
+          }
+        });
+      }
+
+      this.inboxPollTimer = setInterval(runInboxCheck, 15000);
     }
 
     attachEventListeners() {
@@ -3325,7 +3423,7 @@
             clubId: this.viewingClub.id,
             deck: { id: 'cdeck_' + Date.now(), title: resolved.title, words: resolved.words },
             username: prof.username,
-            userId: prof.id || this.user?.id
+            userId: (this.user && this.user.id) || prof.id
           });
           if (res.club) {
             this.viewingClub = res.club;

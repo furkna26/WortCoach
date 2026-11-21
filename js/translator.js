@@ -137,17 +137,25 @@ class WortMeisterTranslator {
   async translateTextHybrid(text, src, tgt, signal) {
     const cleanText = text.trim();
 
-    // 1. Google Translate Web Client (Hızlı, Ücretsiz, API Key Gerektirmez) - parçalı çeviri
+    // 1. Google Translate Web Client (Hızlı, Ücretsiz, API Key Gerektirmez) - 3'lü paralel parça çevirisi
     try {
-      const out = [];
-      for (const chunk of this.splitIntoChunks(cleanText)) {
-        if (!chunk.trim()) { out.push(chunk); continue; }
-        const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(chunk)}`;
-        const res = await fetch(gUrl, { signal });
-        const raw = await res.json();
-        if (!(raw && Array.isArray(raw[0]))) throw new Error('bad response');
-        const lead = chunk.match(/^\s*/)[0], trail = chunk.match(/\s*$/)[0];
-        out.push(lead + raw[0].map((item) => item[0]).join('').trim() + trail);
+      const chunks = this.splitIntoChunks(cleanText);
+      const out = new Array(chunks.length);
+      const BATCH_SIZE = 3;
+      for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+        const batch = chunks.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(batch.map(async (chunk) => {
+          if (!chunk.trim()) return chunk;
+          const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${src}&tl=${tgt}&dt=t&q=${encodeURIComponent(chunk)}`;
+          const res = await fetch(gUrl, { signal });
+          const raw = await res.json();
+          if (!(raw && Array.isArray(raw[0]))) throw new Error('bad response');
+          const lead = chunk.match(/^\s*/)[0], trail = chunk.match(/\s*$/)[0];
+          return lead + raw[0].map((item) => item[0]).join('').trim() + trail;
+        }));
+        for (let j = 0; j < results.length; j++) {
+          out[i + j] = results[j];
+        }
       }
       const joined = out.join('').trim();
       if (joined) return joined;

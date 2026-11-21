@@ -4,33 +4,33 @@
  * Harici API istekleri için Network-Only Pass-through (Canlı sözlük ve çeviri taramaları).
  */
 
-const CACHE_NAME = 'wortcoach-v3.9.2';
+const CACHE_NAME = 'wortcoach-v3.10.0';
 
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './css/app.css?v=3.9.2',
-  './css/components.css?v=3.9.2',
-  './js/config.js?v=3.9.2',
-  './js/db.js?v=3.9.2',
-  './js/verbHelper.js?v=3.9.2',
-  './js/grammarEnrichment.js?v=3.9.2',
-  './js/offlineDictionary.js?v=3.9.2',
-  './js/dictionary.js?v=3.9.2',
-  './js/curatedPacks.js?v=3.9.2',
-  './js/seeder.js?v=3.9.2',
-  './js/tts.js?v=3.9.2',
-  './js/pronunciation.js?v=3.9.2',
-  './js/translator.js?v=3.9.2',
-  './js/game.js?v=3.9.2',
-  './js/study.js?v=3.9.2',
-  './js/stats.js?v=3.9.2',
-  './js/coach.js?v=3.9.2',
-  './js/deckBuilder.js?v=3.9.2',
-  './js/satzBuilder.js?v=3.9.2',
-  './js/social.js?v=3.9.2',
-  './js/app.js?v=3.9.2',
+  './css/app.css?v=3.10.0',
+  './css/components.css?v=3.10.0',
+  './js/config.js?v=3.10.0',
+  './js/db.js?v=3.10.0',
+  './js/verbHelper.js?v=3.10.0',
+  './js/grammarEnrichment.js?v=3.10.0',
+  './js/offlineDictionary.js?v=3.10.0',
+  './js/dictionary.js?v=3.10.0',
+  './js/curatedPacks.js?v=3.10.0',
+  './js/seeder.js?v=3.10.0',
+  './js/tts.js?v=3.10.0',
+  './js/pronunciation.js?v=3.10.0',
+  './js/translator.js?v=3.10.0',
+  './js/game.js?v=3.10.0',
+  './js/study.js?v=3.10.0',
+  './js/stats.js?v=3.10.0',
+  './js/coach.js?v=3.10.0',
+  './js/deckBuilder.js?v=3.10.0',
+  './js/satzBuilder.js?v=3.10.0',
+  './js/social.js?v=3.10.0',
+  './js/app.js?v=3.10.0',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-192.svg',
@@ -57,7 +57,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keyList) => {
       return Promise.all(
         keyList.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key !== CACHE_NAME && key !== 'wortcoach-user-meta') {
             return caches.delete(key);
           }
           return null;
@@ -94,27 +94,56 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Yerel uygulama dosyaları için Network-First stratejisi
-  event.respondWith(
-    fetch(request)
-      .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          if (request.mode === 'navigate') {
-            return caches.match('./index.html');
+  // Navigasyon, kök HTML ve manifest için Network-First stratejisi (güncel sürüm anında alınsın)
+  const isNavOrShell =
+    request.mode === 'navigate' ||
+    url.pathname.endsWith('/') ||
+    url.pathname.endsWith('/index.html') ||
+    url.pathname.endsWith('/manifest.json');
+
+  if (isNavOrShell) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
           }
-          return new Response('', { status: 404, statusText: 'Not Found' });
-        });
-      })
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            if (request.mode === 'navigate') {
+              return caches.match('./index.html');
+            }
+            return new Response('', { status: 404, statusText: 'Not Found' });
+          });
+        })
+    );
+    return;
+  }
+
+  // Versiyonlu ?v= CSS/JS ve statik ikon varlıkları için Cache-First (anında açılış)
+  event.respondWith(
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => new Response('', { status: 404, statusText: 'Not Found' }));
+    })
   );
 });
 
@@ -159,28 +188,49 @@ self.addEventListener('notificationclick', (event) => {
 // PWA Web Push Bildirim Motoru (Uygulama Kapalıyken Uyandırma)
 // =========================================================================
 let currentPushUserId = null;
+let currentPushAccessToken = null;
 
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
   if (event.data && event.data.type === 'STORE_PUSH_USER' && event.data.userId) {
     currentPushUserId = String(event.data.userId);
+    if (event.data.accessToken) {
+      currentPushAccessToken = String(event.data.accessToken);
+    }
     if ('caches' in self) {
       caches.open('wortcoach-user-meta').then((c) => {
-        c.put('/__active_user_id', new Response(String(event.data.userId)));
+        const tasks = [c.put('/__active_user_id', new Response(String(event.data.userId)))];
+        if (event.data.accessToken) {
+          tasks.push(c.put('/__active_access_token', new Response(String(event.data.accessToken))));
+        }
+        return Promise.all(tasks);
       }).catch(() => {});
     }
   }
 });
 
-async function getStoredPushUserId() {
-  if (currentPushUserId) return currentPushUserId;
+async function getStoredPushMeta() {
+  if (currentPushUserId && currentPushAccessToken) {
+    return { userId: currentPushUserId, accessToken: currentPushAccessToken };
+  }
+  let userId = currentPushUserId;
+  let accessToken = currentPushAccessToken;
   try {
     if ('caches' in self) {
       const c = await caches.open('wortcoach-user-meta');
-      const res = await c.match('/__active_user_id');
-      if (res) return await res.text();
+      if (!userId) {
+        const res = await c.match('/__active_user_id');
+        if (res) userId = await res.text();
+      }
+      if (!accessToken) {
+        const tRes = await c.match('/__active_access_token');
+        if (tRes) accessToken = await tRes.text();
+      }
     }
   } catch (_) {}
-  return null;
+  return { userId, accessToken };
 }
 
 self.addEventListener('push', (event) => {
@@ -189,18 +239,22 @@ self.addEventListener('push', (event) => {
       let title = 'WortCoach';
       let options = {
         body: 'Yeni bir davetiniz veya bildiriminiz var!',
-        icon: 'icons/icon-192.svg',
-        badge: 'icons/icon-192.svg',
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
         vibrate: [200, 100, 200],
         tag: 'wortcoach_remote_push',
         renotify: true
       };
 
-      const userId = await getStoredPushUserId();
+      const { userId, accessToken } = await getStoredPushMeta();
       if (userId) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (accessToken) {
+          headers.Authorization = `Bearer ${accessToken}`;
+        }
         const res = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/decks/inbox/get', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ userId })
         });
         const data = await res.json();
@@ -229,8 +283,8 @@ self.addEventListener('push', (event) => {
     } catch (err) {
       return self.registration.showNotification('WortCoach', {
         body: 'Yeni bir aktivite bildirimi aldınız.',
-        icon: 'icons/icon-192.svg',
-        badge: 'icons/icon-192.svg'
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png'
       });
     }
   })());

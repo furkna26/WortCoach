@@ -296,12 +296,40 @@ const COACH_CHAT_SCHEMA = {
 const EMOJI_RE = /[\p{Extended_Pictographic}\u200d\ufe0f]/gu;
 const clean = (v, max) => String(v ?? '').replace(EMOJI_RE, '').replace(/\s+/g, ' ').trim().slice(0, max);
 
+const TOKEN_CACHE = new Map();
+const TOKEN_CACHE_TTL_MS = 60_000;
+const TOKEN_CACHE_MAX = 500;
+
+function isOriginAllowed(origin, env) {
+  if (!origin) return true; // Origin başlığı olmayan sunucu/CLI/Keepalive istekleri
+  let parsed;
+  try {
+    parsed = new URL(origin);
+  } catch (_) {
+    return false;
+  }
+  const host = parsed.hostname.toLowerCase();
+  const scheme = parsed.protocol;
+  if (scheme === 'https:' && (host === 'furkna26.github.io' || host === 'wortcoach.app' || host.endsWith('.wortcoach.app'))) {
+    return true;
+  }
+  if ((scheme === 'http:' || scheme === 'https:') && (host === 'localhost' || host === '127.0.0.1' || host === '[::1]')) {
+    return true;
+  }
+  if (env && env.ALLOWED_ORIGINS) {
+    const extra = String(env.ALLOWED_ORIGINS).split(',').map(s => s.trim()).filter(Boolean);
+    if (extra.includes(origin) || extra.includes(parsed.origin)) return true;
+  }
+  return false;
+}
+
 function cors(env, req) {
   const origin = req.headers.get('Origin') || '';
+  const allowed = isOriginAllowed(origin, env);
   return {
-    ok: true,
+    ok: allowed,
     headers: {
-      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Origin': allowed ? (origin || '*') : 'https://furkna26.github.io',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       Vary: 'Origin',
@@ -549,7 +577,61 @@ function getSbFetch(env) {
   };
 }
 
-async function handleDatabaseApi(path, body, env, c) {
+async function verifyAuthUser(req, env) {
+  if (!req || !req.headers) return null;
+  const authHeader = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+  if (!authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token || token.length < 16) return null;
+
+  const now = Date.now();
+  const cached = TOKEN_CACHE.get(token);
+  if (cached && now - cached.ts < TOKEN_CACHE_TTL_MS) {
+    return cached.user;
+  }
+  if (cached) TOKEN_CACHE.delete(token);
+
+  const sbKey = env.SUPABASE_SECRET || '';
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/user`, {
+      method: 'GET',
+      headers: {
+        'apikey': sbKey,
+        'Authorization': `Bearer ${token}`,
+      }
+    });
+    if (!res.ok) return null;
+    const u = await res.json().catch(() => null);
+    if (!u || !u.id) return null;
+    const user = { id: u.id, email: u.email || '' };
+    if (TOKEN_CACHE.size >= TOKEN_CACHE_MAX) {
+      const oldest = TOKEN_CACHE.keys().next().value;
+      if (oldest !== undefined) TOKEN_CACHE.delete(oldest);
+    }
+    TOKEN_CACHE.set(token, { user, ts: now });
+    return user;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function requireAuthUser(req, env, c, requestedUserId = '') {
+  const authUser = await verifyAuthUser(req, env);
+  if (!authUser || !authUser.id) {
+    return {
+      errorResponse: json({ error: 'Oturum doğrulanamadı. Lütfen tekrar giriş yapın.' }, 401, c.headers)
+    };
+  }
+  const reqId = clean(requestedUserId, 40);
+  if (reqId && reqId !== authUser.id) {
+    return {
+      errorResponse: json({ error: 'Bu işlem için yetkiniz yok.' }, 403, c.headers)
+    };
+  }
+  return { userId: authUser.id, user: authUser };
+}
+
+async function handleDatabaseApi(path, body, env, c, req) {
   const sbFetch = getSbFetch(env);
   try {
     // 0. Supabase Keep-Alive Health Check (Veritabanının uykuya / offline moda düşmesini önler)
@@ -655,6 +737,27 @@ async function handleDatabaseApi(path, body, env, c) {
       return json({ ok: true, session: tokenData, profile, user: { id: userId, username } }, 200, c.headers);
     }
 
+    // 2b. Oturum Token Yenileme (Refresh Token)
+    if (path === '/api/auth/refresh') {
+      const refreshToken = String(body.refreshToken || '').trim();
+      if (!refreshToken) {
+        return json({ error: 'Yenileme belirteci (refreshToken) eksik.' }, 400, c.headers);
+      }
+
+      const tokenRes = await sbFetch('/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      if (!tokenRes.ok) {
+        return json({ error: 'Oturum süresi doldu, lütfen tekrar giriş yapın.' }, 401, c.headers);
+      }
+      const tokenData = await tokenRes.json().catch(() => null);
+      if (!tokenData || !tokenData.access_token) {
+        return json({ error: 'Token yenilenemedi.' }, 401, c.headers);
+      }
+      return json({ ok: true, session: tokenData }, 200, c.headers);
+    }
+
     // 3. Profil Getir
     if (path === '/api/profile/get') {
       const userId = clean(body.userId, 40);
@@ -667,7 +770,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 4. Profil Deste Gizliliği Güncelle
     if (path === '/api/profile/update') {
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       const deckPrivacy = ['private', 'friends', 'public'].includes(body.deckPrivacy) ? body.deckPrivacy : 'friends';
       await sbFetch(`/rest/v1/profiles?id=eq.${userId}`, {
         method: 'PATCH',
@@ -678,7 +784,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 5. Aktivite ve ELO Kaydet (RPC)
     if (path === '/api/stats/record') {
-      const { userId, type, isCorrect, responseTimeMs, eloDelta } = body;
+      const { userId: rawUserId, type, isCorrect, responseTimeMs, eloDelta } = body;
+      const authCheck = await requireAuthUser(req, env, c, rawUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
 
       const rpcRes = await sbFetch('/rest/v1/rpc/record_activity_stat', {
@@ -762,7 +871,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 8. Arkadaşlık İsteği Gönder
     if (path === '/api/friends/request') {
-      const { requesterId, addresseeId } = body;
+      const { requesterId: rawReqId, addresseeId } = body;
+      const authCheck = await requireAuthUser(req, env, c, rawReqId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const requesterId = authCheck.userId;
       if (!requesterId || !addresseeId || requesterId === addresseeId) {
         return json({ error: 'Geçersiz istek.' }, 400, c.headers);
       }
@@ -783,7 +895,18 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 9. Arkadaşlık Kabul Et
     if (path === '/api/friends/accept') {
+      const authCheck = await requireAuthUser(req, env, c);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
       const friendshipId = clean(body.friendshipId, 50);
+      if (!friendshipId) return json({ error: 'Arkadaşlık kimliği eksik.' }, 400, c.headers);
+
+      const fRes = await sbFetch(`/rest/v1/friendships?id=eq.${friendshipId}&select=id,requester_id,addressee_id`);
+      const fRows = await fRes.json().catch(() => []);
+      const row = Array.isArray(fRows) && fRows[0] ? fRows[0] : null;
+      if (!row || row.addressee_id !== authCheck.userId) {
+        return json({ error: 'Bu arkadaşlık isteğini onaylama yetkiniz yok.' }, 403, c.headers);
+      }
+
       await sbFetch(`/rest/v1/friendships?id=eq.${friendshipId}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: 'accepted' })
@@ -793,14 +916,28 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 10. Arkadaşlığı Sil
     if (path === '/api/friends/remove') {
+      const authCheck = await requireAuthUser(req, env, c);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
       const friendshipId = clean(body.friendshipId, 50);
+      if (!friendshipId) return json({ error: 'Arkadaşlık kimliği eksik.' }, 400, c.headers);
+
+      const fRes = await sbFetch(`/rest/v1/friendships?id=eq.${friendshipId}&select=id,requester_id,addressee_id`);
+      const fRows = await fRes.json().catch(() => []);
+      const row = Array.isArray(fRows) && fRows[0] ? fRows[0] : null;
+      if (!row || (row.requester_id !== authCheck.userId && row.addressee_id !== authCheck.userId)) {
+        return json({ error: 'Bu arkadaşlık kaydını silme yetkiniz yok.' }, 403, c.headers);
+      }
+
       await sbFetch(`/rest/v1/friendships?id=eq.${friendshipId}`, { method: 'DELETE' });
       return json({ ok: true }, 200, c.headers);
     }
 
     // 11. Arkadaş Listesi & ELO Liderlik Tablosu
     if (path === '/api/friends/list') {
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
 
       const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(requester_id.eq.${userId},addressee_id.eq.${userId})&select=id,requester_id,addressee_id`);
@@ -836,7 +973,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 12. Bekleyen İstekler
     if (path === '/api/friends/pending') {
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       if (!userId) return json({ error: 'Kullanıcı kimliği eksik.' }, 400, c.headers);
 
       const pRes = await sbFetch(`/rest/v1/friendships?status=eq.pending&addressee_id=eq.${userId}&select=id,requester_id,created_at`);
@@ -933,7 +1073,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 13b. Kullanıcının Tüm Destelerini Otomatik Buluta Senkronize Et
     if (path === '/api/decks/sync_all') {
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       const authorUsername = clean(body.username, 40) || 'Kullanıcı';
       const deckPrivacy = ['public', 'friends', 'private'].includes(body.deckPrivacy) ? body.deckPrivacy : null;
       const incomingDecks = Array.isArray(body.decks) ? body.decks : [];
@@ -1036,7 +1179,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 14. Deste Kaydet (Ekleme / Güncelleme / Paylaşım)
     if (path === '/api/decks/save') {
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       const title = clean(body.title, 80) || 'Yeni Deste';
       const description = clean(body.description, 200) || '';
       const authorUsername = clean(body.authorUsername || body.username, 40) || 'Anonim';
@@ -1220,7 +1366,10 @@ async function handleDatabaseApi(path, body, env, c) {
     // 14b-1. Herkese Açık Desteyi Yayından Kaldır / Sil
     if (path === '/api/decks/public/remove') {
       const deckId = clean(body.deckId, 60);
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       if (!deckId || !ownerId) return json({ error: 'Eksik parametre.' }, 400, c.headers);
 
       if (env.LIMITS) {
@@ -1244,7 +1393,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     // 14b-2. Arkadaşa Doğrudan Deste Gönderme (Gelen Kutusu / Inbox)
     if (path === '/api/decks/inbox/send') {
-      const fromUserId = clean(body.fromUserId, 40);
+      const requestedFromId = clean(body.fromUserId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedFromId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const fromUserId = authCheck.userId;
       const fromUsername = clean(body.fromUsername, 40) || 'Arkadaşın';
       const toUserId = clean(body.toUserId, 40);
       const deckTitle = clean(body.deckTitle, 80) || 'Paylaşılan Deste';
@@ -1292,7 +1444,10 @@ async function handleDatabaseApi(path, body, env, c) {
     }
 
     if (path === '/api/decks/inbox/get') {
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       if (!userId || !env.LIMITS) return json({ ok: true, gifts: [] }, 200, c.headers);
 
       const existingStr = await env.LIMITS.get(`inbox:${userId}`);
@@ -1342,7 +1497,10 @@ async function handleDatabaseApi(path, body, env, c) {
     }
 
     if (path === '/api/decks/inbox/resolve') {
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       const giftId = clean(body.giftId, 60);
       if (!userId || !giftId || !env.LIMITS) return json({ ok: true }, 200, c.headers);
 
@@ -1360,7 +1518,10 @@ async function handleDatabaseApi(path, body, env, c) {
     if (path === '/api/clubs/create') {
       const name = clean(body.name, 60);
       const description = clean(body.description, 200) || '';
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       const ownerUsername = clean(body.ownerUsername, 40) || 'Yönetici';
       const access = clean(body.access, 20) === 'code' ? 'code' : 'public';
       if (!name || !ownerId) return json({ error: 'Kulüp adı ve kurucu bilgisi zorunludur.' }, 400, c.headers);
@@ -1399,7 +1560,10 @@ async function handleDatabaseApi(path, body, env, c) {
     if (path === '/api/clubs/join') {
       const code = clean(body.code, 20).toUpperCase();
       const directClubId = clean(body.clubId, 50);
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       const username = clean(body.username, 40) || 'Üye';
       if (!userId) return json({ error: 'Kullanıcı bilgisi eksik.' }, 400, c.headers);
       if (!env.LIMITS) return json({ error: 'Depolama alanı aktif değil.' }, 500, c.headers);
@@ -1429,7 +1593,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     if (path === '/api/clubs/delete') {
       const clubId = clean(body.clubId, 50);
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       if (!clubId || !ownerId || !env.LIMITS) return json({ error: 'Eksik parametre.' }, 400, c.headers);
 
       const clubStr = await env.LIMITS.get(`club:${clubId}`);
@@ -1459,7 +1626,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     if (path === '/api/clubs/members/remove') {
       const clubId = clean(body.clubId, 50);
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       const memberId = clean(body.memberId, 40);
       if (!clubId || !ownerId || !memberId || !env.LIMITS) return json({ error: 'Eksik parametre.' }, 400, c.headers);
 
@@ -1481,7 +1651,10 @@ async function handleDatabaseApi(path, body, env, c) {
 
     if (path === '/api/clubs/decks/remove') {
       const clubId = clean(body.clubId, 50);
-      const ownerId = clean(body.ownerId, 40);
+      const requestedOwnerId = clean(body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedOwnerId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const ownerId = authCheck.userId;
       const deckId = clean(body.deckId, 60);
       if (!clubId || !ownerId || !deckId || !env.LIMITS) return json({ error: 'Eksik parametre.' }, 400, c.headers);
 
@@ -1540,7 +1713,10 @@ async function handleDatabaseApi(path, body, env, c) {
       const clubId = clean(body.clubId, 50);
       const deck = body.deck;
       const addedBy = clean(body.username, 40) || 'Üye';
-      const addedById = clean(body.userId || body.ownerId, 40);
+      const requestedAddedById = clean(body.userId || body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedAddedById);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const addedById = authCheck.userId;
       if (!clubId || !deck || !env.LIMITS) return json({ error: 'Geçersiz parametreler.' }, 400, c.headers);
 
       const clubStr = await env.LIMITS.get(`club:${clubId}`);
@@ -1776,6 +1952,9 @@ async function handleDatabaseApi(path, body, env, c) {
     }
 
     if (path === '/api/clubs/decks/add_card') {
+      const requestedUserId = clean(body.userId || body.ownerId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
       const clubId = clean(body.clubId, 50);
       const deckId = clean(body.deckId, 60);
       const card = body.card;
@@ -1908,7 +2087,10 @@ async function handleDatabaseApi(path, body, env, c) {
     }
 
     if (path === '/api/push/subscribe') {
-      const userId = clean(body.userId, 40);
+      const requestedUserId = clean(body.userId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedUserId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const userId = authCheck.userId;
       const subscription = body.subscription;
       if (!userId || !subscription || !env.LIMITS) {
         return json({ error: 'Eksik abonelik parametreleri.' }, 400, c.headers);
@@ -1936,7 +2118,7 @@ export default {
 
     // Database / Auth Proxy Endpointleri (Token limitinden muaftır)
     if (path.startsWith('/api/')) {
-      return await handleDatabaseApi(path, body, env, c);
+      return await handleDatabaseApi(path, body, env, c, req);
     }
 
     const ip = req.headers.get('CF-Connecting-IP') || 'unknown';

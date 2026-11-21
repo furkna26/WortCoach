@@ -34,3 +34,71 @@ window.coachRequest = async function (task, payload, signal) {
   }
   return data;
 };
+
+/**
+ * Ağır harici kütüphaneleri (PDF.js, Mammoth DOCX vb.) açılışta değil,
+ * yalnızca ilgili özellik kullanıldığında bir defaya mahsus yükler.
+ */
+window.WortCoachLoader = (() => {
+  const inflight = new Map();
+
+  function loadScriptOnce(src, checkFn) {
+    if (typeof checkFn === 'function' && checkFn()) {
+      return Promise.resolve(checkFn());
+    }
+    if (inflight.has(src)) {
+      return inflight.get(src);
+    }
+
+    const promise = new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) {
+        if (typeof checkFn === 'function' && checkFn()) {
+          resolve(checkFn());
+          return;
+        }
+        existing.addEventListener('load', () => resolve(checkFn ? checkFn() : true), { once: true });
+        existing.addEventListener('error', () => {
+          inflight.delete(src);
+          reject(new Error('Kütüphane yüklenemedi: ' + src));
+        }, { once: true });
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.onload = () => resolve(checkFn ? checkFn() : true);
+      script.onerror = () => {
+        inflight.delete(src);
+        script.remove();
+        reject(new Error('Harici kütüphane yüklenemedi: ' + src));
+      };
+      document.head.appendChild(script);
+    });
+
+    inflight.set(src, promise);
+    return promise;
+  }
+
+  return {
+    loadScriptOnce,
+    async ensurePdfJs() {
+      await loadScriptOnce(
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+        () => window.pdfjsLib
+      );
+      if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      return window.pdfjsLib;
+    },
+    async ensureMammoth() {
+      return loadScriptOnce(
+        'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js',
+        () => window.mammoth
+      );
+    },
+  };
+})();

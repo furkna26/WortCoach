@@ -13,11 +13,22 @@ class WortCoachApp {
     this.searchAbortController = null;
     this.modalDebounceTimer = null;
     this.modalAbortController = null;
+    this.cardsFilterDebounceTimer = null;
+    this.cardsRenderLimit = 60;
     this.deferredInstallPrompt = null;
     this.currentSearchEntry = null;
     this.activeTabId = 'tab-home';
     this.routeHistoryStack = [];
     this.isHandlingRoute = false;
+  }
+
+  escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   async init() {
@@ -38,9 +49,12 @@ class WortCoachApp {
     this.bindSettingsModal();
     this.bindGames();
     this.bindPronunciationCoach();
-    if (window.WordGameService) {
-      window.WordGameService.initPool();
-    }
+    const deferIdle = window.requestIdleCallback || ((cb) => setTimeout(cb, 50));
+    deferIdle(() => {
+      if (window.WordGameService) {
+        window.WordGameService.initPool();
+      }
+    });
 
     window.wmTranslator.init();
     this.bindSmartReader();
@@ -70,19 +84,12 @@ class WortCoachApp {
       await this.renderDecksTab();
     });
 
-    // Opsiyonel Azure Speech Pronunciation Assessment Ayarı
-    const azureKeyInput = document.getElementById('input-azure-speech-key');
-    const azureRegionInput = document.getElementById('input-azure-speech-region');
+    // Fonetik Motor Seçimi Ayarı
     const azureStatus = document.getElementById('azure-speech-status');
-    const azureSaveBtn = document.getElementById('btn-save-azure-key');
     const settingsEngineSelect = document.getElementById('select-settings-phonetic-engine');
 
-    const updateAzureUI = () => {
-      const curKey = localStorage.getItem('azure_speech_key') || '';
-      const curReg = localStorage.getItem('azure_speech_region') || 'westeurope';
+    const updatePhoneticStatusUI = () => {
       const curEng = window.wmPronunciation ? window.wmPronunciation.getSelectedEngine() : 'HYBRID_ENSEMBLE';
-      if (azureKeyInput) azureKeyInput.value = curKey;
-      if (azureRegionInput) azureRegionInput.value = curReg;
       if (settingsEngineSelect) settingsEngineSelect.value = curEng;
       if (azureStatus) {
         const meta = window.wmPronunciation ? window.wmPronunciation.getSelectedEngineMeta() : null;
@@ -90,7 +97,7 @@ class WortCoachApp {
         azureStatus.style.color = '#10B981';
       }
     };
-    updateAzureUI();
+    updatePhoneticStatusUI();
 
     settingsEngineSelect?.addEventListener('change', () => {
       if (window.wmPronunciation) {
@@ -98,23 +105,7 @@ class WortCoachApp {
         const meta = window.wmPronunciation.getSelectedEngineMeta();
         this.showToast(`Fonetik Motoru: ${meta.shortLabel} seçildi.`);
       }
-      updateAzureUI();
-      this.syncPronunciationEngineSelectorUI();
-    });
-
-    azureSaveBtn?.addEventListener('click', () => {
-      const keyVal = (azureKeyInput?.value || '').trim();
-      const regVal = (azureRegionInput?.value || 'westeurope').trim() || 'westeurope';
-      localStorage.setItem('azure_speech_region', regVal);
-      if (keyVal) {
-        localStorage.setItem('azure_speech_key', keyVal);
-        if (window.wmPronunciation) window.wmPronunciation.setSelectedEngine('AZURE_CLOUD');
-        this.showToast('Azure Speech GOP anahtarı kaydedildi ve aktif edildi.');
-      } else {
-        localStorage.removeItem('azure_speech_key');
-        this.showToast('Yerleşik ücretsiz Fonetik Motoru aktif.');
-      }
-      updateAzureUI();
+      updatePhoneticStatusUI();
       this.syncPronunciationEngineSelectorUI();
     });
   }
@@ -126,7 +117,7 @@ class WortCoachApp {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.9.2').then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=3.10.0').then((reg) => {
         reg.update();
         if (reg.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -1116,8 +1107,9 @@ class WortCoachApp {
         artBadge.innerHTML = '';
         return;
       }
+      const safeArt = this.escapeHtml(art);
       const st = window.getArticleStyle ? window.getArticleStyle(art) : null;
-      artBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${art.toLowerCase()}">${art.toUpperCase()}</span>`;
+      artBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${safeArt.toLowerCase()}">${safeArt.toUpperCase()}</span>`;
     };
 
     document.querySelectorAll('#fallback-article-selectors .btn-classifier-pill').forEach((btn) => {
@@ -1185,7 +1177,13 @@ class WortCoachApp {
       const chipEl = document.createElement('div');
       chipEl.className = 'meaning-chip selected';
       chipEl.setAttribute('data-val', val);
-      chipEl.innerHTML = `<span class="meaning-chip-check"></span><span class="meaning-chip-text">${val}</span>`;
+      const checkSpan = document.createElement('span');
+      checkSpan.className = 'meaning-chip-check';
+      const textSpan = document.createElement('span');
+      textSpan.className = 'meaning-chip-text';
+      textSpan.textContent = val;
+      chipEl.appendChild(checkSpan);
+      chipEl.appendChild(textSpan);
       trChipsContainer?.insertBefore(chipEl, addCustomBtn);
       await this.saveCustomMeaningForWord(cleanWord, val);
       customInput.value = '';
@@ -1362,6 +1360,10 @@ class WortCoachApp {
         let extractedText = '';
 
         if (ext === 'pdf') {
+          if (typeof window.pdfjsLib === 'undefined' && window.WortCoachLoader) {
+            if (uploadStatus) uploadStatus.textContent = 'PDF okuyucu yükleniyor...';
+            await window.WortCoachLoader.ensurePdfJs();
+          }
           if (typeof window.pdfjsLib !== 'undefined') {
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
             const arrayBuffer = await file.arrayBuffer();
@@ -1379,13 +1381,17 @@ class WortCoachApp {
             throw new Error('PDF ayrıştırıcı kütüphane henüz yüklenemedi.');
           }
         } else if (file.type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
-          if (uploadStatus) uploadStatus.textContent = 'G?rseldeki Almanca metin okunuyor...';
+          if (uploadStatus) uploadStatus.textContent = 'Görseldeki Almanca metin okunuyor...';
           const b64 = await (window.coachHelper ? window.coachHelper.downscaleImage(file) : new Promise((res, rej) => {
             const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(file);
           }));
           const ocr = await window.coachRequest('ocr', { file: { mime: 'image/jpeg', data: b64 } });
           extractedText = ocr?.text || '';
         } else if (ext === 'docx') {
+          if (typeof window.mammoth === 'undefined' && window.WortCoachLoader) {
+            if (uploadStatus) uploadStatus.textContent = 'DOCX okuyucu yükleniyor...';
+            await window.WortCoachLoader.ensureMammoth();
+          }
           if (typeof window.mammoth !== 'undefined') {
             const arrayBuffer = await file.arrayBuffer();
             const res = await window.mammoth.extractRawText({ arrayBuffer });
@@ -1771,12 +1777,12 @@ class WortCoachApp {
 
     const renderReaderGrammarRow = (ent, cleanTarget, stemNoteText = '') => {
       if (!modalGrammarRow) return;
-      const posStr = ent?.partOfSpeech || (cleanTarget.includes(' ') ? 'Kalıp' : 'Kelime');
+      const posStr = this.escapeHtml(ent?.partOfSpeech || (cleanTarget.includes(' ') ? 'Kalıp' : 'Kelime'));
       const stemNote = stemNoteText ? `<span class="badge" style="background:rgba(59,130,246,0.15); color:#60A5FA;">Kök: ${escapeHtmlAttr(stemNoteText)}</span>` : '';
       const rNuance = ent && window.detectGermanTags ? window.detectGermanTags(ent) : [];
-      const rNuanceHtml = rNuance.map((t) => `<span class="badge-nuance ${t.className}" style="color:${t.color}; background-color:${t.bg}; border:1px solid ${t.border}; font-size:0.75rem; padding:2px 6px;">${t.label}</span>`).join(' ');
-      const rCefrBadge = ent?.cefr ? `<span class="badge badge-cefr" style="background:rgba(99,102,241,0.15); color:#A5B4FC; border:1px solid rgba(99,102,241,0.3); font-size:0.75rem; font-weight:700; padding:2px 6px;">${String(ent.cefr).toUpperCase()}</span>` : '';
-      modalGrammarRow.innerHTML = `<span class="badge badge-pos-${ent?.partOfSpeech || 'OTHER'}">${posStr}</span> ${rCefrBadge} ${stemNote} ${rNuanceHtml}`;
+      const rNuanceHtml = rNuance.map((t) => `<span class="badge-nuance ${escapeHtmlAttr(t.className)}" style="color:${t.color}; background-color:${t.bg}; border:1px solid ${t.border}; font-size:0.75rem; padding:2px 6px;">${escapeHtmlAttr(t.label)}</span>`).join(' ');
+      const rCefrBadge = ent?.cefr ? `<span class="badge badge-cefr" style="background:rgba(99,102,241,0.15); color:#A5B4FC; border:1px solid rgba(99,102,241,0.3); font-size:0.75rem; font-weight:700; padding:2px 6px;">${escapeHtmlAttr(String(ent.cefr).toUpperCase())}</span>` : '';
+      modalGrammarRow.innerHTML = `<span class="badge badge-pos-${escapeHtmlAttr(ent?.partOfSpeech || 'OTHER')}">${posStr}</span> ${rCefrBadge} ${stemNote} ${rNuanceHtml}`;
     };
 
     const renderReaderTrChips = (trList = [], cleanTarget = '') => {
@@ -1844,8 +1850,9 @@ class WortCoachApp {
         ? window.DictionaryService.synthesizeInstantEntry(cleanTarget)
         : null;
       if (instantEntry?.article && modalArticleBadge) {
+        const safeInstantArt = this.escapeHtml(instantEntry.article);
         const st = window.getArticleStyle ? window.getArticleStyle(instantEntry.article) : null;
-        modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${instantEntry.article.toLowerCase()}">${instantEntry.article.toUpperCase()}</span>`;
+        modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${safeInstantArt.toLowerCase()}">${safeInstantArt.toUpperCase()}</span>`;
       }
       renderReaderGrammarRow(instantEntry, cleanTarget);
 
@@ -1890,8 +1897,9 @@ class WortCoachApp {
         const ent = res.entry || instantEntry;
         const art = ent?.article || '';
         if (art && modalArticleBadge) {
+          const safeArt = this.escapeHtml(art);
           const st = window.getArticleStyle ? window.getArticleStyle(art) : null;
-          modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${art.toLowerCase()}">${art.toUpperCase()}</span>`;
+          modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${safeArt.toLowerCase()}">${safeArt.toUpperCase()}</span>`;
         }
 
         if (modalBannerContainer && res.sourceLabel) {
@@ -1965,7 +1973,14 @@ class WortCoachApp {
         const newChip = document.createElement('div');
         newChip.className = 'meaning-chip selected';
         newChip.setAttribute('data-val', val);
-        newChip.innerHTML = `<span class="meaning-chip-check">✓</span><span class="meaning-chip-text">${val}</span>`;
+        const chkSpan = document.createElement('span');
+        chkSpan.className = 'meaning-chip-check';
+        chkSpan.textContent = '✓';
+        const txtSpan = document.createElement('span');
+        txtSpan.className = 'meaning-chip-text';
+        txtSpan.textContent = val;
+        newChip.appendChild(chkSpan);
+        newChip.appendChild(txtSpan);
         modalTrChips?.insertBefore(newChip, addBtn);
         newChip.addEventListener('click', () => {
           newChip.classList.toggle('selected');
@@ -2530,7 +2545,7 @@ class WortCoachApp {
               <span style="font-size:0.74rem; color:var(--text-muted);">Sözlükte aramak için tıklayın</span>
             </div>
             <div class="synonym-chips-container">
-              ${data.synonyms.map((s) => `<button type="button" class="synonym-chip" data-word="${s.replace(/"/g, '&quot;')}"><svg class="svg-icon" style="width:13px;height:13px;color:#818CF8;"><use href="#icon-search"></use></svg><span>${s}</span></button>`).join('')}
+              ${data.synonyms.map((s) => `<button type="button" class="synonym-chip" data-word="${this.escapeHtml(s)}"><svg class="svg-icon" style="width:13px;height:13px;color:#818CF8;"><use href="#icon-search"></use></svg><span>${this.escapeHtml(s)}</span></button>`).join('')}
             </div>
           `;
         }
@@ -2540,7 +2555,7 @@ class WortCoachApp {
               <span>KELİME AİLESİ (WORTFAMILIE)</span>
             </div>
             <div class="synonym-chips-container">
-              ${data.wordFamily.map((w) => `<button type="button" class="synonym-chip wortfamilie-chip" data-word="${w.replace(/"/g, '&quot;')}"><svg class="svg-icon" style="width:13px;height:13px;color:#34D399;"><use href="#icon-link"></use></svg><span>${w}</span></button>`).join('')}
+              ${data.wordFamily.map((w) => `<button type="button" class="synonym-chip wortfamilie-chip" data-word="${this.escapeHtml(w)}"><svg class="svg-icon" style="width:13px;height:13px;color:#34D399;"><use href="#icon-link"></use></svg><span>${this.escapeHtml(w)}</span></button>`).join('')}
             </div>
           `;
         }
@@ -2550,7 +2565,7 @@ class WortCoachApp {
           if (tagsRow && extraTags.length > 0) {
             extraTags.forEach((et) => {
               if (!tagsRow.innerHTML.includes(et.label)) {
-                tagsRow.innerHTML += `<span class="badge-nuance ${et.className}" style="color:${et.color}; background-color:${et.bg}; border:1px solid ${et.border};">${et.label}</span>`;
+                tagsRow.innerHTML += `<span class="badge-nuance ${this.escapeHtml(et.className)}" style="color:${et.color}; background-color:${et.bg}; border:1px solid ${et.border};">${this.escapeHtml(et.label)}</span>`;
               }
             });
           }
@@ -2561,7 +2576,7 @@ class WortCoachApp {
             e.stopPropagation();
             const targetWord = chip.getAttribute('data-word');
             if (targetWord) {
-              const searchInput = document.getElementById('search-input');
+              const searchInput = document.getElementById('global-search-input');
               if (searchInput) searchInput.value = targetWord;
               this.executeSearch(targetWord);
               window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2614,7 +2629,12 @@ class WortCoachApp {
         newChip.className = 'meaning-chip selected';
         newChip.setAttribute('data-type', 'tr');
         newChip.setAttribute('data-val', val);
-        newChip.innerHTML = `<span class="chip-check-icon"></span><span>${val}</span>`;
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'chip-check-icon';
+        const valSpan = document.createElement('span');
+        valSpan.textContent = val;
+        newChip.appendChild(iconSpan);
+        newChip.appendChild(valSpan);
         newChip.addEventListener('click', () => {
           const isSel = newChip.classList.contains('selected');
           const selCount = trChipsContainer ? trChipsContainer.querySelectorAll('.meaning-chip.selected').length : 0;
@@ -4048,32 +4068,145 @@ class WortCoachApp {
   bindCardsTab() {
     const filterInput = document.getElementById('cards-filter-input');
     filterInput?.addEventListener('input', () => {
-      this.renderCardsList(filterInput.value.trim());
+      if (this.cardsFilterDebounceTimer) clearTimeout(this.cardsFilterDebounceTimer);
+      this.cardsFilterDebounceTimer = setTimeout(() => {
+        this.renderCardsList(filterInput.value.trim(), true);
+      }, 200);
+    });
+
+    // Kategori filtre pilleri bir kez bağlanır
+    document.querySelectorAll('#cards-pos-filter-bar .pos-filter-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('#cards-pos-filter-bar .pos-filter-pill').forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+        this.activeCardsPosFilter = pill.getAttribute('data-pos') || 'ALL';
+        const currentQuery = document.getElementById('cards-filter-input')?.value || '';
+        this.renderCardsList(currentQuery, true);
+      });
+    });
+
+    // Tek olay delegasyonu (yüzlerce kartta sıfır listener kopyalaması)
+    const listContainer = document.getElementById('all-cards-list');
+    listContainer?.addEventListener('click', async (e) => {
+      const target = e.target;
+      if (!target) return;
+
+      const loadMoreBtn = target.closest('#btn-cards-load-more');
+      if (loadMoreBtn) {
+        this.cardsRenderLimit = (this.cardsRenderLimit || 60) + 60;
+        const currentQuery = document.getElementById('cards-filter-input')?.value?.trim() || '';
+        await this.renderCardsList(currentQuery, false);
+        return;
+      }
+
+      const emptyCuratedBtn = target.closest('#btn-empty-open-curated');
+      if (emptyCuratedBtn) {
+        document.getElementById('modal-curated-packs')?.classList.remove('hidden');
+        this.renderCuratedPacksModal();
+        return;
+      }
+
+      const editBtn = target.closest('.btn-card-edit');
+      if (editBtn) {
+        e.stopPropagation();
+        const cardId = Number(editBtn.getAttribute('data-id'));
+        const card = this._renderedCardsById?.get(cardId);
+        if (card) this.openEditCardModal(card);
+        return;
+      }
+
+      const ttsBtn = target.closest('.btn-card-tts');
+      if (ttsBtn) {
+        e.stopPropagation();
+        window.wmTTS.speak(ttsBtn.getAttribute('data-word'), 'de-DE');
+        return;
+      }
+
+      const pronBtn = target.closest('.btn-card-pronounce');
+      if (pronBtn) {
+        e.stopPropagation();
+        const cardId = Number(pronBtn.getAttribute('data-id'));
+        const card = this._renderedCardsById?.get(cardId);
+        if (card) this.openPronunciationCoach(card, 'word');
+        return;
+      }
+
+      const delBtn = target.closest('.btn-card-delete');
+      if (delBtn) {
+        e.stopPropagation();
+        const id = Number(delBtn.getAttribute('data-id'));
+        if (confirm('Kartı silmek istiyor musunuz?')) {
+          await window.wmDB.deleteCard(id);
+          this.showToast('Kart silindi.');
+          const currentQuery = document.getElementById('cards-filter-input')?.value?.trim() || '';
+          await this.renderCardsList(currentQuery, false);
+          await this.renderDecksTab();
+          await this.refreshHomeDashboard();
+        }
+        return;
+      }
+
+      const cardEl = target.closest('.deck-item-card');
+      if (cardEl && !target.closest('.deck-item-actions')) {
+        const cardId = Number(cardEl.getAttribute('data-card-id'));
+        const card = this._renderedCardsById?.get(cardId);
+        if (card) this.openEditCardModal(card);
+      }
     });
   }
 
-  async renderCardsList(filterQuery = '') {
+  async renderCardsList(filterQuery = '', resetLimit = true) {
     const cards = await window.wmDB.getAllCards();
     const container = document.getElementById('all-cards-list');
     const subtitle = document.getElementById('cards-total-subtitle');
+    if (!container) return;
 
     if (!this.activeCardsPosFilter) this.activeCardsPosFilter = 'ALL';
+    if (resetLimit || !this.cardsRenderLimit) this.cardsRenderLimit = 60;
 
-    // 1. Canlı kategori sayaçlarını hesapla
-    const allCount = cards.length;
-    const nounCount = cards.filter((c) => (c.partOfSpeech || '').toUpperCase() === 'NOUN').length;
-    const verbCount = cards.filter((c) => (c.partOfSpeech || '').toUpperCase() === 'VERB').length;
-    const adjCount = cards.filter((c) => {
+    // 1 & 3. Tek geçişte kategori sayaçları + filtreleme
+    let nounCount = 0;
+    let verbCount = 0;
+    let adjCount = 0;
+    let phraseCount = 0;
+    const filtered = [];
+    const activePos = this.activeCardsPosFilter;
+    const q = filterQuery ? filterQuery.toLowerCase().trim() : '';
+
+    this._renderedCardsById = new Map();
+    for (let i = 0; i < cards.length; i++) {
+      const c = cards[i];
+      this._renderedCardsById.set(Number(c.id), c);
+
       const pos = (c.partOfSpeech || '').toUpperCase();
-      return pos === 'ADJECTIVE' || pos === 'ADJ';
-    }).length;
-    const phraseCount = cards.filter((c) => {
-      const pos = (c.partOfSpeech || '').toUpperCase();
-      return pos === 'PHRASE' || (c.germanWord || '').includes(' ');
-    }).length;
+      const isNoun = pos === 'NOUN';
+      const isVerb = pos === 'VERB';
+      const isAdj = pos === 'ADJECTIVE' || pos === 'ADJ';
+      const isPhrase = pos === 'PHRASE' || (c.germanWord || '').includes(' ');
+
+      if (isNoun) nounCount++;
+      if (isVerb) verbCount++;
+      if (isAdj) adjCount++;
+      if (isPhrase) phraseCount++;
+
+      if (activePos !== 'ALL') {
+        if (activePos === 'NOUN' && !isNoun) continue;
+        if (activePos === 'VERB' && !isVerb) continue;
+        if (activePos === 'ADJECTIVE' && !isAdj) continue;
+        if (activePos === 'PHRASE' && !isPhrase) continue;
+      }
+
+      if (q) {
+        const gw = (c.germanWord || '').toLowerCase();
+        const tr = (c.meaningsTr || '').toLowerCase();
+        if (!gw.includes(q) && !tr.includes(q)) continue;
+      }
+
+      filtered.push(c);
+    }
 
     const countAllEl = document.getElementById('count-pos-all');
-    if (countAllEl) countAllEl.textContent = allCount;
+    if (countAllEl) countAllEl.textContent = cards.length;
     const countNounEl = document.getElementById('count-pos-noun');
     if (countNounEl) countNounEl.textContent = nounCount;
     const countVerbEl = document.getElementById('count-pos-verb');
@@ -4083,39 +4216,6 @@ class WortCoachApp {
     const countPhraseEl = document.getElementById('count-pos-phrase');
     if (countPhraseEl) countPhraseEl.textContent = phraseCount;
 
-    // 2. Kategori Butonları Click Listener
-    document.querySelectorAll('#cards-pos-filter-bar .pos-filter-pill').forEach((pill) => {
-      pill.onclick = () => {
-        document.querySelectorAll('#cards-pos-filter-bar .pos-filter-pill').forEach((p) => p.classList.remove('active'));
-        pill.classList.add('active');
-        this.activeCardsPosFilter = pill.getAttribute('data-pos') || 'ALL';
-        const currentQuery = document.getElementById('cards-filter-input')?.value || '';
-        this.renderCardsList(currentQuery);
-      };
-    });
-
-    // 3. Filtreleme: Hem Tür hem de Arama Sorgusu
-    let filtered = cards;
-    if (this.activeCardsPosFilter !== 'ALL') {
-      filtered = filtered.filter((c) => {
-        const pos = (c.partOfSpeech || '').toUpperCase();
-        if (this.activeCardsPosFilter === 'NOUN') return pos === 'NOUN';
-        if (this.activeCardsPosFilter === 'VERB') return pos === 'VERB';
-        if (this.activeCardsPosFilter === 'ADJECTIVE') return pos === 'ADJECTIVE' || pos === 'ADJ';
-        if (this.activeCardsPosFilter === 'PHRASE') return pos === 'PHRASE' || (c.germanWord || '').includes(' ');
-        return true;
-      });
-    }
-
-    if (filterQuery) {
-      const q = filterQuery.toLowerCase().trim();
-      filtered = filtered.filter(
-        (c) =>
-          (c.germanWord || '').toLowerCase().includes(q) ||
-          (c.meaningsTr && c.meaningsTr.toLowerCase().includes(q))
-      );
-    }
-
     if (subtitle) {
       subtitle.textContent = `${filtered.length} / ${cards.length} Kelime Kartı Listeleniyor`;
     }
@@ -4124,7 +4224,9 @@ class WortCoachApp {
       if (cards.length === 0) {
         container.innerHTML = `
           <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.03); border-radius:var(--radius-xl); border:1px solid var(--border-subtle); margin-top:10px;">
-            <div style="font-size:2.4rem; margin-bottom:10px;">️</div>
+            <div style="margin-bottom:12px;">
+              <svg class="svg-icon" style="width:42px; height:42px; color:var(--text-muted);"><use href="#icon-cards"></use></svg>
+            </div>
             <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-primary); margin:0 0 6px;">Henüz Kelime Kartınız Yok</h3>
             <p style="font-size:0.84rem; color:var(--text-secondary); max-width:320px; margin:0 auto 18px;">Sözlükten kelime arayıp ekleyebilir veya hazır destelerden istediğiniz seviyeyi tek tıkla yükleyebilirsiniz.</p>
             <button type="button" class="btn-primary" id="btn-empty-open-curated" style="margin:0 auto; padding:10px 20px; border-radius:var(--radius-pill); font-weight:800;">
@@ -4133,40 +4235,44 @@ class WortCoachApp {
             </button>
           </div>
         `;
-        document.getElementById('btn-empty-open-curated')?.addEventListener('click', () => {
-          document.getElementById('modal-curated-packs')?.classList.remove('hidden');
-          this.renderCuratedPacksModal();
-        });
       } else {
         container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">Eşleşen kart bulunamadı.</div>`;
       }
       return;
     }
 
-    container.innerHTML = filtered
-      .map(
-        (c) => {
-          let trMeaning = (c.meaningsTr && c.meaningsTr !== '-') ? c.meaningsTr : '';
-          if (!trMeaning && window.DictionaryService) {
-            try {
-              const syn = window.DictionaryService.synthesizeInstantEntry(c.germanWord);
-              if (syn && syn.meaningsTr) trMeaning = syn.meaningsTr;
-            } catch (_) {}
-          }
-          if (!trMeaning) trMeaning = c.meaningsEn || 'Anlam belirtilmedi';
+    const visibleSlice = filtered.slice(0, this.cardsRenderLimit);
+    const hasMore = filtered.length > visibleSlice.length;
 
-          const artStyle = window.getArticleStyle ? window.getArticleStyle(c.article) : null;
-          const artBadge = artStyle
-            ? artStyle.badgeHtml
-            : (c.article ? `<span class="badge badge-${c.article}">${c.article}</span>` : '');
+    const cardsHtml = visibleSlice
+      .map((c) => {
+        let trMeaning = (c.meaningsTr && c.meaningsTr !== '-') ? c.meaningsTr : '';
+        if (!trMeaning && window.DictionaryService) {
+          try {
+            const syn = window.DictionaryService.synthesizeInstantEntry(c.germanWord);
+            if (syn && syn.meaningsTr) trMeaning = syn.meaningsTr;
+          } catch (_) {}
+        }
+        if (!trMeaning) trMeaning = c.meaningsEn || 'Anlam belirtilmedi';
 
-          const maturity = window.getCardMaturity ? window.getCardMaturity(c) : null;
-          const maturityBadge = maturity ? maturity.badgeHtml : '';
+        const artStyle = window.getArticleStyle ? window.getArticleStyle(c.article) : null;
+        const safeArt = this.escapeHtml(c.article);
+        const artBadge = artStyle
+          ? artStyle.badgeHtml
+          : (safeArt ? `<span class="badge badge-${safeArt}">${safeArt}</span>` : '');
 
-          const enrichment = window.getGrammarEnrichment ? window.getGrammarEnrichment(c.germanWord) : null;
-          const rektionBadge = enrichment ? `<span class="badge-rektion" style="font-size:0.7rem; padding:2px 6px;">${enrichment.badge}</span>` : '';
+        const maturity = window.getCardMaturity ? window.getCardMaturity(c) : null;
+        const maturityBadge = maturity ? maturity.badgeHtml : '';
 
-          return `
+        const enrichment = window.getGrammarEnrichment ? window.getGrammarEnrichment(c.germanWord) : null;
+        const rektionBadge = enrichment ? `<span class="badge-rektion" style="font-size:0.7rem; padding:2px 6px;">${this.escapeHtml(enrichment.badge)}</span>` : '';
+
+        const safeWord = this.escapeHtml(c.germanWord);
+        const safePos = this.escapeHtml(c.partOfSpeech);
+        const safeTr = this.escapeHtml(trMeaning);
+        const safePlural = c.pluralForm ? this.escapeHtml(c.pluralForm) : '';
+
+        return `
         <div class="deck-item-card" data-card-id="${c.id}" style="margin-bottom:8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px;" title="Düzenlemek için tıklayın">
           <div style="flex:1; min-width:0; padding-right:4px;">
             <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -4175,20 +4281,20 @@ class WortCoachApp {
                 <span>DE</span>
               </span>
               ${artBadge}
-              <strong style="font-size:1.05rem; color:var(--text-primary); word-break:break-word;">${c.germanWord}</strong>
-              <span class="badge badge-pos-${c.partOfSpeech}">${c.partOfSpeech}</span>
+              <strong style="font-size:1.05rem; color:var(--text-primary); word-break:break-word;">${safeWord}</strong>
+              <span class="badge badge-pos-${safePos}">${safePos}</span>
               ${maturityBadge}
               ${rektionBadge}
               ${c.isReflexive ? `<span class="badge-reflexiv">Reflexiv</span>` : ''}
             </div>
-            <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; word-break:break-word;">${trMeaning}</div>
-            ${c.pluralForm ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Çoğul: ${c.pluralForm}</div>` : ''}
+            <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; word-break:break-word;">${safeTr}</div>
+            ${safePlural ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Çoğul: ${safePlural}</div>` : ''}
           </div>
           <div class="deck-item-actions" style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
             <button type="button" class="card-action-icon-btn btn-card-edit" data-id="${c.id}" title="Düzenle" aria-label="Düzenle">
               <svg class="svg-icon"><use href="#icon-edit"></use></svg>
             </button>
-            <button type="button" class="card-action-icon-btn btn-card-tts" data-word="${c.germanWord}" title="Dinle" aria-label="Dinle">
+            <button type="button" class="card-action-icon-btn btn-card-tts" data-word="${safeWord}" title="Dinle" aria-label="Dinle">
               <svg class="svg-icon"><use href="#icon-volume"></use></svg>
             </button>
             <button type="button" class="card-action-icon-btn btn-card-pronounce btn-mic-trigger" data-id="${c.id}" title="Telaffuz (Mikrofon)" aria-label="Telaffuz">
@@ -4200,59 +4306,14 @@ class WortCoachApp {
           </div>
         </div>
       `;
-        })
+      })
       .join('');
 
-    // Kartın gövdesine tıklandığında doğrudan düzenleme modunu aç
-    container.querySelectorAll('.deck-item-card').forEach((cardEl) => {
-      cardEl.addEventListener('click', (e) => {
-        if (e.target.closest('.deck-item-actions')) return;
-        const cardId = Number(cardEl.getAttribute('data-card-id'));
-        const card = cards.find((c) => c.id === cardId);
-        if (card) this.openEditCardModal(card);
-      });
-    });
+    const loadMoreHtml = hasMore
+      ? `<button type="button" id="btn-cards-load-more" class="btn-secondary" style="width:100%; margin:12px 0 4px; padding:12px; border-radius:var(--radius-lg); font-weight:800;">Daha Fazla Göster (${visibleSlice.length} / ${filtered.length})</button>`
+      : '';
 
-    container.querySelectorAll('.btn-card-edit').forEach((b) => {
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const cardId = Number(b.getAttribute('data-id'));
-        const card = cards.find((c) => c.id === cardId);
-        if (card) this.openEditCardModal(card);
-      });
-    });
-
-    container.querySelectorAll('.btn-card-tts').forEach((b) => {
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        window.wmTTS.speak(b.getAttribute('data-word'), 'de-DE');
-      });
-    });
-
-    container.querySelectorAll('.btn-card-pronounce').forEach((b) => {
-      b.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const cardId = Number(b.getAttribute('data-id'));
-        const card = cards.find((c) => c.id === cardId);
-        if (card) {
-          this.openPronunciationCoach(card, 'word');
-        }
-      });
-    });
-
-    container.querySelectorAll('.btn-card-delete').forEach((b) => {
-      b.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = Number(b.getAttribute('data-id'));
-        if (confirm('Kartı silmek istiyor musunuz?')) {
-          await window.wmDB.deleteCard(id);
-          this.showToast('Kart silindi.');
-          await this.renderCardsList(filterQuery);
-          await this.renderDecksTab();
-          await this.refreshHomeDashboard();
-        }
-      });
-    });
+    container.innerHTML = cardsHtml + loadMoreHtml;
   }
 
   // --- AKILLI KART EKLEME MODALI ---
@@ -4873,22 +4934,31 @@ ${jsonStr}`
       try {
         // Yeni Deste Oluştur
         const newDeck = await window.wmDB.createDeck(parsedData.deckName);
-        let addedCount = 0;
-
+        const batchPayloads = [];
         for (const c of parsedData.cards) {
           const cleanW = (c.germanWord || '').trim();
           if (cleanW) {
-            await window.wmDB.addCard({
+            batchPayloads.push({
               ...c,
               germanWord: cleanW,
               deckId: newDeck.id
             });
+          }
+        }
+
+        let addedCount = 0;
+        if (typeof window.wmDB.addCardsBatch === 'function') {
+          const savedList = await window.wmDB.addCardsBatch(batchPayloads);
+          addedCount = savedList.length;
+        } else {
+          for (const payload of batchPayloads) {
+            await window.wmDB.addCard(payload);
             addedCount++;
           }
         }
 
         modal.classList.add('hidden');
-        this.showToast(`"${parsedData.deckName}" (${addedCount} kart) başarıyla içe aktarıldı! `);
+        this.showToast(`"${parsedData.deckName}" (${addedCount} kart) başarıyla içe aktarıldı.`);
         await this.renderDecksTab();
         await this.renderCardsList();
       } catch (err) {

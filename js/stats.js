@@ -63,10 +63,15 @@ class WortMeisterStats {
     const learnedCards = cards.filter((c) => (Number(c.srsStage) || 0) >= 3);
     const streak = this.calculateStreak(logs);
 
-    document.getElementById('stat-learned-count').textContent = String(learnedCards.length);
-    document.getElementById('stat-total-cards').textContent = String(cards.length);
-    document.getElementById('stat-accuracy-rate').textContent = `%${accuracy}`;
-    document.getElementById('stat-streak-days').textContent = `${streak} Gün`;
+    const learnedEl = document.getElementById('stat-learned-count');
+    const totalEl = document.getElementById('stat-total-cards');
+    const accEl = document.getElementById('stat-accuracy-rate');
+    const streakEl = document.getElementById('stat-streak-days');
+
+    if (learnedEl) learnedEl.textContent = String(learnedCards.length);
+    if (totalEl) totalEl.textContent = String(cards.length);
+    if (accEl) accEl.textContent = `%${accuracy}`;
+    if (streakEl) streakEl.textContent = `${streak} Gün`;
 
     this.renderDailyBarChart(logs);
     this.renderCefrDistribution(cards);

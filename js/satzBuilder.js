@@ -997,6 +997,9 @@ KESİN KURALLAR:
         if (file.size > MAX_PDF_BYTES) throw new Error('PDF en fazla 4.5 MB olabilir.');
         state.file = { mime: 'application/pdf', data: await window.coachHelper.readAsBase64(file) };
       } else if (lower.endsWith('.docx')) {
+        if (!window.mammoth && window.WortCoachLoader) {
+          await window.WortCoachLoader.ensureMammoth();
+        }
         if (!window.mammoth) throw new Error('DOCX ayrıştırıcı hazır değil.');
         const res = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
         $('satz-extract-text-input').value = (res.value || '').slice(0, 25000);

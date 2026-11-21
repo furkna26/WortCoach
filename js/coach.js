@@ -72,6 +72,9 @@
         if (file.size > MAX_PDF_BYTES) throw new Error('PDF en fazla 4 MB olabilir.');
         chatState.file = { mime: 'application/pdf', data: await window.coachHelper.readAsBase64(file) };
       } else if (lower.endsWith('.docx')) {
+        if (!window.mammoth && window.WortCoachLoader) {
+          await window.WortCoachLoader.ensureMammoth();
+        }
         if (!window.mammoth) throw new Error('DOCX okuyucu yüklenemedi.');
         const res = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
         chatState.contextText = (res.value || '').slice(0, 15000);
@@ -654,14 +657,17 @@
         try {
           const deck = await window.wmDB.createDeck(exercise.title || 'Koç Destesi', 'Koç tarafından üretildi', 'default');
           const targetDeckId = deck && deck.id ? deck.id : Date.now();
-          for (const w of exercise.words) {
-            await window.wmDB.addCard({
-              deckId: targetDeckId,
-              germanWord: w.lemma,
-              meaningsTr: w.contextMeaning || '',
-              partOfSpeech: w.pos || 'NOUN',
-              exampleSentence: w.sourceSentence || ''
-            });
+          const batchCards = exercise.words.map((w) => ({
+            deckId: targetDeckId,
+            germanWord: w.lemma,
+            meaningsTr: w.contextMeaning || '',
+            partOfSpeech: w.pos || 'NOUN',
+            exampleSentence: w.sourceSentence || ''
+          }));
+          if (typeof window.wmDB.addCardsBatch === 'function') {
+            await window.wmDB.addCardsBatch(batchCards);
+          } else {
+            for (const c of batchCards) await window.wmDB.addCard(c);
           }
           saveBtn.innerHTML = '<span>Desteye Kaydedildi</span>';
           toast(`"${exercise.title || 'Koç Destesi'}" destelerinize eklendi.`);

@@ -1,13 +1,116 @@
 /**
- * WortMeisterDB — Native IndexedDB Asenkron DAO Sarmalayıcısı (v1)
+ * WortMeisterDB — Native IndexedDB Asenkron DAO Sarmalayıcısı (v2)
  * ObjectStores: cards, decks, studyLogs, settings
+ * v2 Optimizasyonları: germanWordLower indeksi, bellek içi okuma önbelleği,
+ * tek-transaction addCardsBatch() ve tek-transaction deleteDeck().
  */
 
 class WortMeisterDatabase {
   constructor() {
     this.dbName = 'WortMeisterDB';
-    this.dbVersion = 1;
+    this.dbVersion = 2;
     this.db = null;
+    this._cardsCache = null;
+    this._cardsByWordMap = null;
+    this._decksCache = null;
+  }
+
+  _invalidateCache(scope = 'all') {
+    if (scope === 'all' || scope === 'cards') {
+      this._cardsCache = null;
+      this._cardsByWordMap = null;
+    }
+    if (scope === 'all' || scope === 'decks') {
+      this._decksCache = null;
+    }
+  }
+
+  _upsertCacheCard(card) {
+    if (!card || !Array.isArray(this._cardsCache)) return;
+    const idx = this._cardsCache.findIndex((c) => Number(c.id) === Number(card.id));
+    if (idx !== -1) {
+      const prevLower = (this._cardsCache[idx].germanWord || '').trim().toLowerCase();
+      const nextLower = (card.germanWord || '').trim().toLowerCase();
+      this._cardsCache[idx] = card;
+      if (this._cardsByWordMap) {
+        if (prevLower && prevLower !== nextLower && this._cardsByWordMap.get(prevLower)?.id === card.id) {
+          this._cardsByWordMap.delete(prevLower);
+        }
+        if (nextLower) this._cardsByWordMap.set(nextLower, card);
+      }
+    } else {
+      this._cardsCache.push(card);
+      const nextLower = (card.germanWord || '').trim().toLowerCase();
+      if (this._cardsByWordMap && nextLower && !this._cardsByWordMap.has(nextLower)) {
+        this._cardsByWordMap.set(nextLower, card);
+      }
+    }
+  }
+
+  _removeCacheCard(cardId) {
+    if (!Array.isArray(this._cardsCache)) return;
+    const numId = Number(cardId);
+    const removed = this._cardsCache.find((c) => Number(c.id) === numId);
+    this._cardsCache = this._cardsCache.filter((c) => Number(c.id) !== numId);
+    if (removed && this._cardsByWordMap) {
+      const lower = (removed.germanWord || '').trim().toLowerCase();
+      if (lower && this._cardsByWordMap.get(lower)?.id === removed.id) {
+        const replacement = this._cardsCache.find((c) => (c.germanWord || '').trim().toLowerCase() === lower);
+        if (replacement) {
+          this._cardsByWordMap.set(lower, replacement);
+        } else {
+          this._cardsByWordMap.delete(lower);
+        }
+      }
+    }
+  }
+
+  _buildCardRecord(cardData, resolvedDeckId, now) {
+    const cleanWord = (cardData.germanWord || '').trim();
+    const easeFactor = Number(cardData.easeFactor ?? 2.5);
+    const interval = Number(cardData.interval ?? (cardData.intervalDays ?? 0));
+    const repetitions = Number(cardData.repetitions ?? (cardData.srsStage ?? 0));
+    const lapses = Number(cardData.lapses ?? 0);
+    const dueDate = Number(cardData.dueDate ?? (cardData.nextReviewDate ?? now));
+
+    const record = {
+      deckId: resolvedDeckId,
+      germanWord: cleanWord,
+      germanWordLower: cleanWord.toLowerCase(),
+      targetLanguage: cardData.targetLanguage || 'de',
+      partOfSpeech: cardData.partOfSpeech || 'OTHER',
+      article: cardData.article || '',
+      pluralForm: cardData.pluralForm || '',
+      meaningsTr: (cardData.meaningsTr || '').trim(),
+      meaningsEn: (cardData.meaningsEn || '').trim(),
+      exampleSentence: (cardData.exampleSentence || '').trim(),
+      praesens: cardData.praesens || '',
+      praeteritum: cardData.praeteritum || '',
+      partizipZwei: cardData.partizipZwei || '',
+      hilfsverb: cardData.hilfsverb || '',
+      isSeparable: Boolean(cardData.isSeparable),
+      separablePrefix: cardData.separablePrefix || '',
+      regularity: cardData.regularity || '',
+      imperativ: cardData.imperativ || '',
+      cefr: cardData.cefr || 'A1',
+      // 4'lü SM-2 Veri Yapısı
+      easeFactor,
+      interval,
+      repetitions,
+      lapses,
+      dueDate,
+      // Geriye dönük uyumluluk
+      srsStage: repetitions,
+      nextReviewDate: dueDate,
+      intervalDays: interval,
+      isPriority: Boolean(cardData.isPriority),
+      isQuizCard: Boolean(cardData.isQuizCard),
+      createdAt: now
+    };
+    if (Array.isArray(cardData.customMeanings)) {
+      record.customMeanings = cardData.customMeanings;
+    }
+    return record;
   }
 
   async init() {
@@ -18,6 +121,7 @@ class WortMeisterDatabase {
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
+        const tx = event.target.transaction;
 
         // 1. cards ObjectStore
         if (!db.objectStoreNames.contains('cards')) {
@@ -29,6 +133,12 @@ class WortMeisterDatabase {
           cardStore.createIndex('nextReviewDate', 'nextReviewDate', { unique: false });
           cardStore.createIndex('isPriority', 'isPriority', { unique: false });
           cardStore.createIndex('germanWord', 'germanWord', { unique: false });
+          cardStore.createIndex('germanWordLower', 'germanWordLower', { unique: false });
+        } else if (tx && typeof tx.objectStore === 'function') {
+          const cardStore = tx.objectStore('cards');
+          if (cardStore && cardStore.indexNames && !cardStore.indexNames.contains('germanWordLower')) {
+            cardStore.createIndex('germanWordLower', 'germanWordLower', { unique: false });
+          }
         }
 
         // 2. decks ObjectStore
@@ -93,20 +203,23 @@ class WortMeisterDatabase {
 
   // --- DECKS ---
   async getAllDecks() {
-    const store = await this._tx('decks', 'readonly');
-    const decks = await new Promise((resolve, reject) => {
-      const req = store.getAll();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = (e) => reject(e.target.error);
-    });
+    if (!this._decksCache) {
+      const store = await this._tx('decks', 'readonly');
+      this._decksCache = await new Promise((resolve, reject) => {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
 
     const cards = await this.getAllCards();
     const countMap = new Map();
     for (const c of cards) {
-      countMap.set(Number(c.deckId), (countMap.get(Number(c.deckId)) || 0) + 1);
+      const did = Number(c.deckId);
+      countMap.set(did, (countMap.get(did) || 0) + 1);
     }
 
-    return decks.map((d) => ({
+    return this._decksCache.map((d) => ({
       ...d,
       cardCount: countMap.get(Number(d.id)) || 0
     }));
@@ -115,13 +228,19 @@ class WortMeisterDatabase {
   async createDeck(name) {
     const store = await this._tx('decks', 'readwrite');
     const deck = {
-      name: name.trim(),
+      name: (name || '').trim() || 'Yeni Deste',
       createdAt: Date.now(),
       cardCount: 0
     };
     return new Promise((resolve, reject) => {
       const req = store.add(deck);
-      req.onsuccess = () => resolve({ ...deck, id: req.result });
+      req.onsuccess = () => {
+        const created = { ...deck, id: req.result };
+        if (Array.isArray(this._decksCache)) {
+          this._decksCache.push(created);
+        }
+        resolve(created);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -129,17 +248,30 @@ class WortMeisterDatabase {
   async deleteDeck(deckId) {
     const numericId = Number(deckId);
     const allCards = await this.getAllCards();
-    const deckCards = allCards.filter((c) => Number(c.deckId) === numericId);
-
-    for (const card of deckCards) {
-      await this.deleteCard(card.id);
+    const targetCardIds = [];
+    for (const c of allCards) {
+      if (Number(c.deckId) === numericId && c.id !== undefined) {
+        targetCardIds.push(c.id);
+      }
     }
 
-    const store = await this._tx('decks', 'readwrite');
+    await this.init();
     return new Promise((resolve, reject) => {
-      const req = store.delete(numericId);
-      req.onsuccess = () => resolve(true);
-      req.onerror = (e) => reject(e.target.error);
+      const tx = this.db.transaction(['cards', 'decks'], 'readwrite');
+      const cardsStore = tx.objectStore('cards');
+      const decksStore = tx.objectStore('decks');
+
+      for (const cid of targetCardIds) {
+        cardsStore.delete(cid);
+      }
+      decksStore.delete(numericId);
+
+      tx.oncomplete = () => {
+        this._invalidateCache('all');
+        resolve(true);
+      };
+      tx.onerror = (e) => reject(e.target.error);
+      tx.onabort = (e) => reject(e.target.error || new Error('Transaction aborted'));
     });
   }
 
@@ -154,7 +286,10 @@ class WortMeisterDatabase {
         deck.name = (newName || '').trim() || deck.name;
         deck.updatedAt = Date.now();
         const putReq = store.put(deck);
-        putReq.onsuccess = () => resolve(deck);
+        putReq.onsuccess = () => {
+          this._invalidateCache('decks');
+          resolve(deck);
+        };
         putReq.onerror = (e) => reject(e.target.error);
       };
       getReq.onerror = (e) => reject(e.target.error);
@@ -163,6 +298,10 @@ class WortMeisterDatabase {
 
   // --- CARDS ---
   async getAllCards() {
+    if (Array.isArray(this._cardsCache)) {
+      return this._cardsCache.slice();
+    }
+
     const store = await this._tx('cards', 'readonly');
     return new Promise((resolve, reject) => {
       const req = store.getAll();
@@ -171,10 +310,13 @@ class WortMeisterDatabase {
         const valid = [];
         const badIds = [];
         const toMigrate = [];
+        const wordMap = new Map();
         const now = Date.now();
 
         for (const c of raw) {
           if (c && typeof c.germanWord === 'string' && c.germanWord.trim().length > 0) {
+            const lower = c.germanWord.trim().toLowerCase();
+            let needsSave = false;
             // SM-2 Geriye Dönük Otomatik Migrasyon
             if (c.easeFactor === undefined || c.interval === undefined || c.repetitions === undefined || c.dueDate === undefined) {
               c.easeFactor = Number(c.easeFactor ?? 2.5);
@@ -182,13 +324,26 @@ class WortMeisterDatabase {
               c.repetitions = Number(c.repetitions ?? (c.srsStage ?? 0));
               c.lapses = Number(c.lapses ?? 0);
               c.dueDate = Number(c.dueDate ?? (c.nextReviewDate ?? now));
+              needsSave = true;
+            }
+            if (c.germanWordLower !== lower) {
+              c.germanWordLower = lower;
+              needsSave = true;
+            }
+            if (needsSave) {
               toMigrate.push(c);
             }
             valid.push(c);
+            if (!wordMap.has(lower)) {
+              wordMap.set(lower, c);
+            }
           } else if (c && c.id) {
             badIds.push(c.id);
           }
         }
+
+        this._cardsCache = valid;
+        this._cardsByWordMap = wordMap;
 
         // Arka planda migrasyon ve temizlik
         if (badIds.length > 0 || toMigrate.length > 0) {
@@ -198,7 +353,7 @@ class WortMeisterDatabase {
           }).catch(() => {});
         }
 
-        resolve(valid);
+        resolve(valid.slice());
       };
       req.onerror = (e) => reject(e.target.error);
     });
@@ -206,8 +361,11 @@ class WortMeisterDatabase {
 
   async getCardByWord(word) {
     const normalized = (word || '').trim().toLowerCase();
-    const all = await this.getAllCards();
-    return all.find((c) => (c.germanWord || '').toLowerCase() === normalized) || null;
+    if (!normalized) return null;
+    if (!this._cardsByWordMap) {
+      await this.getAllCards();
+    }
+    return (this._cardsByWordMap && this._cardsByWordMap.get(normalized)) || null;
   }
 
   async findCardByGerman(word) {
@@ -227,7 +385,7 @@ class WortMeisterDatabase {
     const rawDeckId = cardData.deckId && typeof cardData.deckId === 'object' ? cardData.deckId.id : cardData.deckId;
     const resolvedDeckId = Number(rawDeckId) || 1;
 
-    // Üst üste binmeyi ve mükerrer kart kaydını engelle
+    // Üst üste binmeyi ve mükerrer kart kaydını O(1) önbellek üzerinden engelle
     const existing = await this.getCardByWord(cleanWord);
     if (existing) {
       const merged = {
@@ -235,6 +393,7 @@ class WortMeisterDatabase {
         ...cardData,
         deckId: resolvedDeckId,
         germanWord: cleanWord,
+        germanWordLower: cleanWord.toLowerCase(),
         id: existing.id,
         updatedAt: Date.now()
       };
@@ -243,49 +402,87 @@ class WortMeisterDatabase {
 
     const store = await this._tx('cards', 'readwrite');
     const now = Date.now();
-    const easeFactor = Number(cardData.easeFactor ?? 2.5);
-    const interval = Number(cardData.interval ?? (cardData.intervalDays ?? 0));
-    const repetitions = Number(cardData.repetitions ?? (cardData.srsStage ?? 0));
-    const lapses = Number(cardData.lapses ?? 0);
-    const dueDate = Number(cardData.dueDate ?? (cardData.nextReviewDate ?? now));
-
-    const record = {
-      deckId: resolvedDeckId,
-      germanWord: cleanWord,
-      targetLanguage: cardData.targetLanguage || 'de',
-      partOfSpeech: cardData.partOfSpeech || 'OTHER',
-      article: cardData.article || '',
-      pluralForm: cardData.pluralForm || '',
-      meaningsTr: (cardData.meaningsTr || '').trim(),
-      meaningsEn: (cardData.meaningsEn || '').trim(),
-      exampleSentence: (cardData.exampleSentence || '').trim(),
-      praesens: cardData.praesens || '',
-      praeteritum: cardData.praeteritum || '',
-      partizipZwei: cardData.partizipZwei || '',
-      hilfsverb: cardData.hilfsverb || '',
-      isSeparable: Boolean(cardData.isSeparable),
-      separablePrefix: cardData.separablePrefix || '',
-      regularity: cardData.regularity || '',
-      imperativ: cardData.imperativ || '',
-      cefr: cardData.cefr || 'A1',
-      // 4'lü SM-2 Veri Yapısı
-      easeFactor,
-      interval,
-      repetitions,
-      lapses,
-      dueDate,
-      // Geriye dönük uyumluluk
-      srsStage: repetitions,
-      nextReviewDate: dueDate,
-      intervalDays: interval,
-      isPriority: Boolean(cardData.isPriority),
-      createdAt: now
-    };
+    const record = this._buildCardRecord(cardData, resolvedDeckId, now);
 
     return new Promise((resolve, reject) => {
       const req = store.add(record);
-      req.onsuccess = () => resolve({ ...record, id: req.result });
+      req.onsuccess = () => {
+        const saved = { ...record, id: req.result };
+        this._upsertCacheCard(saved);
+        resolve(saved);
+      };
       req.onerror = (e) => reject(e.target.error);
+    });
+  }
+
+  async addCardsBatch(cardsArray) {
+    if (!Array.isArray(cardsArray) || cardsArray.length === 0) return [];
+    if (!this._cardsByWordMap) {
+      await this.getAllCards();
+    }
+
+    await this.init();
+    const now = Date.now();
+    const wordMap = this._cardsByWordMap || new Map();
+    const pendingOps = [];
+    const seenInBatch = new Map();
+
+    for (let i = 0; i < cardsArray.length; i++) {
+      const item = cardsArray[i];
+      if (!item || typeof item !== 'object') continue;
+      const cleanWord = (item.germanWord || '').trim();
+      if (!cleanWord) continue;
+
+      const lower = cleanWord.toLowerCase();
+      const rawDeckId = item.deckId && typeof item.deckId === 'object' ? item.deckId.id : item.deckId;
+      const resolvedDeckId = Number(rawDeckId) || 1;
+
+      const existing = wordMap.get(lower);
+      if (existing) {
+        const merged = {
+          ...existing,
+          ...item,
+          deckId: resolvedDeckId,
+          germanWord: cleanWord,
+          germanWordLower: lower,
+          id: existing.id,
+          updatedAt: now
+        };
+        pendingOps.push({ type: 'put', record: merged });
+      } else if (seenInBatch.has(lower)) {
+        const prev = seenInBatch.get(lower);
+        Object.assign(prev.record, this._buildCardRecord(item, resolvedDeckId, now));
+      } else {
+        const record = this._buildCardRecord(item, resolvedDeckId, now + i);
+        const op = { type: 'add', record };
+        seenInBatch.set(lower, op);
+        pendingOps.push(op);
+      }
+    }
+
+    if (pendingOps.length === 0) return [];
+
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction('cards', 'readwrite');
+      const store = tx.objectStore('cards');
+      const results = [];
+
+      for (const op of pendingOps) {
+        if (op.type === 'put') {
+          const req = store.put(op.record);
+          req.onsuccess = () => results.push(op.record);
+        } else {
+          const req = store.add(op.record);
+          req.onsuccess = () => results.push({ ...op.record, id: req.result });
+        }
+      }
+
+      tx.oncomplete = () => {
+        this._invalidateCache('cards');
+        resolve(results);
+      };
+      tx.onerror = (e) => reject(e.target.error);
+      tx.onabort = (e) => reject(e.target.error || new Error('Batch transaction aborted'));
     });
   }
 
@@ -299,6 +496,7 @@ class WortMeisterDatabase {
     const rawDeckId = card.deckId && typeof card.deckId === 'object' ? card.deckId.id : card.deckId;
     card.deckId = Number(rawDeckId) || 1;
     card.germanWord = cleanWord;
+    card.germanWordLower = cleanWord.toLowerCase();
 
     // SM-2 ve Leitner alanlarını senkronize tut
     if (card.easeFactor === undefined) card.easeFactor = 2.5;
@@ -314,7 +512,10 @@ class WortMeisterDatabase {
     const store = await this._tx('cards', 'readwrite');
     return new Promise((resolve, reject) => {
       const req = store.put(card);
-      req.onsuccess = () => resolve(card);
+      req.onsuccess = () => {
+        this._upsertCacheCard(card);
+        resolve(card);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -323,7 +524,10 @@ class WortMeisterDatabase {
     const store = await this._tx('cards', 'readwrite');
     return new Promise((resolve, reject) => {
       const req = store.delete(Number(cardId));
-      req.onsuccess = () => resolve(true);
+      req.onsuccess = () => {
+        this._removeCacheCard(cardId);
+        resolve(true);
+      };
       req.onerror = (e) => reject(e.target.error);
     });
   }
@@ -332,9 +536,9 @@ class WortMeisterDatabase {
     const cards = await this.getAllCards();
     const target = cards.find((c) => Number(c.id) === Number(cardId));
     if (!target) return null;
-    target.isPriority = !target.isPriority;
-    await this.updateCard(target);
-    return target;
+    const updated = { ...target, isPriority: !target.isPriority };
+    await this.updateCard(updated);
+    return updated;
   }
 
   async getDueCards(deckId = 'all', includeAllIfEmpty = false) {
@@ -366,15 +570,12 @@ class WortMeisterDatabase {
 
   /**
    * 4'lü SM-2 Aralıklı Tekrar Algoritması (Geriye Dönük Uyumlu)
-   * - Tekrar (0 / again): repetitions = 0, lapses += 1, interval = 0, easeFactor = Math.max(1.3, easeFactor - 0.20)
-   * - Zor (1 / hard):     interval = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2)), easeFactor = Math.max(1.3, easeFactor - 0.15), repetitions += 1
-   * - İyi (2 / good):     interval = repetitions === 0 ? 1 : (repetitions === 1 ? 3 : Math.round(interval * easeFactor)), repetitions += 1
-   * - Kolay (3 / easy):   interval = repetitions === 0 ? 4 : Math.round(interval * easeFactor * 1.3), easeFactor += 0.15, repetitions += 1
    */
   async applySM2Review(cardId, rating) {
     const allCards = await this.getAllCards();
-    const card = allCards.find((c) => Number(c.id) === Number(cardId));
-    if (!card) return null;
+    const found = allCards.find((c) => Number(c.id) === Number(cardId));
+    if (!found) return null;
+    const card = { ...found };
 
     let r = rating;
     if (r === 'again') r = 0;
@@ -395,26 +596,22 @@ class WortMeisterDatabase {
     let dueDate = now;
 
     if (r === 0) {
-      // Tekrar (0)
       repetitions = 0;
       lapses += 1;
-      interval = 0; // 10 dakika sonra / aynı gün tekrar sor
+      interval = 0;
       easeFactor = Math.max(1.3, easeFactor - 0.20);
       dueDate = now + TEN_MINUTES;
     } else if (r === 1) {
-      // Zor (1)
       interval = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
       easeFactor = Math.max(1.3, easeFactor - 0.15);
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;
     } else if (r === 2) {
-      // İyi (2) -> Yeni kartta 3 gün, öğrenilmiş kartta hard'dan fazla
       const hardDays = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
       interval = repetitions === 0 ? 3 : Math.max(hardDays + 1, Math.round(interval * easeFactor));
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;
     } else if (r === 3) {
-      // Kolay (3) -> Yeni kartta 8 gün, öğrenilmiş kartta good'dan fazla
       const goodDays = repetitions === 0 ? 3 : Math.round(interval * easeFactor);
       interval = repetitions === 0 ? 8 : Math.max(goodDays + 2, Math.round(interval * easeFactor * 1.35));
       easeFactor += 0.15;
@@ -422,7 +619,6 @@ class WortMeisterDatabase {
       dueDate = now + interval * ONE_DAY;
     }
 
-    // 2 ondalık basamağa yuvarla
     easeFactor = Math.round(easeFactor * 100) / 100;
 
     card.easeFactor = easeFactor;
@@ -431,7 +627,6 @@ class WortMeisterDatabase {
     card.lapses = lapses;
     card.dueDate = dueDate;
 
-    // Geriye dönük uyumluluk
     card.intervalDays = interval;
     card.srsStage = repetitions;
     card.nextReviewDate = dueDate;
@@ -491,7 +686,7 @@ window.wmDB.getAllDecks = async () => {
   });
 };
 
-['createDeck', 'deleteDeck', 'updateDeck', 'addCard', 'updateCard', 'deleteCard'].forEach((fn) => {
+['createDeck', 'deleteDeck', 'updateDeck', 'addCard', 'addCardsBatch', 'updateCard', 'deleteCard'].forEach((fn) => {
   if (typeof window.wmDB[fn] === 'function') {
     const orig = window.wmDB[fn].bind(window.wmDB);
     window.wmDB[fn] = async (...args) => {

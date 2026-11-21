@@ -322,6 +322,9 @@
         if (file.size > MAX_PDF_BYTES) throw new Error('PDF en fazla 4.5 MB olabilir.');
         state.file = { mime: 'application/pdf', data: await readAsBase64(file) };
       } else if (lower.endsWith('.docx')) {
+        if (!window.mammoth && window.WortCoachLoader) {
+          await window.WortCoachLoader.ensureMammoth();
+        }
         if (!window.mammoth) throw new Error('DOCX ayrıştırıcı hazır değil.');
         const res = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
         $('deck-builder-text-input').value = (res.value || '').slice(0, 30000);
@@ -618,12 +621,11 @@
       const targetDeckId = createdDeck && createdDeck.id ? createdDeck.id : Date.now();
 
       let added = 0;
-      for (let i = 0; i < selected.length; i++) {
-        const w = selected[i];
-
-        if (isQuiz) {
-          if (saveBtn) saveBtn.textContent = `Quiz Kartları Kaydediliyor: ${i + 1} / ${selected.length}`;
-          await window.wmDB.addCard({
+      const cardsToSave = [];
+      if (isQuiz) {
+        if (saveBtn) saveBtn.textContent = `Quiz Kartları Hazırlanıyor (${selected.length})...`;
+        for (const w of selected) {
+          cardsToSave.push({
             deckId: targetDeckId,
             germanWord: w.front || w.lemma,
             meaningsTr: w.back || w.contextMeaning,
@@ -638,27 +640,44 @@
             cefr: w.category || w.cefr || 'QUIZ',
             isQuizCard: true
           });
-        } else {
-          if (saveBtn) saveBtn.textContent = `Sözlükten Zenginleştiriliyor: ${i + 1} / ${selected.length}`;
-          const entry = await lookupEntry(w.lemma);
-          const isNoun = w.pos === 'NOUN' || (entry && entry.partOfSpeech === 'NOUN');
-
-          await window.wmDB.addCard({
-            deckId: targetDeckId,
-            germanWord: w.lemma,
-            meaningsTr: w.contextMeaning || (entry ? entry.meaningsTr : ''),
-            partOfSpeech: (entry && entry.partOfSpeech) || POS_CARD[w.pos] || 'OTHER',
-            article: isNoun && entry ? entry.article || '' : '',
-            pluralForm: isNoun && entry ? entry.pluralForm || '' : '',
-            exampleSentence: w.sourceSentence || (entry && entry.exampleSentence) || '',
-            praesens: entry ? entry.praesens || '' : '',
-            praeteritum: entry ? entry.praeteritum || '' : '',
-            partizipZwei: entry ? entry.partizipZwei || '' : '',
-            hilfsverb: entry ? entry.hilfsverb || 'hat' : 'hat',
-            cefr: w.cefr || (entry && entry.cefr) || 'A1'
+        }
+      } else {
+        // Sözlük zenginleştirmesini 5'li paralel gruplar halinde hızlandır
+        const CHUNK = 5;
+        for (let i = 0; i < selected.length; i += CHUNK) {
+          if (saveBtn) saveBtn.textContent = `Sözlükten Zenginleştiriliyor: ${Math.min(i + CHUNK, selected.length)} / ${selected.length}`;
+          const slice = selected.slice(i, i + CHUNK);
+          const entries = await Promise.all(slice.map((w) => lookupEntry(w.lemma).catch(() => null)));
+          slice.forEach((w, idx) => {
+            const entry = entries[idx];
+            const isNoun = w.pos === 'NOUN' || (entry && entry.partOfSpeech === 'NOUN');
+            cardsToSave.push({
+              deckId: targetDeckId,
+              germanWord: w.lemma,
+              meaningsTr: w.contextMeaning || (entry ? entry.meaningsTr : ''),
+              partOfSpeech: (entry && entry.partOfSpeech) || POS_CARD[w.pos] || 'OTHER',
+              article: isNoun && entry ? entry.article || '' : '',
+              pluralForm: isNoun && entry ? entry.pluralForm || '' : '',
+              exampleSentence: w.sourceSentence || (entry && entry.exampleSentence) || '',
+              praesens: entry ? entry.praesens || '' : '',
+              praeteritum: entry ? entry.praeteritum || '' : '',
+              partizipZwei: entry ? entry.partizipZwei || '' : '',
+              hilfsverb: entry ? entry.hilfsverb || 'hat' : 'hat',
+              cefr: w.cefr || (entry && entry.cefr) || 'A1'
+            });
           });
         }
-        added++;
+      }
+
+      if (saveBtn) saveBtn.textContent = `Veritabanına Kaydediliyor (${cardsToSave.length})...`;
+      if (typeof window.wmDB.addCardsBatch === 'function') {
+        const resList = await window.wmDB.addCardsBatch(cardsToSave);
+        added = resList.length;
+      } else {
+        for (const c of cardsToSave) {
+          await window.wmDB.addCard(c);
+          added++;
+        }
       }
 
       toast(`"${deckName}" destesi oluşturuldu (${added} kart eklendi).`);

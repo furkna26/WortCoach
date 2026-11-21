@@ -2114,7 +2114,7 @@ class WortCoachPronunciationEngine {
         } else if (selectedEngine === 'WAV2VEC2_CTC' && ctcInfo) {
           combinedPhonScore = Math.round(Math.min(pEval.score, ctcInfo.ctcScore) * 0.6 + ctcInfo.ctcScore * 0.4);
           if (ctcInfo.detectedImpostor && !pEval.feedback) {
-            pEval.feedback = `🧠 Wav2Vec2 CTC Posterior: "${syl.text}" içindeki "${phon.grapheme}" [${phon.ipa}] yerine yüksek olasılıkla (%${ctcInfo.impostorPosterior}) "${ctcInfo.detectedImpostor}" sesi algılandı!`;
+            pEval.feedback = `Wav2Vec2 CTC Posterior: "${syl.text}" içindeki "${phon.grapheme}" [${phon.ipa}] yerine yüksek olasılıkla (%${ctcInfo.impostorPosterior}) "${ctcInfo.detectedImpostor}" sesi algılandı!`;
           }
         } else {
           // HYBRID_ENSEMBLE: MFA Viterbi + Akustik DSP + (varsa Wav2Vec2 CTC)
@@ -2455,7 +2455,7 @@ class WortCoachPronunciationEngine {
 
       if (voicelessBurstFrames >= 1 || voicelessClosureFrames >= 2) {
         score = Math.min(score, 24);
-        feedback = `⚠️ "${syllable.text}" hecesindeki yumuşak/ötümlü "${phon.grapheme}" [${phon.ipa}] yerine sert/ötümsüz "${unvoicedTwin}" [${unvoicedTwin}ʰ] sesi çıkardınız! Ses tellerini kesmeden yumuşak "${phon.grapheme}" okuyun.`;
+        feedback = `Uyarı: "${syllable.text}" hecesindeki yumuşak/ötümlü "${phon.grapheme}" [${phon.ipa}] yerine sert/ötümsüz "${unvoicedTwin}" [${unvoicedTwin}ʰ] sesi çıkardınız! Ses tellerini kesmeden yumuşak "${phon.grapheme}" okuyun.`;
       } else if (avgF0 < 0.14) {
         score = Math.min(score, 48);
         feedback = `"${syllable.text}" hecesindeki "${phon.grapheme}" sesinde ötümlülük zayıf kaldı, "${unvoicedTwin}" sesine kaydı.`;
@@ -2477,7 +2477,7 @@ class WortCoachPronunciationEngine {
 
       if (voicelessOrBurstFrames === 0 && avgF0 > 0.25) {
         score = Math.min(score, 32);
-        feedback = `⚠️ "${syllable.text}" hecesindeki sert "${phon.grapheme}" [${phon.ipa}] sesini fazla yumuşatarak "${voicedTwin}" gibi ötümlü okudunuz!`;
+        feedback = `Uyarı: "${syllable.text}" hecesindeki sert "${phon.grapheme}" [${phon.ipa}] sesini fazla yumuşatarak "${voicedTwin}" gibi ötümlü okudunuz!`;
       } else if (score > 60) {
         score += 5;
       }
@@ -2533,7 +2533,7 @@ class WortCoachPronunciationEngine {
     else if (phon.type === 'DIPHTHONG_EI') {
       if (avgF1High < 0.11 && avgF1Low > avgF1High * 1.5) {
         score = Math.min(score, 30);
-        feedback = `⚠️ "${syllable.text}" hecesindeki "${phon.grapheme}" [aɪ] ("ay") çift ünlüsünü "i/ie" veya "e" gibi kapalı okudunuz! Ağzınızı açarak net "ay" [aɪ] sesi verin.`;
+        feedback = `Uyarı: "${syllable.text}" hecesindeki "${phon.grapheme}" [aɪ] ("ay") çift ünlüsünü "i/ie" veya "e" gibi kapalı okudunuz! Ağzınızı açarak net "ay" [aɪ] sesi verin.`;
       } else if (score > 60) {
         score += 4;
       }
@@ -2543,7 +2543,7 @@ class WortCoachPronunciationEngine {
     else if (phon.type === 'VOWEL_LONG_I') {
       if (avgF1High > avgF1Low * 1.4) {
         score = Math.min(score, 32);
-        feedback = `⚠️ "${syllable.text}" hecesindeki uzun "ie" [iː] sesini "ay (ei)" veya "e" gibi açık okudunuz; tek ve uzun bir "î" [iː] olmalı.`;
+        feedback = `Uyarı: "${syllable.text}" hecesindeki uzun "ie" [iː] sesini "ay (ei)" veya "e" gibi açık okudunuz; tek ve uzun bir "î" [iː] olmalı.`;
       } else if (avgSylDurationMs < 150) {
         score = Math.min(score, 52);
         feedback = `"${syllable.text}" içindeki uzun "ie" [iː] ünlüsü çok kısa kesildi.`;

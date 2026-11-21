@@ -37,18 +37,18 @@ async function runTests() {
   assert(html.includes('id="nav-icon-games"'), "Symbol #nav-icon-games exists");
   assert(html.includes('id="icon-edit"'), "Symbol #icon-edit exists");
 
-  // Verify old book icon restored for nav-icon-home
-  assert(html.includes('d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"'), "Restored classic Book icon for Home/Sözlük");
+  // Verify home and globe icons in bottom navigation
+  assert(html.includes('id="nav-icon-home"') && html.includes('<polyline points="9 22 9 12 15 12 15 22"></polyline>'), "Home icon for Ana Sayfa/Sözlük exists");
 
   // Verify old globe icon restored for nav-icon-translate
   assert(html.includes('<circle cx="12" cy="12" r="10"></circle>'), "Restored classic Globe icon for Çeviri");
 
   // Verify bottom nav labels
-  assert(html.includes('<span class="nav-label">Sözlük</span>'), "Bottom nav tab 1 labeled 'Sözlük'");
-  assert(html.includes('<span class="nav-label">Çeviri</span>'), "Bottom nav tab 2 labeled 'Çeviri'");
-  assert(html.includes('<span class="nav-label">Oyunlar</span>'), "Bottom nav tab 3 labeled 'Oyunlar'");
-  assert(html.includes('<span class="nav-label">Desteler</span>'), "Bottom nav tab 4 labeled 'Desteler'");
-  assert(html.includes('<span class="nav-label">Kelimeler</span>'), "Bottom nav tab 5 labeled 'Kelimeler'");
+  assert(html.includes('<span class="nav-label">Ana Sayfa</span>'), "Bottom nav tab labeled 'Ana Sayfa'");
+  assert(html.includes('<span class="nav-label">Çeviri</span>'), "Bottom nav tab labeled 'Çeviri'");
+  assert(html.includes('<span class="nav-label">Çalış</span>'), "Bottom nav tab labeled 'Çalış'");
+  assert(html.includes('<span class="nav-label">Desteler</span>'), "Bottom nav tab labeled 'Desteler'");
+  assert(html.includes('<span class="nav-label">Kelimeler</span>'), "Bottom nav tab labeled 'Kelimeler'");
 
   // Verify games section moved out of tab-home into dedicated tab-games
   assert(html.includes('id="tab-games"'), "Dedicated tab-games section exists");

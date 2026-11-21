@@ -119,6 +119,7 @@ class DatabaseSeeder {
       targetDeck = await window.wmDB.createDeck(pack.name);
     }
 
+    const batchRecords = [];
     if (Array.isArray(pack.cards) && pack.cards.length > 0) {
       for (const cardData of pack.cards) {
         let cleanEx = (cardData.exampleSentence || '').replace(/^\[[0-9a-zA-Z,\s–\/\.\-]+\]\s*/i, '').trim();
@@ -129,7 +130,7 @@ class DatabaseSeeder {
             if (syn && syn.meaningsTr) meaningsTr = syn.meaningsTr;
           } catch (_) {}
         }
-        await window.wmDB.addCard({
+        batchRecords.push({
           ...cardData,
           exampleSentence: cleanEx,
           meaningsTr: meaningsTr || 'Anlam belirtilmedi',
@@ -140,10 +141,20 @@ class DatabaseSeeder {
       for (const w of pack.words) {
         const synth = window.DictionaryService.synthesizeInstantEntry(w);
         synth.cefr = pack.badge;
-        await window.wmDB.addCard({
+        batchRecords.push({
           ...synth,
           deckId: targetDeck.id
         });
+      }
+    }
+
+    if (batchRecords.length > 0) {
+      if (typeof window.wmDB.addCardsBatch === 'function') {
+        await window.wmDB.addCardsBatch(batchRecords);
+      } else {
+        for (const rec of batchRecords) {
+          await window.wmDB.addCard(rec);
+        }
       }
     }
     return targetDeck;

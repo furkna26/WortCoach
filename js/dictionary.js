@@ -880,6 +880,44 @@ class DictionaryService {
    * Wiktionary API üzerinden doğrulanmış gerçek Almanca morfolojiyi çeker.
    */
   static _wikiCache = new Map();
+  static _resolvedCache = new Map();
+
+  static _setCacheBounded(map, key, val, max = 300) {
+    if (!map || !key) return;
+    if (map.size >= max && !map.has(key)) {
+      const oldestKey = map.keys().next().value;
+      if (oldestKey !== undefined) map.delete(oldestKey);
+    }
+    map.set(key, val);
+  }
+
+  static _withTimeoutSignal(parentSignal, ms = 2500) {
+    if (typeof AbortController === 'undefined') {
+      return { signal: parentSignal, cleanup: () => {} };
+    }
+    const ctrl = new AbortController();
+    let timer = null;
+    const onAbort = () => ctrl.abort();
+    if (parentSignal) {
+      if (parentSignal.aborted) {
+        ctrl.abort();
+      } else if (typeof parentSignal.addEventListener === 'function') {
+        parentSignal.addEventListener('abort', onAbort, { once: true });
+      }
+    }
+    if (ms > 0) {
+      timer = setTimeout(() => ctrl.abort(), ms);
+    }
+    return {
+      signal: ctrl.signal,
+      cleanup: () => {
+        if (timer) clearTimeout(timer);
+        if (parentSignal && typeof parentSignal.removeEventListener === 'function') {
+          parentSignal.removeEventListener('abort', onAbort);
+        }
+      }
+    };
+  }
 
   static async fetchWiktionaryDetails(word, signal) {
     if (!word) return null;
@@ -894,25 +932,31 @@ class DictionaryService {
     if (!tryWords.includes(cap)) tryWords.push(cap);
     if (!tryWords.includes(lower)) tryWords.push(lower);
 
-    // Umlaut ve yazım adaylarını da kontrol et (kuhlschrank -> Kühlschrank, uber -> über, schon -> schön)
+    // Umlaut ve yazım adaylarını da kontrol et (en fazla 4 başlangıç adayı)
     const normalizer = (typeof window !== 'undefined' && window.SearchNormalizer) ? window.SearchNormalizer : null;
-    if (normalizer) {
+    if (normalizer && tryWords.length < 4) {
       const candidates = normalizer.generateCandidates(clean);
       for (const cand of candidates) {
+        if (tryWords.length >= 4) break;
         const cCap = cand.charAt(0).toUpperCase() + cand.slice(1);
         if (!tryWords.includes(cand)) tryWords.push(cand);
-        if (!tryWords.includes(cCap)) tryWords.push(cCap);
+        if (tryWords.length < 4 && !tryWords.includes(cCap)) tryWords.push(cCap);
       }
     }
 
     for (let i = 0; i < tryWords.length; i++) {
+      if (signal && signal.aborted) return null;
       const w = tryWords[i];
       try {
         const url = `https://de.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(w)}&prop=wikitext&format=json&origin=*`;
         let res = null;
         for (let attempt = 0; attempt < 2; attempt++) {
+          const tWrap = this._withTimeoutSignal(signal, 2500);
           try {
-            const resp = await fetch(url, { headers: { 'Api-User-Agent': 'WortCoach/2.8.5 (contact@wortcoach.app)' }, signal });
+            const resp = await fetch(url, {
+              headers: { 'Api-User-Agent': 'WortCoach/2.8.5 (contact@wortcoach.app)' },
+              signal: tWrap.signal
+            });
             if (resp.status === 429) {
               await new Promise(resFn => setTimeout(resFn, 300));
               continue;
@@ -923,8 +967,11 @@ class DictionaryService {
               continue;
             }
             break;
-          } catch (_) {
+          } catch (e) {
+            if (signal && signal.aborted) throw e;
             if (attempt === 0) await new Promise(resFn => setTimeout(resFn, 150));
+          } finally {
+            tWrap.cleanup();
           }
         }
         const wt = res?.parse?.wikitext?.['*'];
@@ -1025,12 +1072,16 @@ class DictionaryService {
           rawTags
         };
         if (!DictionaryService._wikiCache) DictionaryService._wikiCache = new Map();
-        DictionaryService._wikiCache.set(cacheKey, resultObj);
-        DictionaryService._wikiCache.set(resultObj.word.toLowerCase(), resultObj);
+        DictionaryService._setCacheBounded(DictionaryService._wikiCache, cacheKey, resultObj, 300);
+        DictionaryService._setCacheBounded(DictionaryService._wikiCache, resultObj.word.toLowerCase(), resultObj, 300);
         return resultObj;
       } catch (_) {}
     }
 
+    if (!signal || !signal.aborted) {
+      if (!DictionaryService._wikiCache) DictionaryService._wikiCache = new Map();
+      DictionaryService._setCacheBounded(DictionaryService._wikiCache, cacheKey, null, 300);
+    }
     return null;
   }
 
@@ -1247,7 +1298,7 @@ class DictionaryService {
     };
 
     if (trList.length > 0 || enList.length > 0) {
-      DictionaryService._readerLookupCache.set(cacheKey, result);
+      DictionaryService._setCacheBounded(DictionaryService._readerLookupCache, cacheKey, result, 300);
     }
 
     return result;
@@ -1430,8 +1481,12 @@ class DictionaryService {
       norm = artMatch[2].trim();
     }
 
-    // Canlı Wiktionary taraması: çekilmiş/çoğul ise Grundformu (kök sözcüğü) alır (0 token, tamamen ücretsiz)
-    const wiki = await this.fetchWiktionaryDetails(norm, signal);
+    // Canlı Wiktionary morfoloji ve ilk TR/EN Google çevirisini PARALEL başlat
+    const [wiki, initTr, initEn] = await Promise.all([
+      this.fetchWiktionaryDetails(norm, signal).catch(() => null),
+      this.translateGermanToTr(norm, signal).catch(() => null),
+      this.translateGermanToEn(norm, signal).catch(() => null)
+    ]);
     const resolvedWord = (wiki && wiki.word) ? wiki.word : norm;
 
     // Çekirdek sözlükte varsa oradan referans al, yoksa sentezle
@@ -1474,11 +1529,15 @@ class DictionaryService {
       entry.rawExamples = wiki.rawExamples;
     }
 
-    // Kesin canlı çeviri: Almanca kelimenin Türkçe ve İngilizce karşılıklarını çek
-    const [liveTr, liveEn] = await Promise.all([
-      this.translateGermanToTr(entry.germanWord, signal).catch(() => null),
-      this.translateGermanToEn(entry.germanWord, signal).catch(() => null)
-    ]);
+    // Wiktionary kök sözcüğü değiştirdiyse yalnızca o zaman yeniden TR/EN çevir, yoksa paralel sonucu kullan
+    let liveTr = initTr;
+    let liveEn = initEn;
+    if (entry.germanWord.toLowerCase() !== norm.toLowerCase()) {
+      [liveTr, liveEn] = await Promise.all([
+        this.translateGermanToTr(entry.germanWord, signal).catch(() => initTr),
+        this.translateGermanToEn(entry.germanWord, signal).catch(() => initEn)
+      ]);
+    }
 
     const isTrInput = (detectedLang === 'tr' || detectedLang === 'az') || /[çğışöüÇĞİŞÖÜ]/i.test(originalQuery);
     const isEnInput = detectedLang === 'en';
@@ -1527,6 +1586,11 @@ class DictionaryService {
       } catch (_) {}
     }
 
+    // 1a. Bellek içi çözümlenmiş sözlük önbelleği (0ms tekrar aramalar)
+    if (DictionaryService._resolvedCache && DictionaryService._resolvedCache.has(lower)) {
+      return { ...DictionaryService._resolvedCache.get(lower) };
+    }
+
     // 1b. Gelişmiş Çevrimdışı Morfolojik Sözlük Motoru (0ms, Çekim ve Kök Analizli)
     if (typeof window !== 'undefined' && window.OfflineDictionary) {
       try {
@@ -1553,8 +1617,7 @@ class DictionaryService {
       return this.synthesizeInstantEntry(offlineHit.germanWord);
     }
 
-    // 4. Doğrudan Almanca Wiktionary doğrulaması (Gerçek Almanca kelimeler - obscür dahil: Wohnung, Kummerspeck, Sehnsucht, Kühlschrank, vb.)
-    // Eğer kelime de.wiktionary.org'da {{Sprache|Deutsch}} olarak mevcutsa, kesinlikle Almancadır!
+    // 4. Doğrudan Almanca Wiktionary doğrulaması (Gerçek Almanca kelimeler - obscür dahil)
     const wikiDirect = await this.fetchWiktionaryDetails(trimmed, signal);
     if (wikiDirect) {
       const entry = this.synthesizeInstantEntry(wikiDirect.word || trimmed);
@@ -1574,40 +1637,46 @@ class DictionaryService {
         entry.germanWord = entry.germanWord.toLowerCase();
       }
 
-      if (!entry.meaningsTr) {
-        const trM = await this.translateGermanToTr(entry.germanWord, signal);
+      if (!entry.meaningsTr || !entry.meaningsEn) {
+        const [trM, enM] = await Promise.all([
+          !entry.meaningsTr ? this.translateGermanToTr(entry.germanWord, signal).catch(() => null) : Promise.resolve(null),
+          !entry.meaningsEn ? this.translateGermanToEn(entry.germanWord, signal).catch(() => null) : Promise.resolve(null)
+        ]);
         if (trM) entry.meaningsTr = trM;
-      }
-      if (!entry.meaningsEn) {
-        const enM = await this.translateGermanToEn(entry.germanWord, signal);
         if (enM) entry.meaningsEn = enM;
       }
       entry.resolvedFromQuery = trimmed;
+      this._setCacheBounded(this._resolvedCache, lower, entry, 200);
       return entry;
     }
 
-    // 5. Doğrudan Almanca morfolojik belirteçleri varsa (ä, artikel, sich, ung, heit vb.)
-    // Asla yerel tahminde bulunma: Canlı internet çevirisi ile varlığını ve anlamını doğrula!
+    // 5. Doğrudan Almanca morfolojik belirteçleri varsa canlı internet çevirisi ile doğrula
     if (this.isKnownGerman(trimmed)) {
-      const trMean = await this.translateGermanToTr(trimmed, signal);
+      const [trMean, enMean] = await Promise.all([
+        this.translateGermanToTr(trimmed, signal).catch(() => null),
+        this.translateGermanToEn(trimmed, signal).catch(() => null)
+      ]);
       if (trMean && trMean.toLowerCase() !== lower) {
         const entry = this.synthesizeInstantEntry(trimmed);
         entry.meaningsTr = trMean;
-        const enMean = await this.translateGermanToEn(trimmed, signal);
         if (enMean) entry.meaningsEn = enMean;
         entry.resolvedFromQuery = trimmed;
+        this._setCacheBounded(this._resolvedCache, lower, entry, 200);
         return entry;
       }
     }
 
     // 6. DİĞER DİLLERDEN VEYA YERELDE BULUNAMAYAN GİRİŞ:
-    // Akıllı Çok Dilli Sözlük Motoru (Google Translate & Wiktionary - 0 Token, 0 Maliyet)
     const cloudEntry = await this.translateWordToGerman(trimmed, signal);
     if (cloudEntry) {
       const transStr = typeof cloudEntry === 'object' ? (cloudEntry.translation || cloudEntry.germanWord) : cloudEntry;
       const detLang = typeof cloudEntry === 'object' ? (cloudEntry.detectedLang || 'auto') : 'auto';
       if (transStr && transStr.toLowerCase() !== lower) {
-        return this.buildEntryFromTranslation(cloudEntry, trimmed, detLang, signal);
+        const built = await this.buildEntryFromTranslation(cloudEntry, trimmed, detLang, signal);
+        if (built) {
+          this._setCacheBounded(this._resolvedCache, lower, built, 200);
+        }
+        return built;
       }
     }
 
@@ -1641,18 +1710,18 @@ class DictionaryService {
     }
 
     if (candidates && candidates.length > 0) {
-      for (const deEx of candidates.slice(0, 3)) {
-        try {
-          const trEx = await this.translateGermanToTr(deEx, abortSignal);
-          if (trEx && trEx.toLowerCase() !== deEx.toLowerCase()) {
-            fetchedExamples.push(`${deEx} (${trEx})`);
-          } else {
-            fetchedExamples.push(deEx);
-          }
-        } catch (_) {
-          fetchedExamples.push(deEx);
-        }
-      }
+      const translatedExamples = await Promise.all(
+        candidates.slice(0, 3).map(async (deEx) => {
+          try {
+            const trEx = await this.translateGermanToTr(deEx, abortSignal);
+            if (trEx && trEx.toLowerCase() !== deEx.toLowerCase()) {
+              return `${deEx} (${trEx})`;
+            }
+          } catch (_) {}
+          return deEx;
+        })
+      );
+      fetchedExamples.push(...translatedExamples);
     }
 
     // 2. Wiktionary'de yoksa çekirdek sözlükteki veya yerel örnekleri kontrol et
