@@ -1,6 +1,7 @@
 name = "wortcoach-proxy"
 main = "worker.js"
 compatibility_date = "2025-01-01"
+account_id = "e730a32bd6fde1b129f33d41b72267e1"
 
 [vars]
 ALLOWED_ORIGIN = "https://furkna26.github.io,http://localhost:8000,http://127.0.0.1:5500,http://localhost:3000"
@@ -10,7 +11,7 @@ DAILY_GLOBAL = "800"
 
 [[kv_namespaces]]
 binding = "LIMITS"
-id = "2335363350024e0f856d8e72e7a7318b"
+id = "d1a04931edd44affb8dee3a945539c99"
 
 [[ratelimits]]
 name = "MINUTE_LIMITER"
