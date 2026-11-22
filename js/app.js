@@ -117,7 +117,7 @@ class WortCoachApp {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=3.10.1').then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=3.10.2').then((reg) => {
         reg.update();
         if (reg.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });

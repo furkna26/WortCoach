@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.10.1" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.10.1" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.10.1" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.10.1" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.10.1" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.10.1" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.10.1" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.10.1" />
+  <link rel="manifest" href="manifest.json?v=3.10.2" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.10.2" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.10.2" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.10.2" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.10.2" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.10.2" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.10.2" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.10.2" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.10.1" />
-  <link rel="stylesheet" href="css/components.css?v=3.10.1" />
+  <link rel="stylesheet" href="css/app.css?v=3.10.2" />
+  <link rel="stylesheet" href="css/components.css?v=3.10.2" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -381,7 +381,7 @@
     <!-- ÜST BAR (HEADER: Academic Crest + Typography) -->
     <header class="app-header">
       <div class="brand-group" id="brand-home-trigger" title="WortCoach Ana Sayfa">
-        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.10.1" alt="WortCoach Logo" width="34" height="34" />
+        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.10.2" alt="WortCoach Logo" width="34" height="34" />
         <div class="brand-text-block">
           <div class="brand-logo" style="line-height:1.15;">
             Wort<span style="color:var(--brand-blue)">Coach</span>
@@ -2674,6 +2674,12 @@
         <div id="deck-builder-suggestions" class="coach-quick-actions" style="margin-bottom:12px;"></div>
 
         <div class="coach-prompt-builder">
+          <label for="deck-builder-target-count" class="coach-instruction-label" style="margin-top:2px;">KAPSAM / KART SAYISI</label>
+          <select id="deck-builder-target-count" class="form-control" style="margin-bottom:8px;">
+            <option value="all" selected>Tüm Uygun Kelimeler (Kapsamlı - Metindeki Tamamı)</option>
+            <option value="100">Geniş Liste (60 - 120+ Kart)</option>
+            <option value="50">Standart Liste (35 - 60 Kart)</option>
+          </select>
           <label for="deck-builder-instruction" id="deck-builder-instruction-label" class="coach-instruction-label">ÖZEL TALİMAT (İSTEĞE BAĞLI)</label>
           <textarea id="deck-builder-instruction" class="coach-instruction-textarea" rows="2" maxlength="300" placeholder="Örn: Bu metindeki A2-B1 seviyesi fiil ve isimleri desteye çevir..."></textarea>
           <button type="button" id="btn-deck-builder-build" class="btn-coach-build-full" style="margin-top:8px;">
@@ -2688,11 +2694,14 @@
           <label for="deck-builder-deck-name" style="font-size:0.8rem; font-weight:800; color:var(--text-muted); display:block; margin-bottom:4px;">DESTE ADI</label>
           <input type="text" id="deck-builder-deck-name" class="form-control" maxlength="80" style="font-weight:800; font-size:1.05rem;" />
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
           <span id="deck-builder-count" style="font-size:0.84rem; font-weight:800; color:var(--text-secondary);">0 kelime seçildi</span>
-          <button type="button" id="btn-deck-builder-toggle-all" class="coach-link-btn" style="background:none; border:0; color:var(--brand-blue-hover); font-weight:800; font-size:0.8rem; cursor:pointer;">Tümünü Seç / Kaldır</button>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button type="button" id="btn-deck-builder-more" class="coach-link-btn" style="background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.32); border-radius:8px; padding:5px 10px; color:#34D399; font-weight:800; font-size:0.78rem; cursor:pointer;">+ Daha Fazla Kart Çıkar</button>
+            <button type="button" id="btn-deck-builder-toggle-all" class="coach-link-btn" style="background:none; border:0; color:var(--brand-blue-hover); font-weight:800; font-size:0.8rem; cursor:pointer;">Tümünü Seç / Kaldır</button>
+          </div>
         </div>
-        <div id="deck-builder-word-list" style="max-height:320px; overflow-y:auto; margin-bottom:14px;"></div>
+        <div id="deck-builder-word-list" style="max-height:420px; overflow-y:auto; margin-bottom:14px;"></div>
         <button type="button" id="btn-deck-builder-save" class="btn-coach-build-full">
           <span>Desteyi Kütüphaneme Kaydet</span>
         </button>
@@ -3317,25 +3326,25 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script defer src="js/config.js?v=3.10.1"></script>
-  <script defer src="js/db.js?v=3.10.1"></script>
-  <script defer src="js/verbHelper.js?v=3.10.1"></script>
-  <script defer src="js/grammarEnrichment.js?v=3.10.1"></script>
-  <script defer src="js/offlineDictionary.js?v=3.10.1"></script>
-  <script defer src="js/dictionary.js?v=3.10.1"></script>
-  <script defer src="js/curatedPacks.js?v=3.10.1"></script>
-  <script defer src="js/seeder.js?v=3.10.1"></script>
-  <script defer src="js/tts.js?v=3.10.1"></script>
-  <script defer src="js/pronunciation.js?v=3.10.1"></script>
-  <script defer src="js/translator.js?v=3.10.1"></script>
-  <script defer src="js/game.js?v=3.10.1"></script>
-  <script defer src="js/study.js?v=3.10.1"></script>
-  <script defer src="js/stats.js?v=3.10.1"></script>
-  <script defer src="js/coach.js?v=3.10.1"></script>
-  <script defer src="js/deckBuilder.js?v=3.10.1"></script>
-  <script defer src="js/satzBuilder.js?v=3.10.1"></script>
-  <script defer src="js/social.js?v=3.10.1"></script>
-  <script defer src="js/app.js?v=3.10.1"></script>
+  <script defer src="js/config.js?v=3.10.2"></script>
+  <script defer src="js/db.js?v=3.10.2"></script>
+  <script defer src="js/verbHelper.js?v=3.10.2"></script>
+  <script defer src="js/grammarEnrichment.js?v=3.10.2"></script>
+  <script defer src="js/offlineDictionary.js?v=3.10.2"></script>
+  <script defer src="js/dictionary.js?v=3.10.2"></script>
+  <script defer src="js/curatedPacks.js?v=3.10.2"></script>
+  <script defer src="js/seeder.js?v=3.10.2"></script>
+  <script defer src="js/tts.js?v=3.10.2"></script>
+  <script defer src="js/pronunciation.js?v=3.10.2"></script>
+  <script defer src="js/translator.js?v=3.10.2"></script>
+  <script defer src="js/game.js?v=3.10.2"></script>
+  <script defer src="js/study.js?v=3.10.2"></script>
+  <script defer src="js/stats.js?v=3.10.2"></script>
+  <script defer src="js/coach.js?v=3.10.2"></script>
+  <script defer src="js/deckBuilder.js?v=3.10.2"></script>
+  <script defer src="js/satzBuilder.js?v=3.10.2"></script>
+  <script defer src="js/social.js?v=3.10.2"></script>
+  <script defer src="js/app.js?v=3.10.2"></script>
 </body>
 </html>
 

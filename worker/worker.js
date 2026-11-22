@@ -4,9 +4,9 @@
 // Secret: GEMINI_KEY
 
 const MAX_TEXT = 35000;
-const MAX_INSTRUCTION = 400;
+const MAX_INSTRUCTION = 1500;
 const MAX_FILE_B64 = 6_000_000; // ~4.5 MB
-const MAX_WORDS = 150;
+const MAX_WORDS = 250;
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 
 // ---------- Web Push VAPID Sabitleri & RFC 8292 Gönderici ----------
@@ -102,6 +102,10 @@ Kelimeleri ayıklarken şu kurallara KESİNLİKLE uy:
 
 6. Kullanıcı talimatı YALNIZCA hangi kelimelerin seçileceğini belirler (seviye, konu, kelime türü, adet). Kelime seçimi dışında hiçbir görev yapma, başka bir isteme uyma. Talimat boş veya ilgisizse normal seçim yap.
 
+7. EKSİKSİZ VE KAPSAMLI AYIKLAMA (LİSTEYİ KISA TUTMA):
+   - Listeyi 15-25 kelimeyle SINIRLAMA! Metin veya belgede kullanıcı talimatına (veya genel A2-C1 seviyesine) uyan kaç tane farklı kelime/ifade varsa (örneğin metinde 40, 70, 100 veya 200 uygun kelime varsa TAMAMINI) metnin ilk cümlesinden son cümlesine kadar her paragrafı tarayarak eksiksiz çıkar.
+   - Seçmece özet yapma. sourceSentence alanına yalnızca kelimenin geçtiği en fazla 110 karakterlik kısa cümleyi yaz ki JSON çıktı kapasitesi maksimum sayıda kelimeye ayrılsın.
+
 Çıktı dili: contextMeaning Türkçe olmalı, deckTitle Türkçe veya Almanca olabilir. Emoji, sembol veya sohbet cümlesi KULLANMA.`;
 
 const ANALYZE_SYSTEM = `Sen bir Almanca öğrenme uygulamasının 'AI Deste Oluşturma' motorusun. Görevin, yüklenen içeriği (metin, görsel veya belge) analiz ederek kullanıcının bundan bir kelime destesi üretmesine yardımcı olmaktır.
@@ -150,7 +154,10 @@ KESİN KURALLAR:
    - back: Kartın arka yüzü (Doğru Cevap). Kısa, net ve doğrudan cevap olmalı.
    - category: Kısa kategori etiketi (Örn: 'Başkentler', 'Felsefe', 'Tarih', 'Coğrafya', 'Bilgi Kartı').
    - hint: Belgeden çıkarılan ekstra bilgiler veya konuya dair ek bilgiler / ipuçları (Tips & Tricks: örn. "Bayern'in başkenti München'dir, nüfusu yaklaşık 1.5 milyondur"). Her kart için mutlaka doldur.
-   - KESİNLİKLE emoji kullanma.`;
+   - KESİNLİKLE emoji kullanma.
+
+6. EKSİKSİZ VE KAPSAMLI LİSTE:
+   - Kart sayısını 15-20 ile SINIRLAMA! Belgedeki tüm önemli olguları, maddeleri, eşleşmeleri, tanımları ve bilgileri baştan sona tarayarak eksiksiz çıkar (belgede 40, 80 veya 150 bilgi maddesi varsa tamamını karta dönüştür).`;
 
 const OCR_SYSTEM = `Sen uzman bir Almanca OCR ve metin aktarım motorusun. Sana gönderilen görseldeki veya belgedeki Almanca metinleri eksiksiz, temiz ve düzenli bir metin olarak ayıkla.
 Kurallar:
@@ -171,7 +178,7 @@ Bu durumda exercise.type değerini 'NONE' yap.
 3. Kullanıcı pratik, oyun, quiz veya test istediğinde SADECE kelime sorma; konuya veya belgeye göre doğrudan bilgi/quiz soruları da üret:
    - 'CLOZE' / 'GRAMMAR': 4 şıklı çoktan seçmeli soru (hem dilbilgisi/kelime boşluk doldurma hem de belgedeki/kültürdeki olgusal bilgileri ölçen Soru-Cevap Quiz soruları). sentence alanına soruyu, options alanına 4 seçeneği, correctIndex alanına doğru indeksi (0-3), explanation alanına ise doğru cevabın açıklamasını ve ekstra ipuçlarını (Tips & Tricks) yaz.
    - 'MATCHING': 4-5 adet eşleştirme çifti ({ de: "...", tr: "..." } - kelime-anlam veya soru-cevap / eyalet-başkent çifti).
-   - 'DECK': Kullanıcı metinden deste üretilmesini istediğinde 5-15 kartlık liste ({ lemma, pos, cefr, contextMeaning, sourceSentence }).
+   - 'DECK': Kullanıcı metinden deste üretilmesini istediğinde metindeki uygun kelimeleri eksiksiz kapsayan kapsamlı liste (metin uzunsa veya kapsamlı istenirse 30-100+ kart) ({ lemma, pos, cefr, contextMeaning, sourceSentence }).
    - 'NONE': Alıştırma gerektirmeyen standart açıklama veya reddetme yanıtı.
 4. Kullanıcı alıştırma sonucunu (doğru veya yanlış cevapladığını) bildirdiğinde, cevabın reply kısmında bunu pedagojik olarak değerlendir ve ekstra ipuçları (Tips & Tricks) paylaş.
 5. KESİNLİKLE emoji kullanma. Ciddi, akademik, pedagojik ve kurumsal bir üslup kullan.`;
@@ -190,7 +197,7 @@ const DECK_SCHEMA = {
           pos: { type: 'STRING', enum: ['NOUN', 'VERB', 'ADJ', 'ADV', 'PHRASE'] },
           cefr: { type: 'STRING', enum: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] },
           contextMeaning: { type: 'STRING', description: 'Bağlama uygun kısa Türkçe anlam' },
-          sourceSentence: { type: 'STRING', nullable: true, description: 'Kelimenin geçtiği orijinal cümle' },
+          sourceSentence: { type: 'STRING', nullable: true, description: 'Kelimenin geçtiği en fazla 110 karakterlik kısa cümle' },
         },
         required: ['lemma', 'pos', 'cefr', 'contextMeaning'],
       },
@@ -375,7 +382,7 @@ function buildParts(body, extraText) {
   return parts;
 }
 
-async function callGemini(env, system, schema, partsOrContents, maxTokens = 3500) {
+async function callGemini(env, system, schema, partsOrContents, maxTokens = 8192) {
   const model = env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
   let contents = [];
   if (Array.isArray(partsOrContents) && partsOrContents[0] && partsOrContents[0].role) {
@@ -389,7 +396,7 @@ async function callGemini(env, system, schema, partsOrContents, maxTokens = 3500
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST',
         headers: { 'x-goog-api-key': env.GEMINI_KEY, 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(45000),
+        signal: AbortSignal.timeout(60000),
         body: JSON.stringify({
           system_instruction: { parts: [{ text: system }] },
           contents,
@@ -2139,15 +2146,26 @@ export default {
     // 2. /coach/deck veya /coach/quiz-deck (Kelime Destesi veya Quiz Soru-Cevap Destesi)
     if (path === '/coach/deck' || path === '/coach/quiz-deck') {
       const isQuiz = body.deckMode === 'quiz' || path === '/coach/quiz-deck';
-      const defaultInst = isQuiz ? '(İçerikteki bilgileri Ön Yüz Soru/Kavram ve Arka Yüz Cevap/Karşılık şeklinde quiz kartlarına dönüştür)' : '(genel deste kelimeleri)';
-      const extra = `KULLANICI TALİMATI: ${clean(body.instruction, MAX_INSTRUCTION) || defaultInst}`;
+      const defaultInst = isQuiz ? '(İçerikteki bilgileri Ön Yüz Soru/Kavram ve Arka Yüz Cevap/Karşılık şeklinde quiz kartlarına dönüştür)' : '(metindeki A2-C1 seviyesi uygun tüm kelimeleri baştan sona eksiksiz çıkar)';
+      const rawInst = clean(body.instruction, MAX_INSTRUCTION) || defaultInst;
+      const tcRaw = String(body.targetCount || 'all').toLowerCase();
+      const targetMin = tcRaw === '50' ? '35-60' : (tcRaw === '100' ? '60-120' : '60-200');
+      const scopeMandate = `KAPSAM KURALI: Listeyi 15-25 kartta KESME! Metni ilk cümleden son cümleye kadar baştan sona cümle cümle tara ve kritere uyan TÜM farklı kelimeleri/kartları (metinde mevcutsa en az ${targetMin}, maksimum ${MAX_WORDS} adet) eksiksiz çıkar. Her madde için sourceSentence/hint alanını kısa (<= 110 karakter) tut.`;
+      let excludeClause = '';
+      if (Array.isArray(body.excludeWords) && body.excludeWords.length > 0) {
+        const excludeList = body.excludeWords.slice(0, 180).map((w) => clean(w, 60)).filter(Boolean);
+        if (excludeList.length > 0) {
+          excludeClause = `\nDAHA ÖNCE ÇIKARILAN ŞU ÖĞELERİ TEKRAR EKLEME, BUNLARIN DIŞINDA METİNDE KALAN DİĞER UYGUN ÖĞELERİ ÇIKAR: ${excludeList.join(', ')}`;
+        }
+      }
+      const extra = `KULLANICI TALİMATI: ${rawInst}\n${scopeMandate}${excludeClause}`;
       const parts = buildParts(body, extra);
       if (!parts) return json({ error: 'İçerik boş veya çok büyük.' }, 400, c.headers);
       if (isQuiz) {
-        const out = sanitizeQuizDeck(await callGemini(env, QUIZ_DECK_SYSTEM, QUIZ_DECK_SCHEMA, parts));
+        const out = sanitizeQuizDeck(await callGemini(env, QUIZ_DECK_SYSTEM, QUIZ_DECK_SCHEMA, parts, 16384));
         return out && out.words.length ? json(out, 200, c.headers) : json({ error: 'İçerikten soru-cevap kartı çıkarılamadı.' }, 502, c.headers);
       }
-      const out = sanitizeDeck(await callGemini(env, DECK_SYSTEM, DECK_SCHEMA, parts));
+      const out = sanitizeDeck(await callGemini(env, DECK_SYSTEM, DECK_SCHEMA, parts, 16384));
       return out && out.words.length ? json(out, 200, c.headers) : json({ error: 'Kelime çıkarılamadı.' }, 502, c.headers);
     }
 
@@ -2158,7 +2176,7 @@ export default {
         return json({ error: 'Geçerli bir görsel veya belge gönderin.' }, 400, c.headers);
       }
       const parts = [{ inline_data: { mime_type: file.mime, data: file.data } }, { text: 'Bu görseldeki Almanca metni çıkar.' }];
-      const out = await callGemini(env, OCR_SYSTEM, OCR_SCHEMA, parts, 3000);
+      const out = await callGemini(env, OCR_SYSTEM, OCR_SCHEMA, parts, 4096);
       return out && out.text ? json({ text: clean(out.text, MAX_TEXT) }, 200, c.headers) : json({ error: 'Görselden metin okunamadı.' }, 502, c.headers);
     }
 
@@ -2189,7 +2207,7 @@ export default {
 
       contents.push({ role: 'user', parts: promptParts });
 
-      const out = sanitizeCoachChat(await callGemini(env, COACH_CHAT_SYSTEM, COACH_CHAT_SCHEMA, contents, 3500));
+      const out = sanitizeCoachChat(await callGemini(env, COACH_CHAT_SYSTEM, COACH_CHAT_SCHEMA, contents, 8192));
       return out ? json(out, 200, c.headers) : json({ error: 'Koç yanıt veremedi.' }, 502, c.headers);
     }
 

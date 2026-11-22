@@ -114,7 +114,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.10.1) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.10.2) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -127,12 +127,12 @@ async function run() {
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
   check(scriptTags.length === 19 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.10.1') && html.includes('js/app.js?v=3.10.1'), 'Assets bumped cleanly to v3.10.1');
+  check(html.includes('css/components.css?v=3.10.2') && html.includes('js/app.js?v=3.10.2'), 'Assets bumped cleanly to v3.10.2');
 
   // 2. Service Worker Audit
   console.log('\n[2] Service Worker Audit');
   const swCode = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.10.1'"), 'SW cache version updated to v3.10.1');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.10.2'"), 'SW cache version updated to v3.10.2');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');

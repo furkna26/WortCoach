@@ -95,12 +95,14 @@
     const btnPick = $('btn-deck-builder-pick');
     const btnAnalyze = $('btn-deck-builder-analyze');
     const btnBuild = $('btn-deck-builder-build');
+    const btnMore = $('btn-deck-builder-more');
     const btnSave = $('btn-deck-builder-save');
     const tabWord = $('tab-btn-deck-mode-word');
     const tabQuiz = $('tab-btn-deck-mode-quiz');
 
     if (btnPick) btnPick.disabled = busy;
     if (btnAnalyze) btnAnalyze.disabled = busy;
+    if (btnMore) btnMore.disabled = busy;
     if (tabWord) tabWord.disabled = busy;
     if (tabQuiz) tabQuiz.disabled = busy;
     if (btnBuild) {
@@ -402,6 +404,61 @@
     }
   }
 
+  function normalizeDeckItems(rawList, isQuiz) {
+    if (!Array.isArray(rawList)) return [];
+    if (isQuiz) {
+      return rawList.map((w) => {
+        const front = cleanStr(w.front || w.lemma || w.question);
+        const back = cleanStr(w.back || w.contextMeaning || w.answer);
+        const category = cleanStr(w.category || w.cefr || 'Soru - Cevap');
+        const hint = cleanStr(w.hint || w.sourceSentence || '');
+        return {
+          front,
+          back,
+          category,
+          hint,
+          lemma: front,
+          pos: 'QUIZ',
+          cefr: category,
+          contextMeaning: back,
+          sourceSentence: hint,
+          selected: true
+        };
+      }).filter((w) => w.front && w.back);
+    }
+    return rawList.map((w) => ({
+      lemma: cleanStr(w.lemma),
+      pos: w.pos || 'PHRASE',
+      cefr: w.cefr || '',
+      contextMeaning: cleanStr(w.contextMeaning),
+      sourceSentence: cleanStr(w.sourceSentence),
+      selected: true
+    })).filter((w) => w.lemma);
+  }
+
+  function mergeUniqueItems(existing, incoming, isQuiz) {
+    const seen = new Set(existing.map((x) => (isQuiz ? x.front : x.lemma).toLowerCase()));
+    const merged = existing.slice();
+    let addedCount = 0;
+    for (const item of incoming) {
+      const key = (isQuiz ? item.front : item.lemma).toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(item);
+      addedCount++;
+    }
+    return { merged, addedCount };
+  }
+
+  function buildDeckInstruction(instruction, isQuiz) {
+    if (isQuiz) {
+      const quizCoreDirective = 'BU BİR QUİZ (SORU - CEVAP - EK BİLGİ) DESTESİDİR. Kelime çevirisi yapma! Belgedeki TÜM olguları, eşleşmeleri ve bilgileri baştan sona eksiksiz çıkar (listeyi 15-20 kartla sınırlama). lemma alanına Soruyu, contextMeaning alanına Doğru Cevabı, sourceSentence alanına kısa (<= 110 karakter) ek bilgi/ipucu yaz.';
+      return instruction ? `${quizCoreDirective} Kullanıcı Kurgusu: ${instruction}` : quizCoreDirective;
+    }
+    const wordTipDirective = 'Metindeki veya listedeki kritere uyan TÜM farklı kelimeleri ilk cümleden son cümleye kadar eksiksiz çıkar (15-25 kelimeyle sınırlama; 40-150+ kelime varsa tamamını çıkar). sourceSentence alanını kısa (<= 100 karakter) tut.';
+    return instruction ? `${instruction}. (${wordTipDirective})` : wordTipDirective;
+  }
+
   // Adım 2: Kelime veya Quiz Kartı Listesi Çıkarma (Deste Oluşturma)
   async function buildDeck(forceInstruction = null) {
     const payload = currentPayload();
@@ -415,22 +472,18 @@
     const instruction = (forceInstruction !== null && typeof forceInstruction === 'string')
       ? forceInstruction
       : ($('deck-builder-instruction')?.value || '').trim();
+    const targetCount = $('deck-builder-target-count')?.value || 'all';
 
     state.byMode[activeMode].instruction = instruction;
     payload.deckMode = activeMode;
-    if (isQuiz) {
-      const quizCoreDirective = 'BU BİR QUİZ (SORU - CEVAP - EK BİLGİ) DESTESİDİR. Kelime çevirisi yapma! lemma alanına Soruyu (belge Türkçe ise Türkçe, Almanca ise Almanca), contextMeaning alanına Doğru Cevabı, sourceSentence alanına ise belgeden bulduğun ekstra bilgileri veya konuya dair ek bilgileri / ipuçlarını (Tips & Tricks: örn. Bayern başkenti München, nüfusu yaklaşık 1.5 milyon vb.) Türkçe olarak MUTLAKA yaz.';
-      payload.instruction = instruction ? `${quizCoreDirective} Kullanıcı Kurgusu: ${instruction}` : quizCoreDirective;
-    } else {
-      const wordTipDirective = 'sourceSentence alanına kelimenin belgedeki cümlesini ve varsa belgeden/kullanımdan kısa bir ek bilgi (ipucu) yaz.';
-      payload.instruction = instruction ? `${instruction}. (${wordTipDirective})` : wordTipDirective;
-    }
+    payload.targetCount = targetCount;
+    payload.instruction = buildDeckInstruction(instruction, isQuiz);
 
     setBusy(true, 'Koç düşünüyor...');
     setStatus(
       isQuiz
-        ? 'Koç belgedeki bilgileri Soru, Cevap ve Ek Bilgi kartlarına dönüştürüyor...'
-        : 'Koç içeriği inceliyor ve kelimeleri ayıklıyor...'
+        ? 'Koç belgedeki bilgileri eksiksiz Soru, Cevap ve Ek Bilgi kartlarına dönüştürüyor...'
+        : 'Koç içeriği baştan sona tarıyor ve tüm uygun kelimeleri ayıklıyor...'
     );
 
     try {
@@ -439,7 +492,8 @@
         ? out.words
         : (out && Array.isArray(out.cards) ? out.cards : []);
 
-      if (!rawList.length) {
+      let items = normalizeDeckItems(rawList, isQuiz);
+      if (!items.length) {
         throw new Error(
           isQuiz
             ? 'İçerikten soru-cevap kartı çıkarılamadı. Lütfen talimatı değiştirerek tekrar deneyin.'
@@ -447,38 +501,30 @@
         );
       }
 
+      // Uzun metin/belgede ilk geçiş 40 kartın altında kaldıysa kalan kelimeler için otomatik 2. tarama
+      const textLen = (payload.text || '').length;
+      const wantLarge = targetCount === 'all' || Number(targetCount) >= 60;
+      if (wantLarge && (textLen >= 1500 || payload.file) && items.length < 40) {
+        setStatus(`İlk aşamada ${items.length} kart bulundu; metnin kalan bölümleri taranıyor...`);
+        try {
+          const contPayload = {
+            ...payload,
+            excludeWords: items.map((x) => (isQuiz ? x.front : x.lemma))
+          };
+          const out2 = await window.coachRequest('deck', contPayload);
+          const raw2 = (out2 && Array.isArray(out2.words) && out2.words.length)
+            ? out2.words
+            : (out2 && Array.isArray(out2.cards) ? out2.cards : []);
+          const items2 = normalizeDeckItems(raw2, isQuiz);
+          if (items2.length > 0) {
+            items = mergeUniqueItems(items, items2, isQuiz).merged;
+          }
+        } catch (_) {}
+      }
+
       const modeStore = state.byMode[activeMode];
       modeStore.deckTitle = out.deckTitle || (isQuiz ? 'Quiz Destesi' : 'Koç Destesi');
-
-      if (isQuiz) {
-        modeStore.words = rawList.map((w) => {
-          const front = cleanStr(w.front || w.lemma || w.question);
-          const back = cleanStr(w.back || w.contextMeaning || w.answer);
-          const category = cleanStr(w.category || w.cefr || 'Soru - Cevap');
-          const hint = cleanStr(w.hint || w.sourceSentence || '');
-          return {
-            front,
-            back,
-            category,
-            hint,
-            lemma: front,
-            pos: 'QUIZ',
-            cefr: category,
-            contextMeaning: back,
-            sourceSentence: hint,
-            selected: true
-          };
-        }).filter((w) => w.front && w.back);
-      } else {
-        modeStore.words = rawList.map((w) => ({
-          lemma: cleanStr(w.lemma),
-          pos: w.pos || 'PHRASE',
-          cefr: w.cefr || '',
-          contextMeaning: cleanStr(w.contextMeaning),
-          sourceSentence: cleanStr(w.sourceSentence),
-          selected: true
-        })).filter((w) => w.lemma);
-      }
+      modeStore.words = items;
 
       $('deck-builder-deck-name').value = modeStore.deckTitle;
       renderWords();
@@ -487,6 +533,50 @@
       $('deck-builder-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (e) {
       setStatus(e.message || 'Deste oluşturulamadı.', true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Mevcut listenin üzerine belgede kalan diğer uygun kelimeleri / kartları ekle
+  async function extractMoreCards() {
+    const payload = currentPayload();
+    if (!payload.text && !payload.file) {
+      toast('Ek tarama için metin veya belge bulunamadı.');
+      return;
+    }
+
+    const activeMode = state.mode;
+    const isQuiz = activeMode === 'quiz';
+    const modeStore = state.byMode[activeMode];
+    const existingKeys = modeStore.words.map((x) => (isQuiz ? x.front : x.lemma)).filter(Boolean);
+    const instruction = ($('deck-builder-instruction')?.value || '').trim() || modeStore.instruction || '';
+
+    payload.deckMode = activeMode;
+    payload.targetCount = 'all';
+    payload.instruction = buildDeckInstruction(instruction, isQuiz);
+    payload.excludeWords = existingKeys;
+
+    setBusy(true, 'Ek kelimeler taranıyor...');
+    setStatus('Belgede listede olmayan kalan kelimeler ve kartlar taranıyor...');
+
+    try {
+      const out = await window.coachRequest('deck', payload);
+      const rawList = (out && Array.isArray(out.words) && out.words.length)
+        ? out.words
+        : (out && Array.isArray(out.cards) ? out.cards : []);
+      const incoming = normalizeDeckItems(rawList, isQuiz);
+      const { merged, addedCount } = mergeUniqueItems(modeStore.words, incoming, isQuiz);
+      modeStore.words = merged;
+      renderWords();
+      setStatus('');
+      if (addedCount > 0) {
+        toast(`${addedCount} yeni kart daha eklendi (Toplam: ${merged.length}).`);
+      } else {
+        toast('Metindeki tüm uygun kartlar zaten listede bulunuyor.');
+      }
+    } catch (e) {
+      setStatus(e.message || 'Ek kartlar çıkarılamadı.', true);
     } finally {
       setBusy(false);
     }
@@ -754,9 +844,10 @@
       renderAnalysisPanel();
     });
 
-    // 3. İncele & Deste Oluştur & Kaydet Butonları
+    // 3. İncele & Deste Oluştur & Ek Tarama & Kaydet Butonları
     $('btn-deck-builder-analyze')?.addEventListener('click', analyze);
     $('btn-deck-builder-build')?.addEventListener('click', () => buildDeck());
+    $('btn-deck-builder-more')?.addEventListener('click', () => extractMoreCards());
     $('btn-deck-builder-save')?.addEventListener('click', saveDeck);
 
     // 4. Tümünü Seç / Kaldır
