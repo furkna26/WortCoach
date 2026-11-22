@@ -1,6 +1,6 @@
 // WortCoach istemci yapılandırması
 window.WORTCOACH_CONFIG = {
-  COACH_API: 'https://wortcoach-proxy.mosmandurmaz26.workers.dev',
+  COACH_API: 'https://wortcoach-proxy.cigarahigh.workers.dev',
 };
 
 /**

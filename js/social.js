@@ -144,7 +144,7 @@
       const refreshToken = this.getRefreshToken();
       if (!refreshToken) return null;
 
-      const apiBase = (window.WORTCOACH_CONFIG && window.WORTCOACH_CONFIG.COACH_API) || 'https://wortcoach-proxy.mosmandurmaz26.workers.dev';
+      const apiBase = (window.WORTCOACH_CONFIG && window.WORTCOACH_CONFIG.COACH_API) || 'https://wortcoach-proxy.cigarahigh.workers.dev';
       this._refreshPromise = (async () => {
         try {
           const res = await fetch(`${apiBase}/api/auth/refresh`, {
@@ -170,7 +170,7 @@
 
     // Backend Proxy Çağrısı (Tarayıcıda anahtar bulundurmaz, JWT Bearer destekli)
     async apiCall(endpoint, payload = {}, _retried = false) {
-      const apiBase = (window.WORTCOACH_CONFIG && window.WORTCOACH_CONFIG.COACH_API) || 'https://wortcoach-proxy.mosmandurmaz26.workers.dev';
+      const apiBase = (window.WORTCOACH_CONFIG && window.WORTCOACH_CONFIG.COACH_API) || 'https://wortcoach-proxy.cigarahigh.workers.dev';
       const headers = { 'Content-Type': 'application/json' };
       const token = this.getAccessToken();
       if (token) {

@@ -37,7 +37,7 @@ jobs:
             -X POST \
             -H "Content-Type: application/json" \
             -d '{}' \
-            "https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/decks/public")
+            "https://wortcoach-proxy.cigarahigh.workers.dev/api/decks/public")
             
           echo "Worker Proxy ping HTTP status: $WORKER_RES"
           

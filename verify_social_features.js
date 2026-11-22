@@ -101,7 +101,7 @@ console.log('\n--- JavaScript Sözdizimi Kontrolü ---');
 // 5. Canlı Backend Worker API Doğrulama Testi
 console.log('\n--- Canlı Cloudflare Worker API Testleri ---');
 async function runApiTests() {
-  const apiBase = 'https://wortcoach-proxy.mosmandurmaz26.workers.dev/api';
+  const apiBase = 'https://wortcoach-proxy.cigarahigh.workers.dev/api';
   
   // Test A: Herkese Açık Desteler
   try {

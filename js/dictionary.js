@@ -1188,7 +1188,7 @@ class DictionaryService {
     // Hızlı Worker /api/translate fallback (yalnızca Google engellenir veya zaman aşımına uğrarsa)
     if (!signal?.aborted) {
       try {
-        const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+        const pRes = await fetch('https://wortcoach-proxy.cigarahigh.workers.dev/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ q: clean, sl, tl }),
@@ -1327,7 +1327,7 @@ class DictionaryService {
     } catch (_) {}
     // 3. Worker Fallback (ücretsiz proxy)
     try {
-      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+      const pRes = await fetch('https://wortcoach-proxy.cigarahigh.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: clean, sl: 'de', tl: 'tr' }),
@@ -1361,7 +1361,7 @@ class DictionaryService {
     } catch (_) {}
     // 3. Worker Fallback (ücretsiz proxy)
     try {
-      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+      const pRes = await fetch('https://wortcoach-proxy.cigarahigh.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: clean, sl: 'de', tl: 'en' }),
@@ -1436,7 +1436,7 @@ class DictionaryService {
 
     // 5. Worker Proxy Fallback (Ücretsiz)
     try {
-      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+      const pRes = await fetch('https://wortcoach-proxy.cigarahigh.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: trimmed, sl: 'auto', tl: 'de' }),

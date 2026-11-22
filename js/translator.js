@@ -178,7 +178,7 @@ class WortMeisterTranslator {
 
     // 3. WortCoach Cloud Proxy Fallback
     try {
-      const pRes = await fetch('https://wortcoach-proxy.mosmandurmaz26.workers.dev/api/translate', {
+      const pRes = await fetch('https://wortcoach-proxy.cigarahigh.workers.dev/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: cleanText, sl: src, tl: tgt }),
