@@ -3,6 +3,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const ROOT = path.resolve(__dirname, '..');
 
 let passed = 0;
 let failed = 0;
@@ -23,7 +24,7 @@ console.log('='.repeat(80));
 
 // [TEST 1: Zero Starter Cards in seedIfNeeded]
 console.log('\n[TEST 1: Zero Starter Cards Added on First Launch]');
-const seederCode = fs.readFileSync(path.join(__dirname, 'js', 'seeder.js'), 'utf-8');
+const seederCode = fs.readFileSync(path.join(ROOT, 'js', 'seeder.js'), 'utf-8');
 const seedFn = seederCode.substring(seederCode.indexOf('seedIfNeeded'), seederCode.indexOf('importCuratedPack'));
 assert(!seedFn.includes("addCard"), 'seedIfNeeded does not call addCard (0 cards on initial launch)');
 assert(!seedFn.includes("starterWords"), 'No starter words in seedIfNeeded');
@@ -31,7 +32,7 @@ assert(seederCode.includes("initialSeedCompleted"), 'initialSeedCompleted flag p
 
 // [TEST 2: Empty Card Prevention in Database]
 console.log('\n[TEST 2: Strict Prevention of Empty Cards in Database]');
-const dbCode = fs.readFileSync(path.join(__dirname, 'js', 'db.js'), 'utf-8');
+const dbCode = fs.readFileSync(path.join(ROOT, 'js', 'db.js'), 'utf-8');
 assert(dbCode.includes("cleanWord"), 'addCard extracts cleanWord');
 assert(dbCode.includes("Boş kelime kartı eklenemez!"), 'addCard warns and rejects empty cardData.germanWord');
 assert(dbCode.includes("Boş kelime ile kart güncellenemez!"), 'updateCard rejects empty germanWord');
@@ -39,13 +40,13 @@ assert(dbCode.includes("typeof c.germanWord === 'string' && c.germanWord.trim().
 
 // [TEST 3: Form and Search Validation Against Empty Cards]
 console.log('\n[TEST 3: Form & Search UI Validation Against Empty Cards]');
-const appCode = fs.readFileSync(path.join(__dirname, 'js', 'app.js'), 'utf-8');
+const appCode = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf-8');
 assert(appCode.includes("if (!wordRaw) {"), 'form-add-card validates wordRaw before submitting');
 assert(appCode.includes("if (!cleanWord || !cleanWord.trim()) {"), 'btn-inline-save validates cleanWord before saving');
 
 // [TEST 4: Deck Sharing & Import Modals & Methods]
 console.log('\n[TEST 4: Deck Sharing & Import Modals and Methods]');
-const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf-8');
 assert(indexHtml.includes('id="modal-share-deck"'), 'modal-share-deck exists in index.html');
 assert(indexHtml.includes('id="btn-share-native"'), 'btn-share-native button exists');
 assert(indexHtml.includes('id="btn-share-copy"'), 'btn-share-copy button exists');

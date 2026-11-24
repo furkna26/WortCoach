@@ -1,5 +1,7 @@
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
+const ROOT = path.resolve(__dirname, '..');
 
 let passed = 0;
 let failed = 0;
@@ -21,7 +23,7 @@ async function run() {
 
   // Group 1: HTML Tab Separation & 5-Item Bottom Navigation
   console.log("\n[TEST GROUP 1: Tab Separation & 5-Item Bottom Navigation]");
-  const html = fs.readFileSync('index.html', 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   assert(html.includes('id="tab-home"'), "Section tab-home (Sözlük) exists");
   assert(html.includes('id="tab-study"'), "Section tab-study (Kartlar/Flashcard) exists as dedicated section");
@@ -36,7 +38,7 @@ async function run() {
   assert(html.includes('data-target="tab-decks"'), "Bottom nav has button for tab-decks (Desteler)");
   assert(html.includes('data-target="tab-cards"'), "Bottom nav has button for tab-cards (Kelimeler)");
 
-  const css = fs.readFileSync('css/app.css', 'utf8');
+  const css = fs.readFileSync(path.join(ROOT, 'css/app.css'), 'utf8');
   assert(css.includes('grid-template-columns: repeat(5, 1fr);'), "Bottom nav configured with 5 columns");
 
   // Check all 6 games + cable game exist in tab-games
@@ -50,15 +52,15 @@ async function run() {
 
   // Group 2: Database Aliases & Safety
   console.log("\n[TEST GROUP 2: Database Method Safety, getTodayStudyLogs & Duplicate Prevention]");
-  const dbCode = fs.readFileSync('js/db.js', 'utf8');
+  const dbCode = fs.readFileSync(path.join(ROOT, 'js/db.js'), 'utf8');
   assert(dbCode.includes('findCardByGerman'), "js/db.js has findCardByGerman alias method");
   assert(dbCode.includes('getCardByWord'), "js/db.js has getCardByWord method");
   assert(dbCode.includes('getTodayStudyLogs'), "js/db.js has getTodayStudyLogs method");
 
   // Group 3: Live Internet Search & Morphological Synthesis
   console.log("\n[TEST GROUP 3: Live Internet Search & Exact User Queries]");
-  const vCode = fs.readFileSync('js/verbHelper.js', 'utf8');
-  const dictCode = fs.readFileSync('js/dictionary.js', 'utf8');
+  const vCode = fs.readFileSync(path.join(ROOT, 'js/verbHelper.js'), 'utf8');
+  const dictCode = fs.readFileSync(path.join(ROOT, 'js/dictionary.js'), 'utf8');
 
   const context = {
     console,
@@ -141,7 +143,7 @@ async function run() {
 
   // Group 4: Display & Card Rendering Stability
   console.log("\n[TEST GROUP 4: Display & Card Rendering Stability]");
-  const appCode = fs.readFileSync('js/app.js', 'utf8');
+  const appCode = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
 
   class MockElement {
     constructor(id = '') {
@@ -158,14 +160,20 @@ async function run() {
   }
 
   const mockDoc = {
+    documentElement: { scrollTop: 0 },
+    body: { scrollTop: 0 },
     getElementById: (id) => new MockElement(id),
     querySelectorAll: () => [],
     querySelector: () => null,
     addEventListener: () => {}
   };
 
+  context.pageYOffset = 0;
+  context.requestAnimationFrame = () => {};
   context.document = mockDoc;
   context.addEventListener = () => {};
+  context.window.pageYOffset = 0;
+  context.window.requestAnimationFrame = () => {};
   context.window.addEventListener = () => {};
   context.window.document = mockDoc;
   context.window.wmDB = {

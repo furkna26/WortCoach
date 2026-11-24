@@ -3,6 +3,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const ROOT = path.resolve(__dirname, '..');
 
 let passed = 0;
 let failed = 0;
@@ -23,12 +24,12 @@ console.log('='.repeat(80));
 
 // [TEST 1: Curated Packs]
 console.log('\n[TEST 1: Curated Decks (10 x 60 Cards = 600 Cards)]');
-const curatedPath = path.join(__dirname, 'js', 'curatedPacks.js');
+const curatedPath = path.join(ROOT, 'js', 'curatedPacks.js');
 assert(fs.existsSync(curatedPath), 'js/curatedPacks.js exists');
 
 const windowMock = {};
 global.window = windowMock;
-require('./js/curatedPacks.js');
+require(path.join(ROOT, 'js', 'curatedPacks.js'));
 
 const packs = windowMock.CURATED_CEFR_PACKS;
 assert(Array.isArray(packs), 'CURATED_CEFR_PACKS is an array');
@@ -45,7 +46,7 @@ for (const code of expectedCodes) {
 
 // [TEST 2: Android POS Filter Chips in index.html]
 console.log('\n[TEST 2: Android POS Filter Tabs in Kelimeler Section]');
-const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf-8');
 assert(indexHtml.includes('id="cards-pos-filter-bar"'), 'cards-pos-filter-bar container exists');
 assert(indexHtml.includes('data-pos="ALL"'), 'Filter pill ALL exists');
 assert(indexHtml.includes('data-pos="NOUN"'), 'Filter pill NOUN (İsimler) exists');
@@ -58,8 +59,8 @@ console.log('\n[TEST 3: Trennbar & Reflexiv Game Mode & Strict Filtering]');
 assert(indexHtml.includes('data-game-type="REFLEXIV_TRENNBAR"'), 'Game card REFLEXIV_TRENNBAR exists in tab-games');
 
 // Load verbHelper and game service
-require('./js/verbHelper.js');
-require('./js/game.js');
+require(path.join(ROOT, 'js', 'verbHelper.js'));
+require(path.join(ROOT, 'js', 'game.js'));
 const gameSvc = windowMock.WordGameService;
 assert(Boolean(gameSvc), 'WordGameService loaded');
 
@@ -120,8 +121,8 @@ assert(gameSvc.remainingSeconds < 60, 'Time penalty deducted on wrong answer');
 
 // [TEST 5: Service Worker & Asset Versioning]
 console.log('\n[TEST 5: Service Worker & Asset Versioning]');
-const swContent = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf-8');
-const configContent = fs.readFileSync(path.join(__dirname, 'js', 'config.js'), 'utf-8');
+const swContent = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf-8');
+const configContent = fs.readFileSync(path.join(ROOT, 'js', 'config.js'), 'utf-8');
 assert(swContent.includes('wortcoach-v'), 'Service Worker cache is wortcoach-v*');
 assert(swContent.includes('curatedPacks.js'), 'Service Worker caches curatedPacks.js');
 assert(indexHtml.includes('curatedPacks.js') || configContent.includes('curatedPacks.js'), 'App loads curatedPacks.js (eager or lazy via config.js)');

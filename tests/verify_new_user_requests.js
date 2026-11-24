@@ -1,4 +1,6 @@
 const fs = require('fs');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '..');
 
 global.window = global;
 global.localStorage = {
@@ -8,9 +10,9 @@ global.localStorage = {
   removeItem(k) { delete this.store[k]; }
 };
 
-eval(fs.readFileSync('js/verbHelper.js', 'utf8'));
-eval(fs.readFileSync('js/dictionary.js', 'utf8'));
-eval(fs.readFileSync('js/game.js', 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/verbHelper.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/dictionary.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/game.js'), 'utf8'));
 
 let passed = 0;
 let failed = 0;
@@ -31,7 +33,7 @@ async function runTests() {
   console.log("================================================================================");
 
   // Test 1: HTML structure and symbols
-  const html = fs.readFileSync('index.html', 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert(html.includes('id="nav-icon-home"'), "Symbol #nav-icon-home exists");
   assert(html.includes('id="nav-icon-translate"'), "Symbol #nav-icon-translate exists");
   assert(html.includes('id="nav-icon-games"'), "Symbol #nav-icon-games exists");
@@ -70,7 +72,7 @@ async function runTests() {
   assert(round.totalPairs === 5, "Cable round has totalPairs = 5");
 
   // Test 3: Suggestion generator in app.js
-  const appJs = fs.readFileSync('js/app.js', 'utf8');
+  const appJs = fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8');
   assert(appJs.includes('openEditCardModal(card)'), "openEditCardModal method exists in app.js");
   assert(appJs.includes('this.editingCardId'), "editingCardId state handled for card updates");
   assert(appJs.includes('window.wmDB.updateCard(updatedCard)'), "wmDB.updateCard called on edit submit");

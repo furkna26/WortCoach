@@ -1,5 +1,7 @@
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
+const ROOT = path.resolve(__dirname, '..');
 
 let passed = 0;
 let failed = 0;
@@ -21,28 +23,28 @@ async function run() {
 
   // 1. Service Worker & Manifest Configuration
   console.log("\n[TEST 1: Service Worker & App Branding]");
-  const swCode = fs.readFileSync('sw.js', 'utf8');
+  const swCode = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   assert(/wortcoach-v3\.[0-9]+\.[0-9]+/.test(swCode), "Service worker cache is modern wortcoach-v3.x");
 
-  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
   assert(manifest.name.startsWith("WortCoach"), `Manifest name starts with 'WortCoach' (got: ${manifest.name})`);
   assert(manifest.short_name === "WortCoach", `Manifest short_name is 'WortCoach' (got: ${manifest.short_name})`);
 
-  const html = fs.readFileSync('index.html', 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert(html.includes("<title>WortCoach"), "index.html title starts with WortCoach");
   assert(html.includes('Wort<span style="color:var(--brand-blue)">Coach</span>'), "Header logo displays WortCoach");
   assert(!html.includes("WortMeister</span>"), "No stale WortMeister logo text in header");
 
   // 2. Audio & TTS German Lock
   console.log("\n[TEST 2: Audio & German TTS Lock]");
-  const ttsCode = fs.readFileSync('js/tts.js', 'utf8');
+  const ttsCode = fs.readFileSync(path.join(ROOT, 'js/tts.js'), 'utf8');
   assert(ttsCode.includes("de-DE") || ttsCode.includes("de_de"), "TTS has de-DE speech synthesis");
   assert(ttsCode.includes("getStrictGermanVoice"), "TTS has getStrictGermanVoice");
   assert(ttsCode.includes("!x.lang.toLowerCase().startsWith('tr')"), "TTS strictly excludes Turkish voices for German speech");
 
   // 3. Database Functions & Aliases
   console.log("\n[TEST 3: Database Core Functions & Aliases]");
-  const dbCode = fs.readFileSync('js/db.js', 'utf8');
+  const dbCode = fs.readFileSync(path.join(ROOT, 'js/db.js'), 'utf8');
   assert(dbCode.includes("async addCard"), "wmDB has addCard");
   assert(dbCode.includes("async updateCard"), "wmDB has updateCard");
   assert(dbCode.includes("async deleteCard"), "wmDB has deleteCard");
@@ -51,13 +53,13 @@ async function run() {
 
   // 4. Zero Local Guessing Enforced
   console.log("\n[TEST 4: Zero Local Guessing Verification]");
-  const verbCode = fs.readFileSync('js/verbHelper.js', 'utf8');
+  const verbCode = fs.readFileSync(path.join(ROOT, 'js/verbHelper.js'), 'utf8');
   assert(!verbCode.includes("article: 'der', plural: `die ${capitalized}e`"), "No fallback guess defaulting nouns to 'der'");
   assert(!verbCode.includes("article: 'der', plural: 'die ' + capitalized + 'e'"), "No string concat fallback guess for nouns");
 
   // 5. Live Search & Resolution
   console.log("\n[TEST 5: Live Search End-to-End]");
-  const dictCode = fs.readFileSync('js/dictionary.js', 'utf8');
+  const dictCode = fs.readFileSync(path.join(ROOT, 'js/dictionary.js'), 'utf8');
   const context = {
     console,
     setTimeout,

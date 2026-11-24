@@ -176,9 +176,10 @@ Bireysel çalışmaları topluluk etkileşimiyle destekleyen çok oyunculu modü
 
 ---
 
-## 10. Teknik Mimari ve v3.11.0 Özellikleri
+## 10. Teknik Mimari ve v3.12.0 Özellikleri
 
+- **Modüler UI Mimarisi:** Ana uygulama orkestratörü (`app.js`), bağımsız yüklenen [readerUI.js](js/readerUI.js), [gamesUI.js](js/gamesUI.js) ve [pronunciationUI.js](js/pronunciationUI.js) modüllerine ayrılmıştır; tüm dinamik arayüz çıktıları XSS kaçışıyla (`escapeHtml`) korunur.
 - **Tam Kütüphane Yedekleme ve Geri Yükleme:** Ayarlar menüsünden tüm desteler, kartlar, SM-2 tekrar verileri ve çalışma günlükleri tek `.json` dosyası olarak dışa ve içe aktarılabilir.
 - **Masaüstü Klavye Kısayolları:** Tekrar oturumlarında `Space`/`Enter` (kart çevir), `1–4` (Tekrar/Zor/İyi/Kolay), `R` (telaffuz seslendir), `P` (öncelik işaretçi); kelime oyunlarında `1–4` / `A–D` (şık seçimi) ve `Enter`/`Space` (sonraki soru) desteği.
 - **PWA Kısayolları ve Doğrudan Paylaşım (`share_target`):** Mobil ana ekranda uygulama simgesine uzun basıldığında açılan hızlı kısayollar (*Tekrar Yap*, *Akıllı Okuma*, *Almanca Koçu*) ve diğer uygulamalardan paylaşılan Almanca metinleri doğrudan Akıllı Okuma modunda açma desteği.
-- **Güvenli Cloudflare Worker Proxy ve İsteğe Bağlı Yükleme:** Supabase Auth JWT doğrulaması, IP tabanlı hız sınırları, Cloud Secret üzerinde saklanan VAPID Push anahtarı ile korunan Worker mimarisi; PDF.js, Mammoth.js, `curatedPacks.js` ve `pronunciation.js` modüllerinin yalnızca kullanıldığında yüklenmesi (lazy load) sayesinde hızlı ilk açılış.
+- **Güvenli Cloudflare Worker Proxy, İsteğe Bağlı Yükleme ve Test Paketi:** Supabase Auth JWT doğrulaması, IP tabanlı hız sınırları, Cloud Secret üzerinde saklanan VAPID Push anahtarı ve yalnızca statik uygulama dosyalarını yayınlayan GitHub Pages derlemesi; PDF.js, Mammoth.js, `curatedPacks.js` ve `pronunciation.js` modüllerinin isteğe bağlı yüklenmesi ve `node tests/run_all.js` ile tek komutta doğrulama.

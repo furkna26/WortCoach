@@ -1,7 +1,9 @@
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
+const ROOT = path.resolve(__dirname, '..');
 
-console.log('=== WortCoach v3.6.0 Sosyal, Kulüp, Arena & Deste Doğrulama Testi ===\n');
+console.log('=== WortCoach v3.12.0 Sosyal, Kulüp, Arena & Deste Doğrulama Testi ===\n');
 
 // 1. Dosya Varlığı ve Sözdizimi Testleri
 const files = [
@@ -11,27 +13,30 @@ const files = [
   'css/components.css',
   'js/config.js',
   'js/social.js',
+  'js/readerUI.js',
+  'js/gamesUI.js',
+  'js/pronunciationUI.js',
   'js/app.js',
   'worker/worker.js',
   'supabase/schema.sql'
 ];
 
-let allFilesExist = true;
+let hasErrors = false;
 files.forEach(f => {
-  if (fs.existsSync(f)) {
+  if (fs.existsSync(path.join(ROOT, f))) {
     console.log(`[OK] Dosya mevcut: ${f}`);
   } else {
     console.error(`[HATA] Dosya bulunamadı: ${f}`);
-    allFilesExist = false;
+    hasErrors = true;
   }
 });
 
-if (!allFilesExist) {
+if (hasErrors) {
   process.exit(1);
 }
 
-// 2. index.html İncelemesi (Yeni Sekmeler ve Modallar)
-const html = fs.readFileSync('index.html', 'utf8');
+// 2. index.html İncelemesi (Sekmeler, Arena ve Modallar)
+const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const requiredIds = [
   'tab-social',
   'tab-profile',
@@ -43,9 +48,9 @@ const requiredIds = [
   'pane-social-clubs',
   'clubs-list-container',
   'pane-social-arena',
-  'arena-1v1-deck-select',
-  'arena-panel-1v1',
-  'arena-panel-kahoot',
+  'arena-kahoot-deck-select',
+  'arena-kahoot-duration-select',
+  'btn-create-kahoot-room',
   'pane-social-collab',
   'modal-publish-deck',
   'modal-preview-public-deck',
@@ -58,13 +63,12 @@ const requiredIds = [
 ];
 
 console.log('\n--- index.html ID Kontrolleri ---');
-let allIdsPresent = true;
 requiredIds.forEach(id => {
   if (html.includes(`id="${id}"`)) {
     console.log(`[OK] ID mevcut: #${id}`);
   } else {
     console.error(`[HATA] ID eksik: #${id}`);
-    allIdsPresent = false;
+    hasErrors = true;
   }
 });
 
@@ -75,26 +79,32 @@ if (navMatch) {
   const navContent = navMatch[0];
   const navTargets = [...navContent.matchAll(/data-target="([^"]+)"/g)].map(m => m[1]);
   console.log(`Bulunan Nav Hedefleri (${navTargets.length}):`, navTargets);
-  const expectedNav = ['tab-decks', 'tab-cards', 'tab-home', 'tab-games', 'tab-social', 'tab-translate', 'tab-profile'];
+  const expectedNav = ['tab-decks', 'tab-cards', 'tab-games', 'tab-home', 'tab-social', 'tab-translate', 'tab-profile'];
   const isNavExact = JSON.stringify(navTargets) === JSON.stringify(expectedNav);
   if (isNavExact) {
     console.log('[OK] 7 Sekmeli Navigasyon tam ve beklenen sırada!');
   } else {
     console.error('[HATA] Navigasyon sıralaması veya sekme sayısı uyuşmuyor:', navTargets);
+    hasErrors = true;
   }
 } else {
   console.error('[HATA] bottom-nav bulunamadı!');
+  hasErrors = true;
 }
 
 // 4. JS Sözdizimi Kontrolü
 console.log('\n--- JavaScript Sözdizimi Kontrolü ---');
 ['js/social.js', 'js/app.js', 'worker/worker.js'].forEach(jsFile => {
   try {
-    const code = fs.readFileSync(jsFile, 'utf8');
+    let code = fs.readFileSync(path.join(ROOT, jsFile), 'utf8');
+    if (jsFile === 'worker/worker.js') {
+      code = code.replace(/export\s+default\s+\{[\s\S]*$/m, '');
+    }
     new vm.Script(code);
     console.log(`[OK] Sözdizimi geçerli: ${jsFile}`);
   } catch (err) {
     console.error(`[HATA] Sözdizimi hatası: ${jsFile}`, err.message);
+    hasErrors = true;
   }
 });
 
@@ -102,7 +112,7 @@ console.log('\n--- JavaScript Sözdizimi Kontrolü ---');
 console.log('\n--- Canlı Cloudflare Worker API Testleri ---');
 async function runApiTests() {
   const apiBase = 'https://wortcoach-proxy.cigarahigh.workers.dev/api';
-  
+
   // Test A: Herkese Açık Desteler
   try {
     const res = await fetch(`${apiBase}/decks/public`, {
@@ -112,8 +122,10 @@ async function runApiTests() {
     });
     const data = await res.json();
     console.log('[OK] /api/decks/public Yanıtı:', data.ok ? 'Başarılı (ok: true)' : data);
+    if (!data.ok) hasErrors = true;
   } catch (e) {
     console.error('[HATA] /api/decks/public erişilemedi:', e.message);
+    hasErrors = true;
   }
 
   // Test B: Kulüpler Listesi
@@ -125,8 +137,10 @@ async function runApiTests() {
     });
     const data = await res.json();
     console.log('[OK] /api/clubs/list Yanıtı:', data.ok ? 'Başarılı (ok: true)' : data);
+    if (!data.ok) hasErrors = true;
   } catch (e) {
     console.error('[HATA] /api/clubs/list erişilemedi:', e.message);
+    hasErrors = true;
   }
 
   // Test C: 1v1 Oda Oluşturma
@@ -144,8 +158,10 @@ async function runApiTests() {
     });
     const data = await res.json();
     console.log('[OK] /api/multiplayer/room/create (1v1) PIN:', data.room?.pin);
+    if (!data.room?.pin) hasErrors = true;
   } catch (e) {
     console.error('[HATA] 1v1 oda oluşturma başarısız:', e.message);
+    hasErrors = true;
   }
 
   // Test D: Kahoot Oda Oluşturma
@@ -164,11 +180,14 @@ async function runApiTests() {
     });
     const data = await res.json();
     console.log('[OK] /api/multiplayer/room/create (Kahoot) PIN:', data.room?.pin);
+    if (!data.room?.pin) hasErrors = true;
   } catch (e) {
     console.error('[HATA] Kahoot oda oluşturma başarısız:', e.message);
+    hasErrors = true;
   }
 
   console.log('\n=== Tüm Doğrulama Testleri Başarıyla Tamamlandı! ===');
+  if (hasErrors) process.exit(1);
 }
 
 runApiTests();

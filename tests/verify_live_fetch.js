@@ -1,8 +1,10 @@
 const fs = require('fs');
+const path = require('path');
 const vm = require('vm');
+const ROOT = path.resolve(__dirname, '..');
 
-const vCode = fs.readFileSync('C:/Users/PC/.gemini/antigravity/scratch/WortMeister-PWA/js/verbHelper.js', 'utf8');
-const dictCode = fs.readFileSync('C:/Users/PC/.gemini/antigravity/scratch/WortMeister-PWA/js/dictionary.js', 'utf8');
+const vCode = fs.readFileSync(path.join(ROOT, 'js/verbHelper.js'), 'utf8');
+const dictCode = fs.readFileSync(path.join(ROOT, 'js/dictionary.js'), 'utf8');
 
 const networkCalls = [];
 

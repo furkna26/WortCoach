@@ -1,4 +1,6 @@
 const fs = require('fs');
+const path = require('path');
+const ROOT = path.resolve(__dirname, '..');
 
 global.window = global;
 global.localStorage = {
@@ -8,10 +10,10 @@ global.localStorage = {
   removeItem(k) { delete this.store[k]; }
 };
 
-eval(fs.readFileSync('js/verbHelper.js', 'utf8'));
-eval(fs.readFileSync('js/dictionary.js', 'utf8'));
-eval(fs.readFileSync('js/db.js', 'utf8'));
-eval(fs.readFileSync('js/game.js', 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/verbHelper.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/dictionary.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/db.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/game.js'), 'utf8'));
 
 let passed = 0;
 let failed = 0;
