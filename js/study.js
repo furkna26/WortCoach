@@ -116,6 +116,47 @@ class WortMeisterStudy {
     });
 
     this.updateModeToggleUI();
+    this.bindKeyboardShortcuts();
+  }
+
+  bindKeyboardShortcuts() {
+    if (this._kbBound) return;
+    this._kbBound = true;
+
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const active = document.activeElement;
+      if (active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable)) return;
+
+      const studyTab = document.getElementById('tab-study');
+      if (!studyTab || !studyTab.classList.contains('active')) return;
+      if (document.querySelector('.modal-backdrop:not(.hidden), .prof-modal-backdrop:not(.hidden)')) return;
+      if (!this.getCurrentCard() || !this.arena || this.arena.classList.contains('hidden')) return;
+
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        this.toggleFlip();
+        return;
+      }
+
+      if (this.isFlipped && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault();
+        const ratings = ['again', 'hard', 'good', 'easy'];
+        this.submitRating(ratings[Number(e.key) - 1]);
+        return;
+      }
+
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        this.speakCurrentCard();
+        return;
+      }
+
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        document.getElementById('btn-fc-priority')?.click();
+      }
+    });
   }
 
   setStudyMode(mode) {
@@ -444,8 +485,10 @@ class WortMeisterStudy {
     const card = this.getCurrentCard();
     if (!card) return;
 
+    const ratingMap = { again: 0, hard: 1, good: 2, easy: 3 };
+    const rNum = ratingMap[rating] !== undefined ? ratingMap[rating] : Number(rating);
+
     if (navigator.vibrate) {
-      const rNum = Number(rating);
       navigator.vibrate(rNum >= 2 ? [15, 30, 15] : 20);
     }
 
@@ -453,7 +496,7 @@ class WortMeisterStudy {
     await window.wmDB.applySM2Review(card.id, rating);
     // Supabase ELO & Review Stat Hook
     if (window.wmSocial && window.wmSocial.recordActivity) {
-      const isCorrectReview = Number(rating) >= 2;
+      const isCorrectReview = rNum >= 2;
       window.wmSocial.recordActivity({
         type: 'review',
         isCorrect: isCorrectReview,

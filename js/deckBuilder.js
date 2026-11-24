@@ -10,6 +10,12 @@
   const $ = (id) => document.getElementById(id);
   const EMOJI_RE = /[\p{Extended_Pictographic}\u200d\ufe0f]/gu;
   const cleanStr = (s) => String(s || '').replace(EMOJI_RE, '').trim();
+  const escapeHtml = (str) => String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
   const MAX_PDF_BYTES = 4.5 * 1024 * 1024;
   const MAX_IMG_SIDE = 1600;
@@ -632,27 +638,27 @@
         info.innerHTML = `
           <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:5px;">
             <span class="badge" style="background:rgba(245,158,11,0.16); color:#FBBF24; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">SORU</span>
-            <span style="font-weight:800; font-size:0.93rem; color:var(--text-primary); line-height:1.4;">${frontText}</span>
+            <span style="font-weight:800; font-size:0.93rem; color:var(--text-primary); line-height:1.4;">${escapeHtml(frontText)}</span>
           </div>
           <div style="display:flex; align-items:baseline; gap:6px; padding-top:5px; border-top:1px dashed var(--border-subtle);">
             <span class="badge" style="background:rgba(16,185,129,0.16); color:#34D399; font-size:0.65rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">CEVAP</span>
-            <span style="font-weight:700; font-size:0.88rem; color:#34D399; line-height:1.35;">${backText}</span>
+            <span style="font-weight:700; font-size:0.88rem; color:#34D399; line-height:1.35;">${escapeHtml(backText)}</span>
           </div>
           ${hintText ? `
           <div style="display:flex; align-items:baseline; gap:6px; margin-top:5px; padding-top:5px; border-top:1px dashed var(--border-subtle);">
             <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-size:0.64rem; font-weight:800; padding:2px 6px; border-radius:5px; flex-shrink:0;">EK BİLGİ</span>
-            <span style="font-size:0.8rem; color:var(--text-secondary); line-height:1.35;">${hintText}</span>
+            <span style="font-size:0.8rem; color:var(--text-secondary); line-height:1.35;">${escapeHtml(hintText)}</span>
           </div>` : ''}
         `;
       } else {
         info.innerHTML = `
           <div style="font-weight:800; font-size:0.94rem; color:var(--text-primary); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            <span>${w.lemma}</span>
-            <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-size:0.68rem; padding:2px 6px; border-radius:6px;">${POS_LABEL[w.pos] || w.pos}</span>
-            ${w.cefr ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34D399; font-size:0.68rem; padding:2px 6px; border-radius:6px;">${w.cefr}</span>` : ''}
+            <span>${escapeHtml(w.lemma)}</span>
+            <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-size:0.68rem; padding:2px 6px; border-radius:6px;">${escapeHtml(POS_LABEL[w.pos] || w.pos)}</span>
+            ${w.cefr ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#34D399; font-size:0.68rem; padding:2px 6px; border-radius:6px;">${escapeHtml(w.cefr)}</span>` : ''}
           </div>
-          <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">${w.contextMeaning}</div>
-          ${w.sourceSentence ? `<div style="font-size:0.76rem; color:var(--text-muted); margin-top:3px; font-style:italic;">${w.sourceSentence}</div>` : ''}
+          <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">${escapeHtml(w.contextMeaning)}</div>
+          ${w.sourceSentence ? `<div style="font-size:0.76rem; color:var(--text-muted); margin-top:3px; font-style:italic;">${escapeHtml(w.sourceSentence)}</div>` : ''}
         `;
       }
 

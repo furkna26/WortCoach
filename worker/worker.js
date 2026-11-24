@@ -10,27 +10,23 @@ const MAX_WORDS = 250;
 const ALLOWED_MIME = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 
 // ---------- Web Push VAPID Sabitleri & RFC 8292 Gönderici ----------
-const VAPID_PUBLIC_KEY = 'BJcW3pPjbzlIy0LSBdYVRW-aGDY6tDEixX1u_kT5aKejmGC59tNh6hZghflHxMXB0nak4bEuOreXjvaZE7uieyM';
-const VAPID_PRIVATE_JWK = {
-  key_ops: ['sign'],
-  ext: true,
-  kty: 'EC',
-  x: 'lxbek-NvOUjLQtIF1hVFb5oYNjq0MSLFfW7-RPlop6M',
-  y: 'mGC59tNh6hZghflHxMXB0nak4bEuOreXjvaZE7uieyM',
-  crv: 'P-256',
-  d: '9vFfsLk7nqALEsX1qgibQ6Dq10MUfeobcH_bt7-e7qI'
-};
+const VAPID_PUBLIC_KEY = 'BCw1SUoGfLyxLRej5gGkvNI8HsfVpXGbolJyKjpX9v43iwwyRKDE7GSW8RLU0vZMf7qSXhOQzcbrPLNhYpaUxvM';
 const VAPID_SUBJECT = 'mailto:admin@wortcoach.app';
 
-async function sendVapidWebPush(endpoint) {
+async function sendVapidWebPush(endpoint, env) {
   if (!endpoint || typeof endpoint !== 'string' || !endpoint.startsWith('http')) return false;
   try {
+    const rawJwk = env && env.VAPID_PRIVATE_JWK;
+    if (!rawJwk) return false;
+    const privJwk = typeof rawJwk === 'string' ? JSON.parse(rawJwk) : rawJwk;
+    const pubKey = (env && env.VAPID_PUBLIC_KEY) || VAPID_PUBLIC_KEY;
+
     const url = new URL(endpoint);
     const audience = url.origin;
 
     const key = await crypto.subtle.importKey(
       'jwk',
-      VAPID_PRIVATE_JWK,
+      privJwk,
       { name: 'ECDSA', namedCurve: 'P-256' },
       false,
       ['sign']
@@ -62,7 +58,7 @@ async function sendVapidWebPush(endpoint) {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `vapid t=${jwt}, k=${VAPID_PUBLIC_KEY}`,
+        'Authorization': `vapid t=${jwt}, k=${pubKey}`,
         'TTL': '86400',
         'Urgency': 'high'
       }
@@ -306,6 +302,29 @@ const clean = (v, max) => String(v ?? '').replace(EMOJI_RE, '').replace(/\s+/g, 
 const TOKEN_CACHE = new Map();
 const TOKEN_CACHE_TTL_MS = 60_000;
 const TOKEN_CACHE_MAX = 500;
+
+const TRANSLATE_CACHE = new Map();
+const TRANSLATE_CACHE_MAX = 300;
+const TRANSLATE_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function getCachedTranslation(key) {
+  const entry = TRANSLATE_CACHE.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > TRANSLATE_CACHE_TTL_MS) {
+    TRANSLATE_CACHE.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function setCachedTranslation(key, translation, detectedLang) {
+  if (!translation) return;
+  if (TRANSLATE_CACHE.size >= TRANSLATE_CACHE_MAX) {
+    const oldest = TRANSLATE_CACHE.keys().next().value;
+    if (oldest !== undefined) TRANSLATE_CACHE.delete(oldest);
+  }
+  TRANSLATE_CACHE.set(key, { translation, detectedLang, ts: Date.now() });
+}
 
 function isOriginAllowed(origin, env) {
   if (!origin) return true; // Origin başlığı olmayan sunucu/CLI/Keepalive istekleri
@@ -641,7 +660,21 @@ async function requireAuthUser(req, env, c, requestedUserId = '') {
 
 async function handleDatabaseApi(path, body, env, c, req) {
   const sbFetch = getSbFetch(env);
+  const ip = (req && req.headers && req.headers.get('CF-Connecting-IP')) || 'unknown';
   try {
+    if ((path === '/api/auth/login' || path === '/api/auth/register') && env.AUTH_LIMITER) {
+      const { success } = await env.AUTH_LIMITER.limit({ key: `auth:${ip}` });
+      if (!success) {
+        return json({ error: 'Çok fazla deneme yapıldı. Lütfen bir dakika bekleyin.' }, 429, c.headers);
+      }
+    }
+    if (path === '/api/translate' && env.TRANSLATE_LIMITER) {
+      const { success } = await env.TRANSLATE_LIMITER.limit({ key: `tr:${ip}` });
+      if (!success) {
+        return json({ error: 'Çeviri hız sınırına ulaşıldı. Lütfen kısa süre bekleyin.' }, 429, c.headers);
+      }
+    }
+
     // 0. Supabase Keep-Alive Health Check (Veritabanının uykuya / offline moda düşmesini önler)
     if (path === '/api/health' || path === '/api/keepalive') {
       const dbRes = await sbFetch('/rest/v1/profiles?select=id&limit=1');
@@ -1012,11 +1045,12 @@ async function handleDatabaseApi(path, body, env, c, req) {
     // 13. Kullanıcı Desteleri (Gizlilik Kurallarına Göre)
     if (path === '/api/decks/get') {
       const targetUserId = clean(body.targetUserId, 40);
-      const currentUserId = clean(body.currentUserId, 40);
+      const authUser = await verifyAuthUser(req, env);
+      const verifiedUserId = authUser && authUser.id ? authUser.id : '';
       if (!targetUserId) return json({ ok: true, decks: [] }, 200, c.headers);
 
       // Kendi desteleri değilse gizlilik kontrolü yap
-      if (targetUserId !== currentUserId) {
+      if (targetUserId !== verifiedUserId) {
         const pRes = await sbFetch(`/rest/v1/profiles?id=eq.${targetUserId}&select=deck_privacy`);
         const pList = await pRes.json().catch(() => []);
         const privacy = (Array.isArray(pList) && pList[0]) ? pList[0].deck_privacy : 'friends';
@@ -1026,7 +1060,10 @@ async function handleDatabaseApi(path, body, env, c, req) {
         }
 
         if (privacy === 'friends') {
-          const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(and(requester_id.eq.${currentUserId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${currentUserId}))&select=id`);
+          if (!verifiedUserId) {
+            return json({ ok: true, decks: [], privacyNotice: 'Desteler yalnızca arkadaşlar tarafından görülebilir.' }, 200, c.headers);
+          }
+          const fRes = await sbFetch(`/rest/v1/friendships?status=eq.accepted&or=(and(requester_id.eq.${verifiedUserId},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${verifiedUserId}))&select=id`);
           const fList = await fRes.json().catch(() => []);
           if (!Array.isArray(fList) || fList.length === 0) {
             return json({ ok: true, decks: [], privacyNotice: 'Desteler yalnızca arkadaşlar tarafından görülebilir.' }, 200, c.headers);
@@ -1444,7 +1481,7 @@ async function handleDatabaseApi(path, body, env, c, req) {
         const subStr = await env.LIMITS.get(`push_sub:${toUserId}`);
         if (subStr) {
           const sub = JSON.parse(subStr);
-          await sendVapidWebPush(sub.endpoint);
+          await sendVapidWebPush(sub.endpoint, env);
         }
       } catch (_) {}
 
@@ -1851,7 +1888,10 @@ async function handleDatabaseApi(path, body, env, c, req) {
     }
 
     if (path === '/api/multiplayer/invite/send') {
-      const fromUserId = clean(body.fromUserId, 40);
+      const requestedFromId = clean(body.fromUserId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedFromId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
+      const fromUserId = authCheck.userId;
       const fromUsername = clean(body.fromUsername, 40) || 'Arkadaşın';
       const toUserId = clean(body.toUserId, 40);
       const pin = clean(body.pin, 20).toUpperCase();
@@ -1893,7 +1933,7 @@ async function handleDatabaseApi(path, body, env, c, req) {
         const subStr = await env.LIMITS.get(`push_sub:${toUserId}`);
         if (subStr) {
           const sub = JSON.parse(subStr);
-          await sendVapidWebPush(sub.endpoint);
+          await sendVapidWebPush(sub.endpoint, env);
         }
       } catch (_) {}
 
@@ -1937,8 +1977,10 @@ async function handleDatabaseApi(path, body, env, c, req) {
     }
 
     if (path === '/api/multiplayer/room/close') {
+      const requestedHostId = clean(body.hostId, 40);
+      const authCheck = await requireAuthUser(req, env, c, requestedHostId);
+      if (authCheck.errorResponse) return authCheck.errorResponse;
       const pin = clean(body.pin, 20).toUpperCase();
-      const hostId = clean(body.hostId, 40);
       if (!pin || !env.LIMITS) return json({ ok: true }, 200, c.headers);
 
       let roomStr = await env.LIMITS.get(`room:${pin}`);
@@ -1947,6 +1989,9 @@ async function handleDatabaseApi(path, body, env, c, req) {
 
       if (roomStr) {
         const room = JSON.parse(roomStr);
+        if (room.hostId && room.hostId !== authCheck.userId) {
+          return json({ error: 'Odayı yalnızca oda kurucusu kapatabilir.' }, 403, c.headers);
+        }
         room.status = 'closed';
         room.closedAt = new Date().toISOString();
         // 5 dakika boyunca 'closed' statüsü KV'de tutulur, böylece diğer katılımcıların döngüsü anında yakalar
@@ -2050,38 +2095,123 @@ async function handleDatabaseApi(path, body, env, c, req) {
       return json({ ok: true, collab: collabObj }, 200, c.headers);
     }
 
-    // 15. Hızlı ve Ücretsiz Çeviri Proxy (Google Translate & MyMemory - 0 Token, 0 Maliyet)
+    // 15. Hızlı Çeviri Proxy (Önbellek + Google Translate + Edge Gemini Fallback + MyMemory)
     if (path === '/api/translate') {
       const text = clean(body.q || body.text, 2000);
       const sl = clean(body.sl, 10) || 'auto';
       const tl = clean(body.tl, 10) || 'de';
       if (!text) return json({ ok: true, translation: '' }, 200, c.headers);
 
+      const cacheKey = `${sl}|${tl}|${text}`;
+      const cachedHit = getCachedTranslation(cacheKey);
+      if (cachedHit) {
+        return json({
+          ok: true,
+          translation: cachedHit.translation,
+          detectedLang: cachedHit.detectedLang || sl,
+          cached: true
+        }, 200, c.headers);
+      }
+
+      const mtHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*'
+      };
+
       // 1. Google Translate Web API (0 Token)
       try {
         const gUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
-        const gRes = await fetch(gUrl, { signal: AbortSignal.timeout(4000) });
+        const gRes = await fetch(gUrl, { headers: mtHeaders, signal: AbortSignal.timeout(2500) });
         if (gRes.ok) {
           const gData = await gRes.json();
-          if (gData && gData[0]) {
-            const translation = gData[0].map(x => x[0]).join('').trim();
+          if (gData && Array.isArray(gData[0])) {
+            const translation = gData[0].map((x) => (Array.isArray(x) ? x[0] : '')).join('').trim();
             const detectedLang = gData[2] || sl;
-            return json({ ok: true, translation, detectedLang }, 200, c.headers);
+            if (translation) {
+              setCachedTranslation(cacheKey, translation, detectedLang);
+              return json({ ok: true, translation, detectedLang }, 200, c.headers);
+            }
           }
         }
       } catch (_) {}
 
-      // 2. MyMemory Fallback (0 Token)
+      // 2. Google clients5 Fallback (0 Token)
       try {
-        const pair = `${sl === 'auto' ? 'tr' : sl}|${tl}`;
-        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${pair}`;
-        const mmRes = await fetch(mmUrl, { signal: AbortSignal.timeout(4000) });
+        const cUrl = `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text)}`;
+        const cRes = await fetch(cUrl, { headers: mtHeaders, signal: AbortSignal.timeout(2500) });
+        if (cRes.ok) {
+          const cData = await cRes.json();
+          if (Array.isArray(cData)) {
+            if (typeof cData[0] === 'string' && cData[0].trim()) {
+              const translation = cData[0].trim();
+              setCachedTranslation(cacheKey, translation, sl);
+              return json({ ok: true, translation, detectedLang: sl }, 200, c.headers);
+            }
+            if (Array.isArray(cData[0]) && typeof cData[0][0] === 'string' && cData[0][0].trim()) {
+              const translation = cData[0][0].trim();
+              const detectedLang = cData[0][1] || sl;
+              setCachedTranslation(cacheKey, translation, detectedLang);
+              return json({ ok: true, translation, detectedLang }, 200, c.headers);
+            }
+          }
+        }
+      } catch (_) {}
+
+      // 3. Edge-Reliable Gemini Fallback (Google CF PoP IP 429 verdiğinde devreye girer)
+      if (env && env.GEMINI_KEY) {
+        try {
+          const model = env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+          const gemRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': env.GEMINI_KEY,
+              },
+              signal: AbortSignal.timeout(6000),
+              body: JSON.stringify({
+                system_instruction: {
+                  parts: [{ text: 'Sen profesyonel bir çevirmensin. Verilen metni kaynak dilden hedef dile doğal ve doğru çevir. YALNIZCA çeviriyi yaz; açıklama, tırnak veya ekstra yorum ekleme.' }]
+                },
+                contents: [{ role: 'user', parts: [{ text: `Kaynak dil: ${sl}\nHedef dil: ${tl}\nMetin:\n${text}` }] }],
+                generationConfig: {
+                  temperature: 0,
+                  maxOutputTokens: 256,
+                },
+              }),
+            }
+          );
+          if (gemRes.ok) {
+            const gemData = await gemRes.json().catch(() => null);
+            let translation = gemData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+            translation = translation.replace(/^["'«»„"]+|["'«»„"]+$/g, '').trim();
+            if (translation) {
+              setCachedTranslation(cacheKey, translation, sl);
+              return json({ ok: true, translation, detectedLang: sl, provider: 'gemini-fallback' }, 200, c.headers);
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 4. MyMemory Fallback (0 Token son çare)
+      try {
+        const mmSl = sl === 'auto' ? (tl === 'tr' ? 'de' : 'tr') : sl;
+        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${encodeURIComponent(mmSl)}|${encodeURIComponent(tl)}&de=admin@wortcoach.app`;
+        const mmRes = await fetch(mmUrl, { headers: mtHeaders, signal: AbortSignal.timeout(3500) });
         if (mmRes.ok) {
           const data = await mmRes.json();
           let translation = data?.responseData?.translatedText || '';
+          if ((!translation || translation.includes('MYMEMORY WARNING')) && Array.isArray(data?.matches)) {
+            const goodMatch = data.matches.find((m) => Number(m?.match) >= 0.7 && typeof m?.translation === 'string' && m.translation.trim());
+            if (goodMatch) translation = goodMatch.translation;
+          }
           if (translation && !translation.includes('MYMEMORY WARNING')) {
-            translation = translation.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-            return json({ ok: true, translation }, 200, c.headers);
+            translation = translation.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').trim();
+            if (translation) {
+              setCachedTranslation(cacheKey, translation, sl);
+              return json({ ok: true, translation, detectedLang: sl }, 200, c.headers);
+            }
           }
         }
       } catch (_) {}
@@ -2091,7 +2221,8 @@ async function handleDatabaseApi(path, body, env, c, req) {
 
     // 16. Web Push VAPID Abonelik ve Anahtar Endpointleri
     if (path === '/api/push/vapid_key') {
-      return json({ ok: true, publicKey: VAPID_PUBLIC_KEY }, 200, c.headers);
+      const pubKey = (env && env.VAPID_PUBLIC_KEY) || VAPID_PUBLIC_KEY;
+      return json({ ok: true, publicKey: pubKey }, 200, c.headers);
     }
 
     if (path === '/api/push/subscribe') {

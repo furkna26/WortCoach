@@ -114,7 +114,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.10.2) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.11.0) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -123,20 +123,26 @@ async function run() {
   check((html.match(/data-theme="dark"/g) || []).length === 1, 'No duplicate data-theme="dark" on <html>');
   check(!/user-scalable=no|maximum-scale=1\.0/.test(html), 'Viewport permits user pinch-zoom accessibility');
   check(!html.includes('pdf.min.js') && !html.includes('mammoth.browser.min.js'), 'Render-blocking PDF/Mammoth removed from index.html');
+  check(!html.includes('curatedPacks.js') && !html.includes('pronunciation.js'), 'curatedPacks.js and pronunciation.js removed from eager scripts in index.html');
   check(!html.includes('id="coach-critical-css"'), 'Inline <style id="coach-critical-css"> moved out of index.html');
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
-  check(scriptTags.length === 19 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.10.2') && html.includes('js/app.js?v=3.10.2'), 'Assets bumped cleanly to v3.10.2');
+  check(scriptTags.length === 17 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
+  check(html.includes('css/components.css?v=3.11.0') && html.includes('js/app.js?v=3.11.0'), 'Assets bumped cleanly to v3.11.0');
+  check(html.includes('id="btn-export-full-backup"') && html.includes('id="btn-import-full-backup"'), 'Full library backup/restore controls present in settings modal');
 
-  // 2. Service Worker Audit
-  console.log('\n[2] Service Worker Audit');
+  // 2. Service Worker & Manifest Audit
+  console.log('\n[2] Service Worker & Manifest Audit');
   const swCode = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.10.2'"), 'SW cache version updated to v3.10.2');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.11.0'"), 'SW cache version updated to v3.11.0');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');
   check(swCode.includes('__active_access_token') && swCode.includes('Authorization'), 'SW stores and sends Bearer token for background push fetch');
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf8'));
+  check(!JSON.stringify(manifest).includes('3.8.9'), 'manifest.json removes stale v3.8.9 icon query strings');
+  check(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest.json defines PWA shortcuts');
+  check(Boolean(manifest.share_target && manifest.share_target.params && manifest.share_target.params.text), 'manifest.json defines share_target');
 
   // 3. Lazy Loader Audit
   console.log('\n[3] On-Demand Script Loader Audit');
@@ -148,6 +154,8 @@ async function run() {
           appendedSrcs.push(el.src);
           if (el.src.includes('pdf.min.js')) loaderWindow.pdfjsLib = { GlobalWorkerOptions: {} };
           if (el.src.includes('mammoth')) loaderWindow.mammoth = { extractRawText: async () => ({ value: 'ok' }) };
+          if (el.src.includes('curatedPacks.js')) loaderWindow.CURATED_CEFR_PACKS = [{ code: 'A1', cards: [{ germanWord: 'Haus' }] }];
+          if (el.src.includes('pronunciation.js')) loaderWindow.wmPronunciation = { getSelectedEngine: () => 'HYBRID_ENSEMBLE' };
           if (el.onload) el.onload();
         }
       },
@@ -166,6 +174,10 @@ async function run() {
   check(appendedSrcs.filter((s) => s.includes('pdf.min.js')).length === 1, 'Concurrent PDF loads deduplicated to 1 script tag');
   const mam = await loaderWindow.window.WortCoachLoader.ensureMammoth();
   check(Boolean(mam), 'WortCoachLoader.ensureMammoth resolves cleanly');
+  const packsLoaded = await loaderWindow.window.WortCoachLoader.ensureCuratedPacks();
+  const pronLoaded = await loaderWindow.window.WortCoachLoader.ensurePronunciation();
+  check(Boolean(packsLoaded && packsLoaded[0]?.cards?.length), 'WortCoachLoader.ensureCuratedPacks resolves rich packs');
+  check(Boolean(pronLoaded), 'WortCoachLoader.ensurePronunciation resolves cleanly');
 
   // 4. IndexedDB v2 + Cache + Batching Audit
   console.log('\n[4] IndexedDB v2, Cache & Batching Unit Tests');
@@ -205,19 +217,29 @@ async function run() {
   check(hit0 && hit1 && hit0.germanWord === 'Testwort25', 'O(1) case-insensitive getCardByWord lookup accurate');
   check(readsAfterLookups === readsAfterWarmup, `Cached getCardByWord performed 0 IDB scans (before=${readsAfterWarmup}, after=${readsAfterLookups}, init=${readsBefore})`);
 
+  const fullBackup = await wmDB.exportFullBackup();
+  check(fullBackup.format === 'wortcoach-full-backup' && fullBackup.decks.length === 1 && fullBackup.cards.length === 50, 'exportFullBackup exports decks and cards');
   const txBeforeDel = mockIdb.stats.txCount;
   await wmDB.deleteDeck(deck.id);
   const txDeltaDel = mockIdb.stats.txCount - txBeforeDel;
   const cardsAfterDel = await wmDB.getAllCards();
   check(txDeltaDel === 1 && cardsAfterDel.length === 0, `deleteDeck deleted deck + 50 cards in 1 transaction (tx=${txDeltaDel}, remaining=${cardsAfterDel.length})`);
+  const restoreRes = await wmDB.importFullBackup(fullBackup, { mode: 'merge' });
+  const cardsRestored = await wmDB.getAllCards();
+  check(restoreRes.decksAdded === 1 && restoreRes.cardsAdded === 50 && cardsRestored.length === 50, 'importFullBackup cleanly restores exported decks and cards');
 
-  // 5. Cards Render Optimization & XSS Escaping Audit
-  console.log('\n[5] app.js Cards Rendering & XSS Audit');
+  // 5. Cards Render, Backup UI, XSS & Keyboard Shortcuts Audit
+  console.log('\n[5] app.js, study.js, deckBuilder.js & Keyboard Shortcuts Audit');
   const appJs = fs.readFileSync(path.join(__dirname, 'js', 'app.js'), 'utf8');
+  const studyJs = fs.readFileSync(path.join(__dirname, 'js', 'study.js'), 'utf8');
+  const deckBuilderJs = fs.readFileSync(path.join(__dirname, 'js', 'deckBuilder.js'), 'utf8');
   check(appJs.includes('cardsFilterDebounceTimer') && appJs.includes('cardsRenderLimit = 60'), 'Cards tab implements 200ms debounce and 60-card progressive pagination');
   check(appJs.includes('btn-cards-load-more') && appJs.includes('_renderedCardsById'), 'Cards tab uses event delegation and Load More button');
   check(!appJs.includes("getElementById('search-input')"), 'Synonym chip search uses #global-search-input instead of stale #search-input');
   check(appJs.includes('escapeHtml(str)'), 'WortCoachApp defines escapeHtml()');
+  check(appJs.includes('_gameKbBound') && studyJs.includes('bindKeyboardShortcuts'), 'Keyboard shortcuts implemented in study.js and app.js quiz modal');
+  check(appJs.includes('shared_text') && appJs.includes('btn-export-full-backup'), 'app.js handles PWA share_target and full backup UI');
+  check(deckBuilderJs.includes('escapeHtml') && deckBuilderJs.includes('${escapeHtml(w.lemma)}'), 'deckBuilder.js escapes AI/remote fields with escapeHtml');
 
   // 6. Dictionary Parallelism & Cache Test
   console.log('\n[6] Dictionary Live + Cache Audit');
@@ -249,14 +271,25 @@ async function run() {
   check(socialCode.includes('setInterval(runInboxCheck, 15000)') && !socialCode.includes('}, 3500);'), 'Inbox polling relaxed from 3.5s to 15s');
   check(socialCode.includes('document.hidden') && socialCode.includes('_inboxPollingInFlight') && socialCode.includes('_1v1PollingInFlight') && socialCode.includes('_kahootPollingInFlight'), 'Polling pauses when hidden and prevents overlapping async flights');
   check(socialCode.includes('headers.Authorization = `Bearer ${token}`') && socialCode.includes('refreshAuthSession'), 'social.js sends Bearer JWT and supports 401 refresh retry');
+  check(socialCode.includes('function escapeHtml(str)') && socialCode.includes('${escapeHtml(d.title)}'), 'social.js escapes user/remote HTML interpolations via escapeHtml');
+  check(socialCode.includes('window.wmDB.addCardsBatch(batchItems)'), 'social.js importDeckToLocal uses single-transaction addCardsBatch');
+  check(!socialCode.includes('BJcW3pPjbzl'), 'social.js no longer references old rotated VAPID key');
 
-  // 8. Worker CORS & JWT Verification Audit
+  // 8. Worker CORS, VAPID Secret, Rate-Limit & JWT Verification Audit
   console.log('\n[8] worker/worker.js Security Audit');
   const workerRaw = fs.readFileSync(path.join(__dirname, 'worker', 'worker.js'), 'utf8');
+  const wranglerToml = fs.readFileSync(path.join(__dirname, 'worker', 'wrangler.toml'), 'utf8');
   const workerNoExport = workerRaw.replace(/export\s+default\s+\{[\s\S]*$/m, '');
   const wSandbox = { URL, Map, Set, TextEncoder, crypto: global.crypto, fetch: global.fetch, Response, console };
   vm.createContext(wSandbox);
   vm.runInContext(workerNoExport, wSandbox);
+
+  check(!workerRaw.includes('VAPID_PRIVATE_JWK = {') && !workerRaw.includes('9vFfsLk7nq') && workerRaw.includes('env.VAPID_PRIVATE_JWK'), 'worker.js removed hardcoded VAPID_PRIVATE_JWK and reads env secret');
+  check(wranglerToml.includes('name = "AUTH_LIMITER"') && wranglerToml.includes('name = "TRANSLATE_LIMITER"'), 'wrangler.toml defines AUTH_LIMITER and TRANSLATE_LIMITER');
+  check(workerRaw.includes('env.AUTH_LIMITER.limit') && workerRaw.includes('env.TRANSLATE_LIMITER.limit'), 'worker.js enforces AUTH_LIMITER and TRANSLATE_LIMITER');
+
+  const decksGetSlice = workerRaw.slice(workerRaw.indexOf("path === '/api/decks/get'"), workerRaw.indexOf("path === '/api/decks/get'") + 600);
+  check(decksGetSlice.includes('verifyAuthUser(req, env)') && !decksGetSlice.includes('body.currentUserId'), '/api/decks/get uses verified JWT instead of body.currentUserId');
 
   const corsAllowedGitHub = wSandbox.cors({}, { headers: { get: (k) => k === 'Origin' ? 'https://furkna26.github.io' : '' } });
   const corsAllowedLocal = wSandbox.cors({}, { headers: { get: (k) => k === 'Origin' ? 'http://localhost:8000' : '' } });
@@ -273,6 +306,7 @@ async function run() {
     '/api/friends/remove', '/api/friends/list', '/api/friends/pending',
     '/api/decks/sync_all', '/api/decks/save', '/api/decks/public/remove',
     '/api/decks/inbox/send', '/api/decks/inbox/get', '/api/decks/inbox/resolve',
+    '/api/multiplayer/invite/send', '/api/multiplayer/room/close',
     '/api/clubs/create', '/api/clubs/join', '/api/clubs/delete',
     '/api/clubs/members/remove', '/api/clubs/decks/remove', '/api/clubs/decks/add',
     '/api/clubs/decks/add_card', '/api/push/subscribe'
@@ -284,14 +318,28 @@ async function run() {
     if (!slice.includes('requireAuthUser')) unprotected.push(route);
   }
   check(unprotected.length === 0, `All ${protectedPaths.length} private/mutating Worker routes enforce requireAuthUser`, unprotected.join(', '));
+  const roomCloseStart = workerRaw.indexOf("if (path === '/api/multiplayer/room/close')");
+  const roomCloseEnd = workerRaw.indexOf("if (path === '/api/clubs/decks/add_card')", roomCloseStart);
+  const roomCloseSlice = workerRaw.slice(roomCloseStart, roomCloseEnd);
+  check(roomCloseSlice.includes('room.hostId !== authCheck.userId'), '/api/multiplayer/room/close verifies room.hostId ownership');
 
-  // 9. Zero-Emoji & Clean Repo Audit
-  console.log('\n[9] Zero-Emoji & Repo Hygiene Audit');
+  // 9. Zero-Emoji, Syntax & Clean Repo Audit
+  console.log('\n[9] Zero-Emoji, JS Syntax & Repo Hygiene Audit');
+  const jsFiles = fs.readdirSync(path.join(__dirname, 'js')).filter((f) => f.endsWith('.js')).map((f) => path.join('js', f));
+  const syntaxErrors = [];
+  for (const rel of jsFiles) {
+    try {
+      new vm.Script(fs.readFileSync(path.join(__dirname, rel), 'utf8'));
+    } catch (e) {
+      syntaxErrors.push(`${rel}: ${e.message}`);
+    }
+  }
+  check(syntaxErrors.length === 0, `All ${jsFiles.length} frontend JS files pass syntax validation`, syntaxErrors.join('; '));
   const emojiRegex = /[\u{1F300}-\u{1FAFF}]/u;
   const specificBadChars = /[\uFE0F]/;
   const scanFiles = [
-    'index.html', 'sw.js', 'css/app.css', 'css/components.css', 'worker/worker.js',
-    ...fs.readdirSync(path.join(__dirname, 'js')).filter((f) => f.endsWith('.js')).map((f) => path.join('js', f))
+    'index.html', 'sw.js', 'manifest.json', 'README.md', 'css/app.css', 'css/components.css', 'worker/worker.js',
+    ...jsFiles
   ];
   const dirtyFiles = [];
   for (const rel of scanFiles) {

@@ -18,6 +18,16 @@ name = "MINUTE_LIMITER"
 namespace_id = "1001"
 simple = { limit = 6, period = 60 }
 
+[[ratelimits]]
+name = "AUTH_LIMITER"
+namespace_id = "1002"
+simple = { limit = 15, period = 60 }
+
+[[ratelimits]]
+name = "TRANSLATE_LIMITER"
+namespace_id = "1003"
+simple = { limit = 60, period = 60 }
+
 # Supabase Veritabanını 7 Gün Hareketsizlikten Korumak İçin Otomatik Cron Tetikleyici (Her 12 Saatte Bir)
 [triggers]
 crons = ["0 4,16 * * *"]

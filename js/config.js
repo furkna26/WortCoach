@@ -100,5 +100,19 @@ window.WortCoachLoader = (() => {
         () => window.mammoth
       );
     },
+    async ensureCuratedPacks() {
+      return loadScriptOnce(
+        'js/curatedPacks.js?v=3.11.0',
+        () => (Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0] && Array.isArray(window.CURATED_CEFR_PACKS[0].cards)
+          ? window.CURATED_CEFR_PACKS
+          : null)
+      );
+    },
+    async ensurePronunciation() {
+      return loadScriptOnce(
+        'js/pronunciation.js?v=3.11.0',
+        () => window.wmPronunciation
+      );
+    },
   };
 })();

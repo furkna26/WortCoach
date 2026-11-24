@@ -121,9 +121,10 @@ assert(gameSvc.remainingSeconds < 60, 'Time penalty deducted on wrong answer');
 // [TEST 5: Service Worker & Asset Versioning]
 console.log('\n[TEST 5: Service Worker & Asset Versioning]');
 const swContent = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf-8');
+const configContent = fs.readFileSync(path.join(__dirname, 'js', 'config.js'), 'utf-8');
 assert(swContent.includes('wortcoach-v'), 'Service Worker cache is wortcoach-v*');
 assert(swContent.includes('curatedPacks.js'), 'Service Worker caches curatedPacks.js');
-assert(indexHtml.includes('curatedPacks.js'), 'index.html includes curatedPacks.js');
+assert(indexHtml.includes('curatedPacks.js') || configContent.includes('curatedPacks.js'), 'App loads curatedPacks.js (eager or lazy via config.js)');
 
 console.log('='.repeat(80));
 console.log(`FINAL RESULT: ${passed} PASSED, ${failed} FAILED (TOTAL: ${passed + failed})`);

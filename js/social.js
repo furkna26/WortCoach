@@ -16,6 +16,15 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // 1. LİG TANIMLARI
   const RANK_TIERS = [
     { name: 'Tahta', min: 0, max: 799, color: '#A0826C' },
@@ -590,6 +599,9 @@
       const val = String(selectionVal || '').trim();
       if (val.startsWith('pack:')) {
         const packCode = val.slice(5);
+        if (!Array.isArray(window.CURATED_CEFR_PACKS) && window.WortCoachLoader && typeof window.WortCoachLoader.ensureCuratedPacks === 'function') {
+          await window.WortCoachLoader.ensureCuratedPacks().catch(() => {});
+        }
         const packs = Array.isArray(window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : [];
         const pack = packs.find(p => p.code === packCode) || packs[0];
         if (!pack) throw new Error('Hazır deste paketi bulunamadı.');
@@ -612,6 +624,9 @@
       const decks = await this.getLocalDecksSafe();
       const deck = decks.find(d => String(d.id) === val || Number(d.id) === Number(val));
       if (!deck) {
+        if (!Array.isArray(window.CURATED_CEFR_PACKS) && window.WortCoachLoader && typeof window.WortCoachLoader.ensureCuratedPacks === 'function') {
+          await window.WortCoachLoader.ensureCuratedPacks().catch(() => {});
+        }
         // Fallback: Hazır paket varsa ilk hazır paketi dön
         const packs = Array.isArray(window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : [];
         if (packs.length > 0) {
@@ -781,17 +796,36 @@
     async importDeckToLocal(cloudDeck) {
       const title = cloudDeck.title || cloudDeck.name || 'İçe Aktarılan Deste';
       const createdDeck = await this.addLocalDeckSafe(title);
-      const newDeckId = (createdDeck && createdDeck.id) ? createdDeck.id : 1;
+      const newDeckId = Number((createdDeck && createdDeck.id) ? createdDeck.id : 1) || 1;
 
       const words = cloudDeck.words_json || cloudDeck.words || cloudDeck.cards || [];
-      for (const w of words) {
-        await this.addLocalCardSafe({
-          deckId: newDeckId,
-          lemma: w.lemma || w.front || w.germanWord || '',
-          contextMeaning: w.contextMeaning || w.back || w.meaningsTr || '',
-          pos: w.pos || w.partOfSpeech || 'NOUN',
-          sourceSentence: w.sourceSentence || w.example || w.exampleSentence || ''
-        });
+      if (window.wmDB && typeof window.wmDB.addCardsBatch === 'function') {
+        const batchItems = words
+          .map((w) => ({
+            deckId: newDeckId,
+            germanWord: (w.lemma || w.front || w.germanWord || '').trim(),
+            meaningsTr: (w.contextMeaning || w.back || w.meaningsTr || '').trim(),
+            meaningsEn: (w.meaningsEn || '').trim(),
+            partOfSpeech: w.pos || w.partOfSpeech || 'NOUN',
+            article: w.article || '',
+            pluralForm: w.pluralForm || '',
+            exampleSentence: (w.sourceSentence || w.example || w.exampleSentence || '').trim(),
+            isQuizCard: Boolean(w.isQuizCard)
+          }))
+          .filter((c) => c.germanWord);
+        if (batchItems.length > 0) {
+          await window.wmDB.addCardsBatch(batchItems);
+        }
+      } else {
+        for (const w of words) {
+          await this.addLocalCardSafe({
+            deckId: newDeckId,
+            lemma: w.lemma || w.front || w.germanWord || '',
+            contextMeaning: w.contextMeaning || w.back || w.meaningsTr || '',
+            pos: w.pos || w.partOfSpeech || 'NOUN',
+            sourceSentence: w.sourceSentence || w.example || w.exampleSentence || ''
+          });
+        }
       }
 
       await this.populateDeckSelects();
@@ -857,21 +891,21 @@
         const isOwner = d.ownerId && (d.ownerId === myId || (this.user && d.ownerId === this.user.id));
 
         html += `
-          <div class="public-deck-card" data-pub-id="${d.id}">
+          <div class="public-deck-card" data-pub-id="${escapeHtml(d.id)}">
             <div class="public-deck-header">
               <div>
-                <div class="public-deck-title">${d.title}</div>
-                <div class="public-deck-author">Üreten: ${author}</div>
+                <div class="public-deck-title">${escapeHtml(d.title)}</div>
+                <div class="public-deck-author">Üreten: ${escapeHtml(author)}</div>
               </div>
-              <div class="public-deck-date">${dateStr}</div>
+              <div class="public-deck-date">${escapeHtml(dateStr)}</div>
             </div>
-            ${d.description ? `<div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.4;">${d.description}</div>` : ''}
+            ${d.description ? `<div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.4;">${escapeHtml(d.description)}</div>` : ''}
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span class="badge" style="background:var(--accent-primary-soft); color:var(--brand-blue-hover); font-weight:800; font-size:0.75rem; padding:3px 8px; border-radius:6px;">${wCount} Kelime</span>
               <div class="public-deck-actions" style="display:flex; gap:6px;">
-                ${isOwner ? `<button type="button" class="btn-remove-pub-deck" data-pub-id="${d.id}" style="padding:4px 8px; font-size:0.75rem; background:#EF4444; border:1px solid #EF4444; color:#fff; border-radius:6px; font-weight:700;">Yayından Kaldır</button>` : ''}
-                <button type="button" class="btn-preview-pub-deck" data-pub-id="${d.id}">İncele</button>
-                <button type="button" class="btn-import-pub-deck" data-pub-id="${d.id}">Kütüphaneme Ekle</button>
+                ${isOwner ? `<button type="button" class="btn-remove-pub-deck" data-pub-id="${escapeHtml(d.id)}" style="padding:4px 8px; font-size:0.75rem; background:#EF4444; border:1px solid #EF4444; color:#fff; border-radius:6px; font-weight:700;">Yayından Kaldır</button>` : ''}
+                <button type="button" class="btn-preview-pub-deck" data-pub-id="${escapeHtml(d.id)}">İncele</button>
+                <button type="button" class="btn-import-pub-deck" data-pub-id="${escapeHtml(d.id)}">Kütüphaneme Ekle</button>
               </div>
             </div>
           </div>
@@ -951,10 +985,10 @@
             html += `
               <div style="background:var(--bg-surface); padding:8px 12px; border-radius:8px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <span style="font-weight:800; font-size:0.9rem; color:var(--text-primary);">${w.lemma || w.front}</span>
-                  <span style="font-size:0.75rem; color:var(--text-muted); margin-left:6px;">(${w.pos || 'Kelime'})</span>
+                  <span style="font-weight:800; font-size:0.9rem; color:var(--text-primary);">${escapeHtml(w.lemma || w.front)}</span>
+                  <span style="font-size:0.75rem; color:var(--text-muted); margin-left:6px;">(${escapeHtml(w.pos || 'Kelime')})</span>
                 </div>
-                <div style="font-size:0.85rem; color:var(--text-secondary); font-weight:600;">${w.contextMeaning || w.back}</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary); font-weight:600;">${escapeHtml(w.contextMeaning || w.back)}</div>
               </div>
             `;
           });
@@ -1022,21 +1056,22 @@
 
         let actionBtnHtml = '';
         if (isMember) {
-          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-open-club-view" data-club-id="${c.id}" style="padding:6px 12px; font-size:0.78rem;">İncele</button>`;
+          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-open-club-view" data-club-id="${escapeHtml(c.id)}" style="padding:6px 12px; font-size:0.78rem;">İncele</button>`;
         } else if (isPublic) {
-          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-direct-join-club" data-club-id="${c.id}" style="padding:6px 12px; font-size:0.78rem; background:#10B981; border-color:#10B981;">Tıkla Katıl</button>`;
+          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-direct-join-club" data-club-id="${escapeHtml(c.id)}" style="padding:6px 12px; font-size:0.78rem; background:#10B981; border-color:#10B981;">Tıkla Katıl</button>`;
         } else {
-          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-trigger-code-join" data-club-code="${c.code || ''}" style="padding:6px 12px; font-size:0.78rem; background:var(--brand-blue);">Kodla Katıl</button>`;
+          actionBtnHtml = `<button type="button" class="btn-primary-compact btn-trigger-code-join" data-club-code="${escapeHtml(c.code || '')}" style="padding:6px 12px; font-size:0.78rem; background:var(--brand-blue);">Kodla Katıl</button>`;
         }
 
+        const safeDesc = c.description ? ' · ' + escapeHtml(c.description) : '';
         const subText = isPublic
-          ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; font-size:0.72rem; padding:2px 6px; border-radius:4px; font-weight:700;">Herkese Açık</span>${c.description ? ' · ' + c.description : ''}`
-          : `<span class="badge" style="background:rgba(239,68,68,0.15); color:#EF4444; font-size:0.72rem; padding:2px 6px; border-radius:4px; font-weight:700;">Özel Kulüp</span>${isMember ? ` · Kod: <strong>${c.code}</strong>` : ''}${c.description ? ' · ' + c.description : ''}`;
+          ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; font-size:0.72rem; padding:2px 6px; border-radius:4px; font-weight:700;">Herkese Açık</span>${safeDesc}`
+          : `<span class="badge" style="background:rgba(239,68,68,0.15); color:#EF4444; font-size:0.72rem; padding:2px 6px; border-radius:4px; font-weight:700;">Özel Kulüp</span>${isMember ? ` · Kod: <strong>${escapeHtml(c.code)}</strong>` : ''}${safeDesc}`;
 
         html += `
-          <div class="club-card" data-club-id="${c.id}">
+          <div class="club-card" data-club-id="${escapeHtml(c.id)}">
             <div style="flex:1;">
-              <div class="club-info-title">${c.name}</div>
+              <div class="club-info-title">${escapeHtml(c.name)}</div>
               <div class="club-info-sub" style="margin-top:2px;">${subText}</div>
               <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">${memberCount} Üye · ${deckCount} Kulüp Destesi</div>
             </div>
@@ -1227,12 +1262,12 @@
             html += `
               <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                  <div style="font-weight:800; font-size:0.9rem; color:var(--text-primary);">${d.title}</div>
-                  <div style="font-size:0.75rem; color:var(--text-muted);">${wList.length} Kelime · Ekleyen: ${d.addedBy || 'Üye'}</div>
+                  <div style="font-weight:800; font-size:0.9rem; color:var(--text-primary);">${escapeHtml(d.title)}</div>
+                  <div style="font-size:0.75rem; color:var(--text-muted);">${wList.length} Kelime · Ekleyen: ${escapeHtml(d.addedBy || 'Üye')}</div>
                 </div>
                 <div style="display:flex; gap:6px;">
-                  <button type="button" class="btn-primary-compact btn-import-club-deck" data-deck-id="${d.id}" style="padding:6px 10px; font-size:0.78rem;">Destelerime Ekle</button>
-                  ${canRemoveDeck ? `<button type="button" class="btn-primary-compact btn-remove-club-deck" data-deck-id="${d.id}" style="padding:6px 8px; font-size:0.75rem; background:#EF4444; border-color:#EF4444; color:#fff;">Sil</button>` : ''}
+                  <button type="button" class="btn-primary-compact btn-import-club-deck" data-deck-id="${escapeHtml(d.id)}" style="padding:6px 10px; font-size:0.78rem;">Destelerime Ekle</button>
+                  ${canRemoveDeck ? `<button type="button" class="btn-primary-compact btn-remove-club-deck" data-deck-id="${escapeHtml(d.id)}" style="padding:6px 8px; font-size:0.75rem; background:#EF4444; border-color:#EF4444; color:#fff;">Sil</button>` : ''}
                 </div>
               </div>
             `;
@@ -1292,10 +1327,10 @@
           const canKick = isOwner && !isThisMemberOwner;
           mHtml += `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid var(--border-subtle);">
-              <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary);">${m.username}</span>
+              <span style="font-weight:700; font-size:0.85rem; color:var(--text-primary);">${escapeHtml(m.username)}</span>
               <div style="display:flex; align-items:center; gap:6px;">
-                <span class="badge" style="font-size:0.72rem; padding:2px 8px; background:var(--accent-primary-soft); color:var(--brand-blue-hover);">${m.role || (isThisMemberOwner ? 'Kurucu' : 'Üye')}</span>
-                ${canKick ? `<button type="button" class="btn-primary-compact btn-kick-club-member" data-member-id="${m.id}" style="padding:3px 6px; font-size:0.7rem; background:#EF4444; border-color:#EF4444; color:#fff;">Çıkar</button>` : ''}
+                <span class="badge" style="font-size:0.72rem; padding:2px 8px; background:var(--accent-primary-soft); color:var(--brand-blue-hover);">${escapeHtml(m.role || (isThisMemberOwner ? 'Kurucu' : 'Üye'))}</span>
+                ${canKick ? `<button type="button" class="btn-primary-compact btn-kick-club-member" data-member-id="${escapeHtml(m.id)}" style="padding:3px 6px; font-size:0.7rem; background:#EF4444; border-color:#EF4444; color:#fff;">Çıkar</button>` : ''}
               </div>
             </div>
           `;
@@ -1484,7 +1519,7 @@
         const hostBadge = p.isHost ? ' (Host)' : '';
         html += `
           <span class="badge" style="background:${isMe ? 'var(--brand-blue)' : 'var(--bg-surface)'}; border:1px solid ${isMe ? 'transparent' : 'var(--border-medium)'}; color:${isMe ? '#fff' : 'var(--text-primary)'}; font-size:0.85rem; padding:6px 14px; border-radius:20px; font-weight:700;">
-            ${p.name}${hostBadge}${isMe ? ' (Siz)' : ''}
+            ${escapeHtml(p.name)}${hostBadge}${isMe ? ' (Siz)' : ''}
           </span>
         `;
       });
@@ -1569,7 +1604,7 @@
       allOptions.forEach((opt, idx) => {
         html += `
           <button type="button" class="btn-arena-option" data-opt="${encodeURIComponent(opt)}" style="background:var(--bg-surface); border:1px solid var(--border-medium); border-radius:12px; padding:14px; text-align:left; font-size:0.95rem; font-weight:700; color:var(--text-primary); cursor:pointer; transition:all 0.15s ease;">
-            <span style="color:var(--text-muted); font-size:0.8rem; margin-right:8px;">${idx + 1}.</span> ${opt}
+            <span style="color:var(--text-muted); font-size:0.8rem; margin-right:8px;">${idx + 1}.</span> ${escapeHtml(opt)}
           </button>
         `;
       });
@@ -1829,7 +1864,7 @@
         const hostBadge = p.isHost ? ' (Host)' : '';
         html += `
           <span class="badge" style="background:${isMe ? 'var(--brand-blue)' : 'var(--bg-surface)'}; border:1px solid ${isMe ? 'transparent' : 'var(--border-subtle)'}; color:${isMe ? '#fff' : 'var(--text-primary)'}; font-size:0.85rem; padding:6px 14px; border-radius:20px; font-weight:700;">
-            ${p.name}${hostBadge}${isMe ? ' (Siz)' : ''}
+            ${escapeHtml(p.name)}${hostBadge}${isMe ? ' (Siz)' : ''}
           </span>
         `;
       });
@@ -1970,8 +2005,8 @@
         sorted.forEach(([name, score], idx) => {
           html += `
             <div style="background:var(--bg-surface); padding:10px 14px; border-radius:10px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-weight:800; font-size:0.9rem;">#${idx + 1} ${name}</span>
-              <span style="font-weight:900; color:var(--brand-blue-hover); font-size:1rem;">${score} Puan</span>
+              <span style="font-weight:800; font-size:0.9rem;">#${idx + 1} ${escapeHtml(name)}</span>
+              <span style="font-weight:900; color:var(--brand-blue-hover); font-size:1rem;">${Number(score) || 0} Puan</span>
             </div>
           `;
         });
@@ -2047,10 +2082,10 @@
         html += `
           <div style="background:var(--bg-surface); padding:8px 12px; border-radius:10px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${f.username}</div>
-              <div style="font-size:0.75rem; color:var(--text-muted);">${f.friend_code || ''}</div>
+              <div style="font-weight:700; font-size:0.88rem; color:var(--text-primary);">${escapeHtml(f.username)}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(f.friend_code || '')}</div>
             </div>
-            <button type="button" class="btn-primary-compact btn-send-match-inv" data-user-id="${f.id}" data-username="${f.username}" style="padding:5px 12px; font-size:0.75rem; background:#10B981; border-color:#10B981;">Davet Et</button>
+            <button type="button" class="btn-primary-compact btn-send-match-inv" data-user-id="${escapeHtml(f.id)}" data-username="${escapeHtml(f.username)}" style="padding:5px 12px; font-size:0.75rem; background:#10B981; border-color:#10B981;">Davet Et</button>
           </div>
         `;
       });
@@ -2176,9 +2211,9 @@
         html += `
           <div style="background:var(--bg-card); padding:8px 12px; border-radius:8px; border:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div style="flex:1;">
-              <span style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">${c.front || c.lemma || ''}</span>
-              <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">(${c.pos || 'Nomen'})</span>
-              <div style="font-size:0.82rem; color:var(--text-secondary);">${c.back || c.contextMeaning || ''}</div>
+              <span style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">${escapeHtml(c.front || c.lemma || '')}</span>
+              <span style="font-size:0.75rem; color:var(--text-muted); margin-left:4px;">(${escapeHtml(c.pos || 'Nomen')})</span>
+              <div style="font-size:0.82rem; color:var(--text-secondary);">${escapeHtml(c.back || c.contextMeaning || '')}</div>
             </div>
             <button type="button" class="prof-mini-btn btn-remove-collab-card" data-card-idx="${idx}" style="color:#EF4444; border-color:rgba(239,68,68,0.3);">Sil</button>
           </div>
@@ -2350,35 +2385,35 @@
             <div class="pending-req-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap; background:rgba(239,68,68,0.06); border-radius:8px; margin-bottom:6px; padding:8px;">
               <div style="flex:1; min-width:180px;">
                 <div style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">
-                  <span style="color:#EF4444; font-weight:900;">${g.fromUsername}</span> seni ${g.matchType === 'kahoot' ? 'Kahoot Grubuna' : 'Zamana Karşı Düelloya'} davet etti!
+                  <span style="color:#EF4444; font-weight:900;">${escapeHtml(g.fromUsername)}</span> seni ${g.matchType === 'kahoot' ? 'Kahoot Grubuna' : 'Zamana Karşı Düelloya'} davet etti!
                 </div>
                 <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
-                  Oda PIN: <strong>${g.pin}</strong> · ${g.deckTitle}
+                  Oda PIN: <strong>${escapeHtml(g.pin)}</strong> · ${escapeHtml(g.deckTitle)}
                 </div>
               </div>
               <div style="display:flex; gap:6px;">
-                <button type="button" class="btn-primary-compact btn-join-match-invite" data-gift-id="${g.id}" data-pin="${g.pin}" data-type="${g.matchType || '1v1'}" style="padding:5px 12px; font-size:0.76rem; background:#EF4444; border-color:#EF4444; color:#fff;">Odaya Katıl</button>
-                <button type="button" class="btn-primary-compact btn-ignore-deck-gift" data-gift-id="${g.id}" style="padding:5px 10px; font-size:0.76rem; background:transparent; color:var(--text-muted); border:1px solid var(--border-subtle);">Reddet</button>
+                <button type="button" class="btn-primary-compact btn-join-match-invite" data-gift-id="${escapeHtml(g.id)}" data-pin="${escapeHtml(g.pin)}" data-type="${escapeHtml(g.matchType || '1v1')}" style="padding:5px 12px; font-size:0.76rem; background:#EF4444; border-color:#EF4444; color:#fff;">Odaya Katıl</button>
+                <button type="button" class="btn-primary-compact btn-ignore-deck-gift" data-gift-id="${escapeHtml(g.id)}" style="padding:5px 10px; font-size:0.76rem; background:transparent; color:var(--text-muted); border:1px solid var(--border-subtle);">Reddet</button>
               </div>
             </div>
           `;
           return;
         }
 
-        const count = g.wordCount || (Array.isArray(g.words) ? g.words.length : 0);
+        const count = Number(g.wordCount || (Array.isArray(g.words) ? g.words.length : 0)) || 0;
         html += `
           <div class="pending-req-item" style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border-subtle); flex-wrap:wrap;">
             <div style="flex:1; min-width:180px;">
               <div style="font-weight:800; font-size:0.88rem; color:var(--text-primary);">
-                <span style="color:var(--brand-blue-hover);">${g.fromUsername}</span> sana bir deste gönderdi
+                <span style="color:var(--brand-blue-hover);">${escapeHtml(g.fromUsername)}</span> sana bir deste gönderdi
               </div>
               <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">
-                <strong>${g.deckTitle}</strong> · ${count} Kelime
+                <strong>${escapeHtml(g.deckTitle)}</strong> · ${count} Kelime
               </div>
             </div>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn-primary-compact btn-accept-deck-gift" data-gift-id="${g.id}" style="padding:5px 10px; font-size:0.76rem; background:#10B981; border-color:#10B981;">Desteyi Ekle</button>
-              <button type="button" class="btn-primary-compact btn-ignore-deck-gift" data-gift-id="${g.id}" style="padding:5px 10px; font-size:0.76rem; background:transparent; color:var(--text-muted); border:1px solid var(--border-subtle);">Görmezden Gel</button>
+              <button type="button" class="btn-primary-compact btn-accept-deck-gift" data-gift-id="${escapeHtml(g.id)}" style="padding:5px 10px; font-size:0.76rem; background:#10B981; border-color:#10B981;">Desteyi Ekle</button>
+              <button type="button" class="btn-primary-compact btn-ignore-deck-gift" data-gift-id="${escapeHtml(g.id)}" style="padding:5px 10px; font-size:0.76rem; background:transparent; color:var(--text-muted); border:1px solid var(--border-subtle);">Görmezden Gel</button>
             </div>
           </div>
         `;
@@ -2466,21 +2501,21 @@
       board.forEach((friend, idx) => {
         const tier = getTierForElo(friend.elo);
         html += `
-          <div class="leaderboard-item" data-friend-id="${friend.id}" style="cursor:pointer;">
+          <div class="leaderboard-item" data-friend-id="${escapeHtml(friend.id)}" style="cursor:pointer;">
             <div class="lb-rank-col">#${idx + 1}</div>
             <div class="lb-info-col">
               <div class="lb-name-row">
-                <span class="lb-username">${friend.username}</span>
-                <span class="lb-code">${friend.friend_code}</span>
+                <span class="lb-username">${escapeHtml(friend.username)}</span>
+                <span class="lb-code">${escapeHtml(friend.friend_code)}</span>
               </div>
               <div class="lb-meta-row" style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                <span class="lb-streak">${friend.streak_days || 0} Gün Seri</span>
-                <button type="button" class="prof-mini-btn btn-send-deck-friend-row" data-friend-id="${friend.id}" style="padding:2px 8px; font-size:0.72rem; color:#10B981; border-color:rgba(16,185,129,0.4);">Deste Gönder</button>
+                <span class="lb-streak">${Number(friend.streak_days) || 0} Gün Seri</span>
+                <button type="button" class="prof-mini-btn btn-send-deck-friend-row" data-friend-id="${escapeHtml(friend.id)}" style="padding:2px 8px; font-size:0.72rem; color:#10B981; border-color:rgba(16,185,129,0.4);">Deste Gönder</button>
               </div>
             </div>
             <div class="lb-tier-col">
-              <span class="lb-tier-badge" style="border-color:${tier.color}; color:${tier.color}">${tier.name}</span>
-              <span class="lb-elo-num">${friend.elo} ELO</span>
+              <span class="lb-tier-badge" style="border-color:${tier.color}; color:${tier.color}">${escapeHtml(tier.name)}</span>
+              <span class="lb-elo-num">${Number(friend.elo) || 0} ELO</span>
             </div>
           </div>
         `;
@@ -2525,14 +2560,14 @@
       incoming.forEach(req => {
         const reqUser = req.requester || { username: 'Bilinmeyen', friend_code: 'WC#0000' };
         html += `
-          <div class="pending-req-item" id="req-item-${req.id}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-subtle);">
+          <div class="pending-req-item" id="req-item-${escapeHtml(req.id)}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-subtle);">
             <div>
-              <div style="font-weight:700; font-size:0.9rem;">${reqUser.username}</div>
-              <div style="font-size:0.75rem; color:var(--text-muted);">${reqUser.friend_code}</div>
+              <div style="font-weight:700; font-size:0.9rem;">${escapeHtml(reqUser.username)}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(reqUser.friend_code)}</div>
             </div>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn-primary-compact btn-req-accept" data-req-id="${req.id}" style="padding:4px 10px; font-size:0.75rem;">Kabul Et</button>
-              <button type="button" class="btn-primary-compact btn-req-reject" data-req-id="${req.id}" style="padding:4px 10px; font-size:0.75rem; background:transparent; color:#EF4444; border:1px solid #EF4444;">Reddet</button>
+              <button type="button" class="btn-primary-compact btn-req-accept" data-req-id="${escapeHtml(req.id)}" style="padding:4px 10px; font-size:0.75rem;">Kabul Et</button>
+              <button type="button" class="btn-primary-compact btn-req-reject" data-req-id="${escapeHtml(req.id)}" style="padding:4px 10px; font-size:0.75rem; background:transparent; color:#EF4444; border:1px solid #EF4444;">Reddet</button>
             </div>
           </div>
         `;
@@ -2582,10 +2617,10 @@
         html += `
           <div class="search-result-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border-subtle);">
             <div>
-              <div style="font-weight:700; font-size:0.9rem;">${u.username} <span style="font-size:0.75rem; color:var(--text-muted);">${u.friend_code}</span></div>
-              <div style="font-size:0.75rem; color:${tier.color}; font-weight:700;">${tier.name} · ${u.elo} ELO</div>
+              <div style="font-weight:700; font-size:0.9rem;">${escapeHtml(u.username)} <span style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(u.friend_code)}</span></div>
+              <div style="font-size:0.75rem; color:${tier.color}; font-weight:700;">${escapeHtml(tier.name)} · ${Number(u.elo) || 0} ELO</div>
             </div>
-            <button type="button" class="btn-primary-compact btn-send-friend-req" data-target-id="${u.id}" style="padding:4px 10px; font-size:0.75rem;">Ekle</button>
+            <button type="button" class="btn-primary-compact btn-send-friend-req" data-target-id="${escapeHtml(u.id)}" style="padding:4px 10px; font-size:0.75rem;">Ekle</button>
           </div>
         `;
       });
@@ -2653,10 +2688,10 @@
         html += `
           <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:10px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-weight:700; font-size:0.92rem; color:var(--text-primary);">${d.title}</div>
+              <div style="font-weight:700; font-size:0.92rem; color:var(--text-primary);">${escapeHtml(d.title)}</div>
               <div style="font-size:0.75rem; color:var(--text-muted);">${words.length} Kelime</div>
             </div>
-            <button type="button" class="btn-primary-compact btn-import-f-deck" data-deck-id="${d.id}" style="padding:6px 10px; font-size:0.78rem;">İçe Aktar</button>
+            <button type="button" class="btn-primary-compact btn-import-f-deck" data-deck-id="${escapeHtml(d.id)}" style="padding:6px 10px; font-size:0.78rem;">İçe Aktar</button>
           </div>
         `;
       });
@@ -2761,6 +2796,9 @@
 
     async refreshSocialView() {
       this.updateUI();
+      if (!Array.isArray(window.CURATED_CEFR_PACKS) && window.WortCoachLoader && typeof window.WortCoachLoader.ensureCuratedPacks === 'function') {
+        await window.WortCoachLoader.ensureCuratedPacks().catch(() => {});
+      }
       await this.populateDeckSelects();
       await this.renderPendingRequests();
       await this.renderIncomingDeckGifts();
@@ -2789,7 +2827,7 @@
           const count = d.cardCount || 0;
           const label = d.name || d.title || 'Genel Deste';
           const sel = String(d.id) === defaultVal ? ' selected' : '';
-          userOnlyHtml += `<option value="${d.id}"${sel}>${label} (${count} kelime)</option>`;
+          userOnlyHtml += `<option value="${escapeHtml(d.id)}"${sel}>${escapeHtml(label)} (${count} kelime)</option>`;
         }
         userOnlyHtml += `</optgroup>`;
       } else {
@@ -2804,7 +2842,7 @@
           const val = 'pack:' + p.code;
           const count = Array.isArray(p.cards) ? p.cards.length : 0;
           const sel = val === defaultVal ? ' selected' : '';
-          gameHtml += `<option value="${val}"${sel}>${p.name} (${count} kelime)</option>`;
+          gameHtml += `<option value="${escapeHtml(val)}"${sel}>${escapeHtml(p.name)} (${count} kelime)</option>`;
         }
         gameHtml += `</optgroup>`;
       }
@@ -2908,13 +2946,31 @@
           });
         }
 
+        let vapidKey = 'BCw1SUoGfLyxLRej5gGkvNI8HsfVpXGbolJyKjpX9v43iwwyRKDE7GSW8RLU0vZMf7qSXhOQzcbrPLNhYpaUxvM';
+        try {
+          const vkRes = await this.apiCall('push/vapid_key', {});
+          if (vkRes && vkRes.ok && vkRes.publicKey) {
+            vapidKey = vkRes.publicKey;
+          }
+        } catch (_) {}
+
         let sub = await reg.pushManager.getSubscription();
+        const prevKey = localStorage.getItem('wm_vapid_pub') || '';
+        if (sub && prevKey !== vapidKey) {
+          try {
+            await sub.unsubscribe();
+            sub = null;
+          } catch (_) {}
+        }
+
         if (!sub && Notification.permission === 'granted') {
-          const VAPID_KEY = 'BJcW3pPjbzlIy0LSBdYVRW-aGDY6tDEixX1u_kT5aKejmGC59tNh6hZghflHxMXB0nak4bEuOreXjvaZE7uieyM';
           sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: this.urlBase64ToUint8Array(VAPID_KEY)
+            applicationServerKey: this.urlBase64ToUint8Array(vapidKey)
           });
+          localStorage.setItem('wm_vapid_pub', vapidKey);
+        } else if (sub && !prevKey) {
+          localStorage.setItem('wm_vapid_pub', vapidKey);
         }
 
         if (sub) {
@@ -2949,8 +3005,8 @@
 
         // Masaüstü tarayıcı fallback
         new Notification(title, {
-          icon: 'icons/icon-192.svg',
-          badge: 'icons/icon-192.svg',
+          icon: 'icons/icon-192.png',
+          badge: 'icons/icon-192.png',
           ...options
         });
       } catch (err) {
@@ -2989,13 +3045,13 @@
         <div style="display:flex; align-items:center; gap:6px; min-width:0; overflow:hidden;">
           <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10B981; flex-shrink:0;"></span>
           <span style="font-size:0.82rem; font-weight:800; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-            <b style="color:var(--brand-blue);">${item.fromUsername || 'Arkadaşın'}</b> seni Rekabete davet etti
+            <b style="color:var(--brand-blue);">${escapeHtml(item.fromUsername || 'Arkadaşın')}</b> seni Rekabete davet etti
           </span>
-          <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">(${item.pin})</span>
+          <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">(${escapeHtml(item.pin)})</span>
         </div>
         <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
           <button type="button" class="btn-toast-join" style="background:var(--brand-blue); color:#fff; border:none; padding:5px 12px; border-radius:999px; font-weight:800; font-size:0.78rem; cursor:pointer;">Katıl</button>
-          <button type="button" class="btn-toast-reject" style="background:transparent; color:var(--text-muted); border:none; padding:4px 6px; font-weight:900; font-size:0.88rem; cursor:pointer;" aria-label="Kapat">✕</button>
+          <button type="button" class="btn-toast-reject" style="background:transparent; color:var(--text-muted); border:none; padding:4px 6px; font-weight:900; font-size:0.88rem; cursor:pointer;" aria-label="Kapat">Kapat</button>
         </div>
       `;
 

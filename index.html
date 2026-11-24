@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.10.2" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.10.2" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.10.2" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.10.2" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.10.2" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.10.2" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.10.2" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.10.2" />
+  <link rel="manifest" href="manifest.json?v=3.11.0" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.11.0" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.11.0" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.11.0" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.11.0" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.11.0" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.11.0" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.11.0" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.10.2" />
-  <link rel="stylesheet" href="css/components.css?v=3.10.2" />
+  <link rel="stylesheet" href="css/app.css?v=3.11.0" />
+  <link rel="stylesheet" href="css/components.css?v=3.11.0" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -381,7 +381,7 @@
     <!-- ÜST BAR (HEADER: Academic Crest + Typography) -->
     <header class="app-header">
       <div class="brand-group" id="brand-home-trigger" title="WortCoach Ana Sayfa">
-        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.10.2" alt="WortCoach Logo" width="34" height="34" />
+        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.11.0" alt="WortCoach Logo" width="34" height="34" />
         <div class="brand-text-block">
           <div class="brand-logo" style="line-height:1.15;">
             Wort<span style="color:var(--brand-blue)">Coach</span>
@@ -2129,7 +2129,7 @@
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:8px;">
           <div class="brand-logo" style="font-size:1.4rem;">Wort<span style="color:var(--brand-blue)">Coach</span></div>
-          <span class="status-pill-green" style="font-size:0.72rem;">v2.7.0</span>
+          <span class="status-pill-green" style="font-size:0.72rem;">v3.11.0</span>
         </div>
         <button id="btn-close-settings-modal" class="icon-btn-ghost" aria-label="Kapat">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
@@ -2155,6 +2155,21 @@
           <span style="font-size:0.72rem; color:var(--text-muted); display:block; line-height:1.4;">
             <strong>Wav2Vec2 Neural CTC</strong> ve <strong>Montreal Forced Aligner (MFA Viterbi)</strong> motorları %100 ücretsiz ve tarayıcı içi çalışır. Dilerseniz Azure Speech anahtarıyla bulut GOP motorunu da kullanabilirsiniz.
           </span>
+        </div>
+
+        <!-- Tam Kütüphane Yedekleme & Geri Yükleme -->
+        <div style="background:var(--bg-inner); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px;">
+          <div style="font-size:0.86rem; font-weight:800; color:var(--text-primary); margin-bottom:4px;">Tam Kütüphane Yedekleme</div>
+          <p style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:10px;">Tüm destelerinizi, kartlarınızı ve SM-2 tekrar ilerlemenizi tek JSON dosyası olarak dışa veya içe aktarın.</p>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" id="btn-export-full-backup" class="btn-secondary" style="flex:1; min-width:150px; border-radius:var(--radius-md);">
+              <span>Tam Yedeği İndir (.json)</span>
+            </button>
+            <button type="button" id="btn-import-full-backup" class="btn-secondary" style="flex:1; min-width:150px; border-radius:var(--radius-md);">
+              <span>Yedekten Geri Yükle (.json)</span>
+            </button>
+          </div>
+          <input type="file" id="input-import-full-backup" accept=".json,application/json" style="display:none;" />
         </div>
 
         <!-- Örnek Verileri Yeniden Yükle -->
@@ -3326,25 +3341,23 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script defer src="js/config.js?v=3.10.2"></script>
-  <script defer src="js/db.js?v=3.10.2"></script>
-  <script defer src="js/verbHelper.js?v=3.10.2"></script>
-  <script defer src="js/grammarEnrichment.js?v=3.10.2"></script>
-  <script defer src="js/offlineDictionary.js?v=3.10.2"></script>
-  <script defer src="js/dictionary.js?v=3.10.2"></script>
-  <script defer src="js/curatedPacks.js?v=3.10.2"></script>
-  <script defer src="js/seeder.js?v=3.10.2"></script>
-  <script defer src="js/tts.js?v=3.10.2"></script>
-  <script defer src="js/pronunciation.js?v=3.10.2"></script>
-  <script defer src="js/translator.js?v=3.10.2"></script>
-  <script defer src="js/game.js?v=3.10.2"></script>
-  <script defer src="js/study.js?v=3.10.2"></script>
-  <script defer src="js/stats.js?v=3.10.2"></script>
-  <script defer src="js/coach.js?v=3.10.2"></script>
-  <script defer src="js/deckBuilder.js?v=3.10.2"></script>
-  <script defer src="js/satzBuilder.js?v=3.10.2"></script>
-  <script defer src="js/social.js?v=3.10.2"></script>
-  <script defer src="js/app.js?v=3.10.2"></script>
+  <script defer src="js/config.js?v=3.11.0"></script>
+  <script defer src="js/db.js?v=3.11.0"></script>
+  <script defer src="js/verbHelper.js?v=3.11.0"></script>
+  <script defer src="js/grammarEnrichment.js?v=3.11.0"></script>
+  <script defer src="js/offlineDictionary.js?v=3.11.0"></script>
+  <script defer src="js/dictionary.js?v=3.11.0"></script>
+  <script defer src="js/seeder.js?v=3.11.0"></script>
+  <script defer src="js/tts.js?v=3.11.0"></script>
+  <script defer src="js/translator.js?v=3.11.0"></script>
+  <script defer src="js/game.js?v=3.11.0"></script>
+  <script defer src="js/study.js?v=3.11.0"></script>
+  <script defer src="js/stats.js?v=3.11.0"></script>
+  <script defer src="js/coach.js?v=3.11.0"></script>
+  <script defer src="js/deckBuilder.js?v=3.11.0"></script>
+  <script defer src="js/satzBuilder.js?v=3.11.0"></script>
+  <script defer src="js/social.js?v=3.11.0"></script>
+  <script defer src="js/app.js?v=3.11.0"></script>
 </body>
 </html>
 

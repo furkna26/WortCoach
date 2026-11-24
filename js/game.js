@@ -47,6 +47,11 @@ class WordGameService {
     }
 
     // Küratörlü hazır destelerden kelime havuzunu zenginleştir
+    const hasRichCurated = typeof window !== 'undefined' && Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0] && Array.isArray(window.CURATED_CEFR_PACKS[0].cards);
+    if ((!isFiltered || userCards.length < 10) && typeof window !== 'undefined' && !hasRichCurated && window.WortCoachLoader && typeof window.WortCoachLoader.ensureCuratedPacks === 'function') {
+      await window.WortCoachLoader.ensureCuratedPacks().catch(() => {});
+    }
+
     const curatedCards = [];
     if (typeof window !== 'undefined' && Array.isArray(window.CURATED_CEFR_PACKS)) {
       window.CURATED_CEFR_PACKS.forEach((pack, pIdx) => {

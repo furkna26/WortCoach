@@ -88,22 +88,46 @@ class WortCoachApp {
     const azureStatus = document.getElementById('azure-speech-status');
     const settingsEngineSelect = document.getElementById('select-settings-phonetic-engine');
 
+    const engineLabelMap = {
+      HYBRID_ENSEMBLE: 'Hibrit Ensemble (Önerilen)',
+      WAV2VEC2_CTC: 'Wav2Vec2 Neural CTC (Yapay Zeka)',
+      MFA_FORCED_ALIGN: 'MFA / Kaldi Zorlamalı Hizalama',
+      AZURE_CLOUD: 'Azure Cloud GOP'
+    };
+
     const updatePhoneticStatusUI = () => {
-      const curEng = window.wmPronunciation ? window.wmPronunciation.getSelectedEngine() : 'HYBRID_ENSEMBLE';
+      let curEng = 'HYBRID_ENSEMBLE';
+      if (window.wmPronunciation) {
+        curEng = window.wmPronunciation.getSelectedEngine();
+      } else {
+        try {
+          const saved = (localStorage.getItem('wortcoach_phonetic_engine') || '').trim();
+          if (engineLabelMap[saved]) curEng = saved;
+        } catch (_) {}
+      }
       if (settingsEngineSelect) settingsEngineSelect.value = curEng;
       if (azureStatus) {
         const meta = window.wmPronunciation ? window.wmPronunciation.getSelectedEngineMeta() : null;
-        azureStatus.textContent = meta ? meta.shortLabel : 'Aktif';
+        azureStatus.textContent = meta ? meta.shortLabel : (engineLabelMap[curEng] || 'Aktif');
         azureStatus.style.color = '#10B981';
       }
     };
     updatePhoneticStatusUI();
 
-    settingsEngineSelect?.addEventListener('change', () => {
+    settingsEngineSelect?.addEventListener('change', async () => {
+      const chosen = settingsEngineSelect.value;
+      if (!window.wmPronunciation && window.WortCoachLoader && typeof window.WortCoachLoader.ensurePronunciation === 'function') {
+        try {
+          localStorage.setItem('wortcoach_phonetic_engine', chosen);
+        } catch (_) {}
+        await window.WortCoachLoader.ensurePronunciation().catch(() => {});
+      }
       if (window.wmPronunciation) {
-        window.wmPronunciation.setSelectedEngine(settingsEngineSelect.value);
+        window.wmPronunciation.setSelectedEngine(chosen);
         const meta = window.wmPronunciation.getSelectedEngineMeta();
         this.showToast(`Fonetik Motoru: ${meta.shortLabel} seçildi.`);
+      } else {
+        this.showToast(`Fonetik Motoru: ${engineLabelMap[chosen] || chosen} seçildi.`);
       }
       updatePhoneticStatusUI();
       this.syncPronunciationEngineSelectorUI();
@@ -399,6 +423,22 @@ class WortCoachApp {
     } catch (_) {}
 
     await this.handleCurrentRoute();
+
+    try {
+      const searchParams = new URLSearchParams(window.location.search || '');
+      const sharedText = (searchParams.get('shared_text') || searchParams.get('text') || searchParams.get('shared_url') || '').trim();
+      if (sharedText) {
+        try {
+          window.history.replaceState({}, '', `${window.location.pathname}#/okuyucu`);
+        } catch (_) {}
+        await this.switchTab('tab-reader', { skipRoutePush: true });
+        const readerInput = document.getElementById('reader-input-text');
+        if (readerInput) {
+          readerInput.value = sharedText;
+          document.getElementById('btn-reader-parse')?.click();
+        }
+      }
+    } catch (_) {}
   }
 
   async handleCurrentRoute() {
@@ -580,7 +620,7 @@ class WortCoachApp {
     }
   }
 
-  // --- AYARLAR MODALI (DeepL API & Örnek Veri Sıfırlama) ---
+  // --- AYARLAR MODALI (Tam Yedekleme, Fonetik Motor & Örnek Veri Sıfırlama) ---
   bindSettingsModal() {
     document.getElementById('btn-open-settings')?.addEventListener('click', () => {
       document.getElementById('modal-settings')?.classList.remove('hidden');
@@ -588,6 +628,52 @@ class WortCoachApp {
 
     document.getElementById('btn-close-settings-modal')?.addEventListener('click', () => {
       document.getElementById('modal-settings')?.classList.add('hidden');
+    });
+
+    document.getElementById('btn-export-full-backup')?.addEventListener('click', async () => {
+      try {
+        if (!window.wmDB || typeof window.wmDB.exportFullBackup !== 'function') return;
+        const data = await window.wmDB.exportFullBackup();
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wortcoach-yedek-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        this.showToast(`${data.decks.length} deste ve ${data.cards.length} kart yedeklendi.`);
+      } catch (e) {
+        this.showToast('Yedekleme oluşturulamadı: ' + (e.message || 'Hata'));
+      }
+    });
+
+    const importFileInput = document.getElementById('input-import-full-backup');
+    document.getElementById('btn-import-full-backup')?.addEventListener('click', () => {
+      importFileInput?.click();
+    });
+
+    importFileInput?.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const res = await window.wmDB.importFullBackup(parsed, { mode: 'merge' });
+        await this.refreshHomeDashboard();
+        await this.renderDecksTab();
+        await this.renderCardsList();
+        if (window.wmStudy && typeof window.wmStudy.populateDeckSelector === 'function') {
+          await window.wmStudy.populateDeckSelector();
+        }
+        this.showToast(`Geri yüklendi: ${res.decksAdded} yeni deste, ${res.cardsAdded} yeni kart (${res.cardsSkipped} mevcut kart korundu).`);
+      } catch (err) {
+        this.showToast('Yedek geri yüklenemedi: ' + (err.message || 'Geçersiz JSON dosyası'));
+      } finally {
+        e.target.value = '';
+      }
     });
   }
 
@@ -2930,6 +3016,38 @@ class WortCoachApp {
 
     this.bindGameDeckSelectionModal();
     this.bindCableGameModal();
+
+    if (!this._gameKbBound) {
+      this._gameKbBound = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const active = document.activeElement;
+        if (active && (/^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName) || active.isContentEditable)) return;
+
+        const quizModal = document.getElementById('modal-game-quiz');
+        if (!quizModal || quizModal.classList.contains('hidden')) return;
+
+        const keyLower = (e.key || '').toLowerCase();
+        const keyMap = { '1': 0, '2': 1, '3': 2, '4': 3, a: 0, b: 1, c: 2, d: 3 };
+        if (Object.prototype.hasOwnProperty.call(keyMap, keyLower)) {
+          const btns = quizModal.querySelectorAll('#game-options-container .game-option-btn');
+          const targetBtn = btns[keyMap[keyLower]];
+          if (targetBtn && !targetBtn.disabled) {
+            e.preventDefault();
+            targetBtn.click();
+          }
+          return;
+        }
+
+        if (e.key === 'Enter' || e.key === ' ') {
+          const nextBtn = document.getElementById('btn-game-next');
+          if (nextBtn && !nextBtn.classList.contains('hidden') && !nextBtn.disabled) {
+            e.preventDefault();
+            nextBtn.click();
+          }
+        }
+      });
+    }
   }
 
   // --- OYUN İÇİN DESTE SEÇİM EKRANI ---
@@ -3806,6 +3924,10 @@ class WortCoachApp {
         btn.disabled = true;
         btn.innerHTML = `<span>Tümü Yükleniyor...</span>`;
       }
+      const hasRichCurated = Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0] && Array.isArray(window.CURATED_CEFR_PACKS[0].cards);
+      if (!hasRichCurated && window.WortCoachLoader && typeof window.WortCoachLoader.ensureCuratedPacks === 'function') {
+        await window.WortCoachLoader.ensureCuratedPacks().catch(() => {});
+      }
       await window.DatabaseSeeder.importAllPacks();
       this.showToast('Tüm hazır desteler başarıyla yüklendi.');
       await this.renderCuratedPacksModal();
@@ -3827,6 +3949,12 @@ class WortCoachApp {
   async renderCuratedPacksModal() {
     const container = document.getElementById('curated-packs-container');
     if (!container) return;
+
+    const hasRichCurated = Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0] && Array.isArray(window.CURATED_CEFR_PACKS[0].cards);
+    if (!hasRichCurated && window.WortCoachLoader && typeof window.WortCoachLoader.ensureCuratedPacks === 'function') {
+      container.innerHTML = '<div style="text-align:center; padding:18px; color:var(--text-muted); font-size:0.85rem;">Hazır paketler yükleniyor...</div>';
+      await window.WortCoachLoader.ensureCuratedPacks().catch(() => {});
+    }
 
     const packs = window.DatabaseSeeder.getAllPacks();
     const existingDecks = await window.wmDB.getAllDecks();
@@ -5146,6 +5274,11 @@ ${jsonStr}`
       return;
     }
 
+    if (!window.wmPronunciation && window.WortCoachLoader && typeof window.WortCoachLoader.ensurePronunciation === 'function') {
+      await window.WortCoachLoader.ensurePronunciation().catch(() => {});
+      this.syncPronunciationEngineSelectorUI();
+    }
+
     this.pronState.isTrainerSession = true;
     this.pronState.trainerCards = shuffled;
     this.pronState.trainerIndex = 0;
@@ -5161,8 +5294,12 @@ ${jsonStr}`
     this.renderPronunciationTarget();
   }
 
-  openPronunciationCoach(entry, initialMode = 'word', options = {}) {
+  async openPronunciationCoach(entry, initialMode = 'word', options = {}) {
     if (!entry) return;
+    if (!window.wmPronunciation && window.WortCoachLoader && typeof window.WortCoachLoader.ensurePronunciation === 'function') {
+      await window.WortCoachLoader.ensurePronunciation().catch(() => {});
+      this.syncPronunciationEngineSelectorUI();
+    }
     this.pronState.isTrainerSession = false;
     this.pronState.trainerCards = [];
     this.pronState.trainerIndex = 0;

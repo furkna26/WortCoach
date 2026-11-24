@@ -1,6 +1,6 @@
 # WortCoach — Morfolojik Almanca Sözlük, Akustik Fonetik Analiz ve İnteraktif Dil Edinimi Platformu
 
-WortCoach; Almanca (DE) kelime edinimi, morfolojik ve sentaktik çözümleme, akustik fonetik telaffuz değerlendirmesi, aralıklı tekrarlama (Leitner Spaced Repetition System) ve eşzamanlı çok oyunculu öğrenme süreçlerini bütünleşik bir yapıda sunan kapsamlı bir dil edinimi platformudur.
+WortCoach; Almanca (DE) kelime edinimi, morfolojik ve sentaktik çözümleme, akustik fonetik telaffuz değerlendirmesi, 4'lü SM-2 aralıklı tekrarlama (Spaced Repetition System) ve eşzamanlı çok oyunculu öğrenme süreçlerini bütünleşik bir yapıda sunan kapsamlı bir dil edinimi platformudur.
 
 Bu doküman, uygulama içerisinde yer alan modüllerin dilbilimsel, pedagojik ve algoritmik çalışma prensiplerini detaylı olarak açıklamaktadır.
 
@@ -10,13 +10,14 @@ Bu doküman, uygulama içerisinde yer alan modüllerin dilbilimsel, pedagojik ve
 
 1. [Morfolojik Sözlük, Kök Çözümleme ve Gramer Zenginleştirme Modülü](#1-morfolojik-sözlük-kök-çözümleme-ve-gramer-zenginleştirme-modülü)
 2. [Akustik Fonetik ve Telaffuz Değerlendirme Modülü (Telaffuz Koçu)](#2-akustik-fonetik-ve-telaffuz-değerlendirme-modülü-telaffuz-koçu)
-3. [Leitner Aralıklı Tekrarlama Sistemi (Spaced Repetition System — SRS)](#3-leitner-aralıklı-tekrarlama-sistemi-spaced-repetition-system--srs)
+3. [4'lü SM-2 Aralıklı Tekrarlama Sistemi (Spaced Repetition System — SRS)](#3-4lü-sm-2-aralıklı-tekrarlama-sistemi-spaced-repetition-system--srs)
 4. [Koç ile Deste Oluşturma Modülü (Kelime Destesi ve Quiz Destesi)](#4-koç-ile-deste-oluşturma-modülü-kelime-destesi-ve-quiz-destesi)
-5. [Sätze bilden — Sentaktik Cümle Kurma ve Kelime Kısıt Denetimi Modülü](#5-sätze-bilden--sentaktik-cümle-kurma-ve-kelime-kısıt-denetimi-modülü)
+5. [Sätze bilden — Sentaktik Cümle Kurma ve Kelime Kısıt Denetimi Modülü](#5-sätze-bilden--sentaktik-cümlle-kurma-ve-kelime-kısıt-denetimi-modülü)
 6. [İnteraktif Alıştırma ve Oyun Modülleri](#6-interaktif-alıştırma-ve-oyun-modülleri)
 7. [Almanca Dil Koçu (Diyalog ve Dinamik Alıştırma Modülü)](#7-almanca-dil-koçu-diyalog-ve-dinamik-alıştırma-modülü)
 8. [Nöral Çeviri ve Akıllı Okuma Modülü](#8-nöral-çeviri-ve-akıllı-okuma-modülü)
 9. [Sosyal Öğrenme, Rekabetçi Düello, Ortak Deste ve ELO Derecelendirme Modülü](#9-sosyal-öğrenme-rekabetçi-düello-ortak-deste-ve-elo-derecelendirme-modülü)
+10. [Teknik Mimari ve v3.11.0 Özellikleri](#10-teknik-mimari-ve-v3110-özellikleri)
 
 ---
 
@@ -65,32 +66,31 @@ Hatalı veya düşük puanlı fonemler renk kodlarıyla (yeşil, sarı, kırmız
 
 ---
 
-## 3. Leitner Aralıklı Tekrarlama Sistemi (Spaced Repetition System — SRS)
+## 3. 4'lü SM-2 Aralıklı Tekrarlama Sistemi (Spaced Repetition System — SRS)
 
-Öğrenilen kelimelerin ve bilgi kartlarının kısa süreli bellekten uzun süreli belleğe aktarılması için 5 aşamalı Leitner aralıklı tekrarlama algoritması kullanılır.
+Öğrenilen kelimelerin ve bilgi kartlarının kısa süreli bellekten uzun süreli belleğe aktarılması için dinamik kolaylık faktörlü (**Ease Factor**) 4 seviyeli SM-2 aralıklı tekrarlama algoritması ve **Cloze** (boşluk doldurma) çalışma modu kullanılır.
 
-### 3.1. Dinamik Kutu ve Tekrar Periyotları
-Her kart, kullanıcının hatırlama başarısına göre 1 ile 5 arasındaki kutular arasında hareket eder:
-- **Kutu 1:** Yeni eklenen veya yanlış yanıtlanan kartlar (Tekrar aralığı: **1 gün**).
-- **Kutu 2:** İlk tekrarı başarılı olan kartlar (Tekrar aralığı: **2 gün**).
-- **Kutu 3:** Orta düzeyde pekişmiş kartlar (Tekrar aralığı: **4 gün**).
-- **Kutu 4:** Güçlü bellek izine sahip kartlar (Tekrar aralığı: **7 gün**).
-- **Kutu 5:** Uzun süreli belleğe yerleşmiş kartlar (Tekrar aralığı: **14 gün**).
+### 3.1. Değerlendirme Seviyeleri ve Tekrar Periyotları
+Her kart, kullanıcının hatırlama zorluğuna göre dört değerlendirme butonundan biriyle güncellenir:
+- **Tekrar (`< 10 dk`):** Unutulan kartların tekrar sayacını sıfırlar ve kısa oturum tekrarına alır.
+- **Zor (`1 gün`):** Kartın tekrar aralığını temkinli biçimde uzatır ve `easeFactor` katsayısını düşürür.
+- **İyi (`3 gün` ve katları):** Standart SM-2 artış çarpanıyla kartı bir sonraki uzun süreli aralığa taşır.
+- **Kolay (`8 gün` ve üstü):** Güçlü bellek izi olan kartların kolaylık faktörünü yükselterek aralığı hızla genişletir.
 
-### 3.2. Çalışma Akışı ve Bilişsel Takip
-- Kullanıcı bir kartı doğru hatırladığında kart bir üst kutuya terfi eder ve bir sonraki tekrar tarihi ilgili kutunun gün aralığına göre ileri taşınır.
-- Yanlış yanıtlanan kartlar anında **Kutu 1** düzeyine geri döner ve ertesi gün tekrar çalışma kuyruğuna dahil edilir.
+### 3.2. Çalışma Akışı, Olgunluk Rozetleri ve Cloze Modu
+- Her kart ilerlemesine göre **Yeni**, **Öğreniliyor**, **Genç** veya **Olgun** rozetleriyle sınıflandırılır.
+- **Cloze (Boşluk Doldurma) Modu:** Örnek cümledeki hedef kelime gizlenerek bağlam içinde hatırlama pratiği yapılır.
 - Ana sayfa üzerindeki gösterge paneli; o gün tekrar zamanı gelmiş (*Due*) kart sayısını, günlük hedef ilerlemesini ve kesintisiz çalışma serisini (*Streak*) gerçek zamanlı olarak takip eder.
 
 ---
 
 ## 4. Koç ile Deste Oluşturma Modülü (Kelime Destesi ve Quiz Destesi)
 
-Bu modül, kullanıcının yüklediği ders materyallerini (PDF belgeleri, Word `.docx` dosyaları, `.txt` metinleri, kitap/defter fotoğrafları veya doğrudan yapıştırılan metinler) analiz ederek iki farklı yapıda çalışma destesine dönüştürür:
+Bu modül, kullanıcının yüklediği ders materyallerini (PDF belgeleri, Word `.docx` dosyaları, `.txt` metinleri, kitap/defter fotoğrafları veya doğrudan yapıştırılan metinler) analiz ederek iki farklı yapıda kapsamlı çalışma destesine dönüştürür:
 
-### 4.1. Kelime Destesi Modu
-- Yüklenen belgedeki Almanca kelimeleri tespit eder ve her birini çekimsiz sözlük köküne (*Lemma*) dönüştürür.
-- İsimler için doğru artikeli ve çoğul ekini, fiiller için mastar halini ve sözcük türünü (`NOUN`, `VERB`, `ADJ`, `ADV`, `PHRASE`) belirler.
+### 4.1. Kapsamlı Kelime Destesi Ayıklama
+- Yüklenen belgedeki Almanca kelimeleri tespit eder ve her birini çekimsiz sözlük köküne (*Lemma*) dönüştürür; metindeki uygun kelimeleri 15–25 kartla kısıtlamadan **250 karta kadar** baştan sona ayıklar ve uzun metinlerde otomatik devam taraması ile **`+ Daha Fazla Kart Çıkar`** seçeneği sunar.
+- İsimler için doğru artikeli ve çoğul ekini, fiiller için mastar halini ve sözcük türünü (`NOUN`, `VERB`, `ADJ`, `ADV`, `PHRASE`) belirler; kullanıcı hedef kart sayısı kapsamını (`Tümü`, `En az 50`, `En az 100`) seçebilir.
 - Kartın ön yüzüne Almanca kelimeyi, arka yüzüne Türkçe anlamını ve alt bilgi alanına belgeden çıkarılan bağlamsal ipuçlarını veya örnek cümleyi yerleştirir.
 
 ### 4.2. Quiz Destesi Modu (Soru - Cevap - Ek Bilgi)
@@ -160,7 +160,7 @@ Almanca Dil Koçu, kullanıcının seçtiği CEFR seviyesine (A1–C1) göre ça
 
 ### 8.2. Akıllı Okuma ve Belge İnceleme
 - Kullanıcının yüklediği PDF, DOCX veya metin belgelerini etkileşimli bir okuma ekranına dönüştürür.
-- Metin içerisindeki her bir kelime tıklanabilir yapıdadır: Kullanıcı okuma yaparken bilmediği bir kelimeye tıkladığında alt panelde kelimenin kanonik kökü, artikeli, Türkçe anlamı ve tüm cümlenin çevirisi anında açılır; kullanıcı okumayı bölmeden kelimeyi seçtiği desteye kaydedebilir.
+- Metin içerisindeki her bir kelime tıklanabilir yapıdadır: Kullanıcı okuma yaparken bilmediği bir kelimeye tıkladığında alt panelde kelimenin kanonik kökü, artikeli, eşzamanlı Google Çeviri destekli çoklu **Türkçe ve İngilizce anlamları** ile tüm cümlenin çevirisi anında açılır; kullanıcı okumayı bölmeden kelimeyi seçtiği desteye kaydedebilir.
 
 ---
 
@@ -172,4 +172,13 @@ Bireysel çalışmaları topluluk etkileşimiyle destekleyen çok oyunculu modü
 - **Birebir Rekabetçi Düello:** Arkadaş listesindeki kullanıcılarla gerçek zamanlı kelime ve bilgi düelloları.
 - **İşbirlikçi Ortak Deste Çalışması (`COL-XXXX`):** Oluşturulan işbirliği kodu üzerinden birden fazla kullanıcının aynı anda ortak bir desteye kelime veya soru kartı eklemesi ve tamamlanan desteyi kendi kütüphanelerine kaydetmesi.
 - **Çalışma Kulüpleri ve Topluluk Kütüphanesi:** Kulüp üyelerinin ortak desteler oluşturabildiği, kendi aralarında sohbet edebildiği ve topluluk tarafından paylaşılan açık desteleri kendi cihazlarına indirebildiği paylaşım ağı.
-- **Dinamik ELO ve Lig Sistemi:** Alıştırmalar, oyunlar ve canlı düellolardaki doğruluk oranı, yanıt süresi ve kelime zorluğuna göre hesaplanan ELO puanı ile *Bronz, Gümüş, Altın, Platin, Elmas* ve *Usta* liglerinde kademe ilerlemesi.
+- **Dinamik ELO ve Lig Sistemi:** Alıştırmalar, oyunlar ve canlı düellolardaki doğruluk oranı, yanıt süresi ve kelime zorluğuna göre hesaplanan ELO puanı ile *Tahta, Demir, Bronz, Gümüş, Altın, Platin, Elmas* ve *Grossmeister* liglerinde kademe ilerlemesi.
+
+---
+
+## 10. Teknik Mimari ve v3.11.0 Özellikleri
+
+- **Tam Kütüphane Yedekleme ve Geri Yükleme:** Ayarlar menüsünden tüm desteler, kartlar, SM-2 tekrar verileri ve çalışma günlükleri tek `.json` dosyası olarak dışa ve içe aktarılabilir.
+- **Masaüstü Klavye Kısayolları:** Tekrar oturumlarında `Space`/`Enter` (kart çevir), `1–4` (Tekrar/Zor/İyi/Kolay), `R` (telaffuz seslendir), `P` (öncelik işaretçi); kelime oyunlarında `1–4` / `A–D` (şık seçimi) ve `Enter`/`Space` (sonraki soru) desteği.
+- **PWA Kısayolları ve Doğrudan Paylaşım (`share_target`):** Mobil ana ekranda uygulama simgesine uzun basıldığında açılan hızlı kısayollar (*Tekrar Yap*, *Akıllı Okuma*, *Almanca Koçu*) ve diğer uygulamalardan paylaşılan Almanca metinleri doğrudan Akıllı Okuma modunda açma desteği.
+- **Güvenli Cloudflare Worker Proxy ve İsteğe Bağlı Yükleme:** Supabase Auth JWT doğrulaması, IP tabanlı hız sınırları, Cloud Secret üzerinde saklanan VAPID Push anahtarı ile korunan Worker mimarisi; PDF.js, Mammoth.js, `curatedPacks.js` ve `pronunciation.js` modüllerinin yalnızca kullanıldığında yüklenmesi (lazy load) sayesinde hızlı ilk açılış.

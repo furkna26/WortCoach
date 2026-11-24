@@ -672,6 +672,120 @@ class WortMeisterDatabase {
     const startMs = startOfDay.getTime();
     return all.filter((l) => (l.reviewedAt || 0) >= startMs);
   }
+
+  async exportFullBackup() {
+    const [decks, cards, studyLogs] = await Promise.all([
+      this.getAllDecks(),
+      this.getAllCards(),
+      this.getAllStudyLogs()
+    ]);
+    return {
+      format: 'wortcoach-full-backup',
+      version: '3.11.0',
+      exportedAt: new Date().toISOString(),
+      decks,
+      cards,
+      studyLogs
+    };
+  }
+
+  async importFullBackup(backupData, { mode = 'merge' } = {}) {
+    if (!backupData || backupData.format !== 'wortcoach-full-backup' || !Array.isArray(backupData.decks) || !Array.isArray(backupData.cards)) {
+      throw new Error('Geçersiz WortCoach yedek dosyası.');
+    }
+
+    const existingDecks = await this.getAllDecks();
+    const deckNameToId = new Map();
+    for (const d of existingDecks) {
+      const key = (d.name || d.title || '').trim().toLowerCase();
+      if (key && !deckNameToId.has(key)) deckNameToId.set(key, Number(d.id));
+    }
+
+    const deckIdMap = new Map();
+    let decksAdded = 0;
+    for (const d of backupData.decks) {
+      if (!d || typeof d !== 'object') continue;
+      const dName = (d.name || d.title || 'Yedek Deste').trim() || 'Yedek Deste';
+      const key = dName.toLowerCase();
+      let mappedId = deckNameToId.get(key);
+      if (!mappedId) {
+        const created = await this.createDeck(dName);
+        mappedId = Number(created.id);
+        deckNameToId.set(key, mappedId);
+        decksAdded++;
+      }
+      if (d.id !== undefined) deckIdMap.set(Number(d.id), mappedId);
+    }
+
+    const fallbackDeckId = existingDecks[0] ? Number(existingDecks[0].id) : (deckNameToId.values().next().value || 1);
+    const existingCards = await this.getAllCards();
+    const seenCardKeys = new Set();
+    for (const c of existingCards) {
+      const wKey = `${Number(c.deckId) || 1}::${(c.germanWord || '').trim().toLowerCase()}`;
+      seenCardKeys.add(wKey);
+    }
+
+    const toInsert = [];
+    let cardsSkipped = 0;
+    for (const c of backupData.cards) {
+      if (!c || typeof c !== 'object') continue;
+      const cleanWord = (c.germanWord || '').trim();
+      if (!cleanWord) continue;
+      const mappedDeckId = deckIdMap.get(Number(c.deckId)) || fallbackDeckId;
+      const wKey = `${mappedDeckId}::${cleanWord.toLowerCase()}`;
+      if (mode === 'merge' && seenCardKeys.has(wKey)) {
+        cardsSkipped++;
+        continue;
+      }
+      seenCardKeys.add(wKey);
+      const clone = { ...c, deckId: mappedDeckId };
+      delete clone.id;
+      toInsert.push(clone);
+    }
+
+    if (toInsert.length > 0) {
+      await this.addCardsBatch(toInsert);
+    }
+
+    let logsAdded = 0;
+    if (Array.isArray(backupData.studyLogs) && backupData.studyLogs.length > 0) {
+      const existingLogs = await this.getAllStudyLogs();
+      const existingLogKeys = new Set(existingLogs.map((l) => `${l.reviewedAt || 0}::${l.rating || ''}`));
+      const logsToAdd = [];
+      for (const l of backupData.studyLogs.slice(0, 5000)) {
+        if (!l || typeof l !== 'object') continue;
+        const revAt = Number(l.reviewedAt) || 0;
+        const rat = String(l.rating || '');
+        const lk = `${revAt}::${rat}`;
+        if (!existingLogKeys.has(lk)) {
+          existingLogKeys.add(lk);
+          logsToAdd.push({
+            cardId: Number(l.cardId) || 0,
+            rating: rat,
+            reviewedAt: revAt || Date.now()
+          });
+        }
+      }
+      if (logsToAdd.length > 0) {
+        await this.init();
+        await new Promise((resolve, reject) => {
+          const tx = this.db.transaction('studyLogs', 'readwrite');
+          const store = tx.objectStore('studyLogs');
+          for (const rec of logsToAdd) {
+            store.add(rec);
+          }
+          tx.oncomplete = () => {
+            logsAdded = logsToAdd.length;
+            resolve();
+          };
+          tx.onerror = (e) => reject(e.target.error);
+          tx.onabort = (e) => reject(e.target.error || new Error('StudyLogs transaction aborted'));
+        });
+      }
+    }
+
+    return { decksAdded, cardsAdded: toInsert.length, cardsSkipped, logsAdded };
+  }
 }
 
 window.wmDB = new WortMeisterDatabase();
