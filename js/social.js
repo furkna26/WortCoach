@@ -595,6 +595,99 @@
     // =========================================================================
     // DESTE SEÇİM ÇÖZÜMLEYİCİSİ (YEREL DESTELER + HAZIR KÜRATÖRLÜ PAKETLER)
     // =========================================================================
+    serializeCardForCloud(c) {
+      const article = (c.article || '').trim();
+      const rawWord = (c.germanWord || c.front || c.lemma || '').trim();
+      const lemma = (article && rawWord && !rawWord.toLowerCase().startsWith(article.toLowerCase() + ' '))
+        ? `${article} ${rawWord}`
+        : rawWord;
+      return {
+        lemma,
+        germanWord: rawWord || lemma,
+        article,
+        pluralForm: (c.pluralForm || '').trim(),
+        contextMeaning: (c.meaningsTr || c.back || c.contextMeaning || '').trim(),
+        meaningsEn: (c.meaningsEn || '').trim(),
+        pos: c.partOfSpeech || c.pos || 'NOUN',
+        sourceSentence: (c.exampleSentence || c.example || c.sourceSentence || '').trim(),
+        exampleTranslationTr: (c.exampleTranslationTr || '').trim(),
+        isQuizCard: Boolean(c.isQuizCard),
+        praesens: c.praesens || '',
+        praeteritum: c.praeteritum || '',
+        partizipZwei: c.partizipZwei || '',
+        hilfsverb: c.hilfsverb || '',
+        imperativ: c.imperativ || '',
+        isSeparable: Boolean(c.isSeparable),
+        separablePrefix: c.separablePrefix || '',
+        regularity: c.regularity || '',
+        isReflexive: Boolean(c.isReflexive),
+        reflexiveType: c.reflexiveType || null
+      };
+    }
+
+    buildLocalCardFromCloudWord(w, deckId) {
+      let germanWord = (w.germanWord || w.lemma || w.front || '').trim();
+      const partOfSpeech = String(w.pos || w.partOfSpeech || 'NOUN').toUpperCase();
+      let article = (w.article || '').trim();
+      const isQuizCard = Boolean(w.isQuizCard);
+
+      if (!isQuizCard && !article && partOfSpeech === 'NOUN' && germanWord) {
+        const m = germanWord.match(/^(der|die|das)\s+(.+)$/i);
+        if (m) {
+          article = m[1].toLowerCase();
+          germanWord = m[2].trim();
+        }
+      }
+
+      const card = {
+        deckId,
+        germanWord,
+        meaningsTr: (w.contextMeaning || w.back || w.meaningsTr || '').trim(),
+        meaningsEn: (w.meaningsEn || '').trim(),
+        partOfSpeech,
+        article,
+        pluralForm: (w.pluralForm || '').trim(),
+        exampleSentence: (w.sourceSentence || w.example || w.exampleSentence || '').trim(),
+        exampleTranslationTr: (w.exampleTranslationTr || '').trim(),
+        isQuizCard,
+        praesens: w.praesens || '',
+        praeteritum: w.praeteritum || '',
+        partizipZwei: w.partizipZwei || '',
+        hilfsverb: w.hilfsverb || '',
+        imperativ: w.imperativ || '',
+        isSeparable: Boolean(w.isSeparable),
+        separablePrefix: w.separablePrefix || '',
+        regularity: w.regularity || '',
+        isReflexive: Boolean(w.isReflexive),
+        reflexiveType: w.reflexiveType || null
+      };
+
+      if (
+        !isQuizCard &&
+        partOfSpeech === 'VERB' &&
+        germanWord &&
+        (!card.praesens || !card.praeteritum || !card.partizipZwei || !card.imperativ) &&
+        window.GermanVerbHelper &&
+        typeof window.GermanVerbHelper.conjugate === 'function'
+      ) {
+        const conj = window.GermanVerbHelper.conjugate(germanWord);
+        if (conj) {
+          if (!card.praesens) card.praesens = conj.praesens || '';
+          if (!card.praeteritum) card.praeteritum = conj.praeteritum || '';
+          if (!card.partizipZwei) card.partizipZwei = conj.partizipZwei || '';
+          if (!card.hilfsverb) card.hilfsverb = conj.hilfsverb || '';
+          if (!card.imperativ) card.imperativ = conj.imperativ || '';
+          if (!card.isSeparable && conj.isSeparable) card.isSeparable = true;
+          if (!card.separablePrefix && conj.separablePrefix) card.separablePrefix = conj.separablePrefix;
+          if (!card.regularity && conj.regularity) card.regularity = conj.regularity;
+          if (!card.isReflexive && conj.isReflexive) card.isReflexive = true;
+          if (!card.reflexiveType && conj.reflexiveType) card.reflexiveType = conj.reflexiveType;
+        }
+      }
+
+      return card;
+    }
+
     async getDeckWithCardsBySelection(selectionVal) {
       const val = String(selectionVal || '').trim();
       if (val.startsWith('pack:')) {
@@ -605,12 +698,7 @@
         const packs = Array.isArray(window.CURATED_CEFR_PACKS) ? window.CURATED_CEFR_PACKS : [];
         const pack = packs.find(p => p.code === packCode) || packs[0];
         if (!pack) throw new Error('Hazır deste paketi bulunamadı.');
-        const words = (pack.cards || []).map(c => ({
-          lemma: (c.article ? `${c.article} ${c.germanWord}` : c.germanWord) || '',
-          contextMeaning: c.meaningsTr || '',
-          pos: c.partOfSpeech || 'NOUN',
-          sourceSentence: c.exampleSentence || ''
-        }));
+        const words = (pack.cards || []).map(c => this.serializeCardForCloud(c));
         return {
           id: val,
           title: pack.name,
@@ -636,14 +724,7 @@
       }
 
       let rawCards = await this.getLocalCardsSafe(deck.id);
-      const words = rawCards.map(c => ({
-        lemma: (c.article && !String(c.germanWord || '').toLowerCase().startsWith(c.article.toLowerCase() + ' '))
-          ? `${c.article} ${c.germanWord}`
-          : (c.germanWord || c.front || c.lemma || ''),
-        contextMeaning: c.meaningsTr || c.back || c.contextMeaning || '',
-        pos: c.partOfSpeech || c.pos || 'NOUN',
-        sourceSentence: c.exampleSentence || c.example || c.sourceSentence || ''
-      }));
+      const words = rawCards.map(c => this.serializeCardForCloud(c));
 
       return {
         id: deck.id,
@@ -679,14 +760,7 @@
       for (const d of localDecks) {
         const cards = await this.getLocalCardsSafe(d.id);
         if (!cards || cards.length === 0) continue;
-        const words = cards.map(c => ({
-          lemma: (c.article && !String(c.germanWord || '').toLowerCase().startsWith(c.article.toLowerCase() + ' '))
-            ? `${c.article} ${c.germanWord}`
-            : (c.germanWord || c.front || ''),
-          contextMeaning: c.meaningsTr || c.back || '',
-          pos: c.partOfSpeech || c.pos || 'NOUN',
-          sourceSentence: c.exampleSentence || c.example || ''
-        }));
+        const words = cards.map(c => this.serializeCardForCloud(c));
         payloadDecks.push({
           id: d.id,
           title: d.name || d.title || 'Deste',
@@ -801,29 +875,21 @@
       const words = cloudDeck.words_json || cloudDeck.words || cloudDeck.cards || [];
       if (window.wmDB && typeof window.wmDB.addCardsBatch === 'function') {
         const batchItems = words
-          .map((w) => ({
-            deckId: newDeckId,
-            germanWord: (w.lemma || w.front || w.germanWord || '').trim(),
-            meaningsTr: (w.contextMeaning || w.back || w.meaningsTr || '').trim(),
-            meaningsEn: (w.meaningsEn || '').trim(),
-            partOfSpeech: w.pos || w.partOfSpeech || 'NOUN',
-            article: w.article || '',
-            pluralForm: w.pluralForm || '',
-            exampleSentence: (w.sourceSentence || w.example || w.exampleSentence || '').trim(),
-            isQuizCard: Boolean(w.isQuizCard)
-          }))
+          .map((w) => this.buildLocalCardFromCloudWord(w, newDeckId))
           .filter((c) => c.germanWord);
         if (batchItems.length > 0) {
           await window.wmDB.addCardsBatch(batchItems);
         }
       } else {
         for (const w of words) {
+          const built = this.buildLocalCardFromCloudWord(w, newDeckId);
+          if (!built.germanWord) continue;
           await this.addLocalCardSafe({
-            deckId: newDeckId,
-            lemma: w.lemma || w.front || w.germanWord || '',
-            contextMeaning: w.contextMeaning || w.back || w.meaningsTr || '',
-            pos: w.pos || w.partOfSpeech || 'NOUN',
-            sourceSentence: w.sourceSentence || w.example || w.exampleSentence || ''
+            ...built,
+            lemma: built.germanWord,
+            contextMeaning: built.meaningsTr,
+            pos: built.partOfSpeech,
+            sourceSentence: built.exampleSentence
           });
         }
       }

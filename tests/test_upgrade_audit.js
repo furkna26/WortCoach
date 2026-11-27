@@ -115,7 +115,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.1) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.2) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -129,8 +129,8 @@ async function run() {
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
   check(scriptTags.length === 20 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.13.1') && html.includes('js/app.js?v=3.13.1'), 'Assets bumped cleanly to v3.13.1');
-  check(html.includes('js/readerUI.js?v=3.13.1') && html.includes('js/gamesUI.js?v=3.13.1') && html.includes('js/pronunciationUI.js?v=3.13.1'), 'Modular UI scripts included cleanly in index.html');
+  check(html.includes('css/components.css?v=3.13.2') && html.includes('js/app.js?v=3.13.2'), 'Assets bumped cleanly to v3.13.2');
+  check(html.includes('js/readerUI.js?v=3.13.2') && html.includes('js/gamesUI.js?v=3.13.2') && html.includes('js/pronunciationUI.js?v=3.13.2'), 'Modular UI scripts included cleanly in index.html');
   check(html.includes('id="btn-export-full-backup"') && html.includes('id="btn-import-full-backup"'), 'Full library backup/restore controls present in settings modal');
   check(
     html.includes('id="modal-mastery-analyzer"') &&
@@ -151,14 +151,14 @@ async function run() {
   // 2. Service Worker & Manifest Audit
   console.log('\n[2] Service Worker & Manifest Audit');
   const swCode = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.1'"), 'SW cache version updated to v3.13.1');
-  check(swCode.includes('./js/readerUI.js?v=3.13.1') && swCode.includes('./js/gamesUI.js?v=3.13.1') && swCode.includes('./js/pronunciationUI.js?v=3.13.1'), 'SW caches modular UI scripts');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.2'"), 'SW cache version updated to v3.13.2');
+  check(swCode.includes('./js/readerUI.js?v=3.13.2') && swCode.includes('./js/gamesUI.js?v=3.13.2') && swCode.includes('./js/pronunciationUI.js?v=3.13.2'), 'SW caches modular UI scripts');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');
   check(swCode.includes('__active_access_token') && swCode.includes('Authorization'), 'SW stores and sends Bearer token for background push fetch');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.1'), 'manifest.json uses v3.13.1 asset URLs without stale v3.8.9');
+  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.2'), 'manifest.json uses v3.13.2 asset URLs without stale v3.8.9');
   check(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest.json defines PWA shortcuts');
   check(Boolean(manifest.share_target && manifest.share_target.params && manifest.share_target.params.text), 'manifest.json defines share_target');
 
@@ -366,6 +366,10 @@ async function run() {
       gamesUiJs.includes('recordGameResult'),
     'User measurement analyzer, study filter modes, and game failure tracking wired across app/study/game modules'
   );
+  check(
+    studyJs.includes('GermanVerbHelper.conjugate'),
+    'study.js self-heals missing verb conjugations on already-imported cards'
+  );
 
   // 6. Dictionary Parallelism & Cache Test
   console.log('\n[6] Dictionary Live + Cache Audit');
@@ -390,6 +394,16 @@ async function run() {
   const elapsedCache = Date.now() - t0;
   check(Boolean(r1 && r1.trList.length > 0 && r1.enList.length > 0), `fastGoogleReaderLookup returns TR (${r1?.trList?.length}) and EN (${r1?.enList?.length})`);
   check(Boolean(r2) && elapsedCache < 15, `Cached fastGoogleReaderLookup completed in ${elapsedCache}ms`);
+  const zubringenConj = dictSandbox.window.GermanVerbHelper.conjugate('zubringen');
+  check(
+    Boolean(zubringenConj) &&
+      zubringenConj.praesens === 'bringt zu' &&
+      zubringenConj.praeteritum === 'brachte zu' &&
+      zubringenConj.partizipZwei === 'zugebracht' &&
+      zubringenConj.hilfsverb === 'hat' &&
+      zubringenConj.imperativ === 'bring zu!',
+    'GermanVerbHelper.conjugate resolves separable verb zubringen with clean imperative'
+  );
 
   // 7. Social.js Polling & JWT Refresh Audit
   console.log('\n[7] social.js Polling & JWT Auth Unit Tests');
@@ -399,6 +413,12 @@ async function run() {
   check(socialCode.includes('headers.Authorization = `Bearer ${token}`') && socialCode.includes('refreshAuthSession'), 'social.js sends Bearer JWT and supports 401 refresh retry');
   check(socialCode.includes('function escapeHtml(str)') && socialCode.includes('${escapeHtml(d.title)}'), 'social.js escapes user/remote HTML interpolations via escapeHtml');
   check(socialCode.includes('window.wmDB.addCardsBatch(batchItems)'), 'social.js importDeckToLocal uses single-transaction addCardsBatch');
+  check(
+    socialCode.includes('serializeCardForCloud') &&
+      socialCode.includes('buildLocalCardFromCloudWord') &&
+      socialCode.includes('GermanVerbHelper.conjugate'),
+    'social.js preserves grammar fields on publish and backfills verb conjugations on import'
+  );
   check(!socialCode.includes('BJcW3pPjbzl'), 'social.js no longer references old rotated VAPID key');
 
   // 8. Worker CORS, VAPID Secret, Rate-Limit & JWT Verification Audit

@@ -428,6 +428,38 @@ class WortMeisterStudy {
         if (nounContainer) nounContainer.classList.add('hidden');
         if (verbContainer) verbContainer.classList.remove('hidden');
 
+        if (
+          !isQuizCard &&
+          card.germanWord &&
+          (!card.praesens || !card.praeteritum || !card.partizipZwei || !card.imperativ) &&
+          window.GermanVerbHelper &&
+          typeof window.GermanVerbHelper.conjugate === 'function'
+        ) {
+          const conj = window.GermanVerbHelper.conjugate(card.germanWord);
+          if (conj) {
+            let dirty = false;
+            const fill = (k, val) => {
+              if (!card[k] && val) {
+                card[k] = val;
+                dirty = true;
+              }
+            };
+            fill('praesens', conj.praesens);
+            fill('praeteritum', conj.praeteritum);
+            fill('partizipZwei', conj.partizipZwei);
+            fill('hilfsverb', conj.hilfsverb);
+            fill('imperativ', conj.imperativ);
+            fill('separablePrefix', conj.separablePrefix);
+            fill('regularity', conj.regularity);
+            fill('reflexiveType', conj.reflexiveType);
+            if (!card.isSeparable && conj.isSeparable) { card.isSeparable = true; dirty = true; }
+            if (!card.isReflexive && conj.isReflexive) { card.isReflexive = true; dirty = true; }
+            if (dirty && card.id && window.wmDB && typeof window.wmDB.updateCard === 'function') {
+              window.wmDB.updateCard(card).catch(() => {});
+            }
+          }
+        }
+
         // Stammformen Şeridi
         if (stammformenBox && window.getStammformenRibbon) {
           const ribbonHtml = window.getStammformenRibbon(card);

@@ -1025,6 +1025,12 @@ class GermanVerbHelper {
     const hilfsverb = SEIN_FULL_VERBS.has(infinitive) || SEIN_FULL_VERBS.has(baseVerb) || baseConj.hilfsverb === 'ist' ? 'ist' : baseConj.hilfsverb;
 
     if (isSeparable && prefix) {
+      const sepImperativ = baseConj.imperativ === '-'
+        ? '-'
+        : baseConj.imperativ
+            .split('/')
+            .map((part) => `${part.replace(/!/g, '').trim()} ${prefix}!`)
+            .join(' / ');
       return {
         infinitive,
         baseVerb,
@@ -1035,7 +1041,7 @@ class GermanVerbHelper {
         isSeparable: true,
         separablePrefix: prefix,
         regularity: isIrregular ? 'Düzensiz (Ayrılabilen)' : 'Düzenli (Ayrılabilen)',
-        imperativ: `${baseConj.imperativ} ${prefix}!`,
+        imperativ: sepImperativ,
         isReflexive,
         reflexiveType
       };
