@@ -115,7 +115,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.0) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.1) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -129,8 +129,8 @@ async function run() {
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
   check(scriptTags.length === 20 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.13.0') && html.includes('js/app.js?v=3.13.0'), 'Assets bumped cleanly to v3.13.0');
-  check(html.includes('js/readerUI.js?v=3.13.0') && html.includes('js/gamesUI.js?v=3.13.0') && html.includes('js/pronunciationUI.js?v=3.13.0'), 'Modular UI scripts included cleanly in index.html');
+  check(html.includes('css/components.css?v=3.13.1') && html.includes('js/app.js?v=3.13.1'), 'Assets bumped cleanly to v3.13.1');
+  check(html.includes('js/readerUI.js?v=3.13.1') && html.includes('js/gamesUI.js?v=3.13.1') && html.includes('js/pronunciationUI.js?v=3.13.1'), 'Modular UI scripts included cleanly in index.html');
   check(html.includes('id="btn-export-full-backup"') && html.includes('id="btn-import-full-backup"'), 'Full library backup/restore controls present in settings modal');
   check(
     html.includes('id="modal-mastery-analyzer"') &&
@@ -139,18 +139,26 @@ async function run() {
       html.includes('id="btn-create-struggling-deck"'),
     'User measurement analyzer modal and study filter controls present in index.html'
   );
+  check(
+    html.includes('class="prof-auth-box auth-modal-card"') &&
+      html.includes('class="auth-form-footer"') &&
+      compCss.includes('.auth-modal-card') &&
+      compCss.includes('env(safe-area-inset-bottom') &&
+      compCss.includes('100dvh'),
+    '#modal-auth uses auth-modal-card, sticky auth-form-footer, 100dvh and mobile safe-area-inset-bottom'
+  );
 
   // 2. Service Worker & Manifest Audit
   console.log('\n[2] Service Worker & Manifest Audit');
   const swCode = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.0'"), 'SW cache version updated to v3.13.0');
-  check(swCode.includes('./js/readerUI.js?v=3.13.0') && swCode.includes('./js/gamesUI.js?v=3.13.0') && swCode.includes('./js/pronunciationUI.js?v=3.13.0'), 'SW caches modular UI scripts');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.1'"), 'SW cache version updated to v3.13.1');
+  check(swCode.includes('./js/readerUI.js?v=3.13.1') && swCode.includes('./js/gamesUI.js?v=3.13.1') && swCode.includes('./js/pronunciationUI.js?v=3.13.1'), 'SW caches modular UI scripts');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');
   check(swCode.includes('__active_access_token') && swCode.includes('Authorization'), 'SW stores and sends Bearer token for background push fetch');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.0'), 'manifest.json uses v3.13.0 asset URLs without stale v3.8.9');
+  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.1'), 'manifest.json uses v3.13.1 asset URLs without stale v3.8.9');
   check(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest.json defines PWA shortcuts');
   check(Boolean(manifest.share_target && manifest.share_target.params && manifest.share_target.params.text), 'manifest.json defines share_target');
 

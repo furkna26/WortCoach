@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.13.0" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.13.0" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.13.0" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.13.0" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.13.0" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.13.0" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.13.0" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.13.0" />
+  <link rel="manifest" href="manifest.json?v=3.13.1" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.13.1" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.13.1" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.13.1" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.13.1" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.13.1" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.13.1" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.13.1" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.13.0" />
-  <link rel="stylesheet" href="css/components.css?v=3.13.0" />
+  <link rel="stylesheet" href="css/app.css?v=3.13.1" />
+  <link rel="stylesheet" href="css/components.css?v=3.13.1" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -381,7 +381,7 @@
     <!-- ÜST BAR (HEADER: Academic Crest + Typography) -->
     <header class="app-header">
       <div class="brand-group" id="brand-home-trigger" title="WortCoach Ana Sayfa">
-        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.13.0" alt="WortCoach Logo" width="34" height="34" />
+        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.13.1" alt="WortCoach Logo" width="34" height="34" />
         <div class="brand-text-block">
           <div class="brand-logo" style="line-height:1.15;">
             Wort<span style="color:var(--brand-blue)">Coach</span>
@@ -2140,7 +2140,7 @@
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:8px;">
           <div class="brand-logo" style="font-size:1.4rem;">Wort<span style="color:var(--brand-blue)">Coach</span></div>
-          <span class="status-pill-green" style="font-size:0.72rem;">v3.13.0</span>
+          <span class="status-pill-green" style="font-size:0.72rem;">v3.13.1</span>
         </div>
         <button id="btn-close-settings-modal" class="icon-btn-ghost" aria-label="Kapat">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
@@ -2587,64 +2587,79 @@
        MODAL: BASİT GİRİŞ YAP & KAYIT OL (SADECE KULLANICI ADI & ŞİFRE)
        ==================================================================== -->
   <div id="modal-auth" class="prof-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-    <div class="prof-auth-box">
-      <div class="prof-modal-header" style="margin-bottom:12px;">
-        <div class="prof-modal-title" id="auth-modal-title">WortCoach Hesabı</div>
-        <button type="button" id="btn-close-auth-modal" class="prof-close-btn" aria-label="Kapat">
-          <svg class="svg-icon"><use href="#icon-close"></use></svg>
-        </button>
-      </div>
+    <div class="prof-auth-box auth-modal-card">
+      <div class="auth-modal-top">
+        <div class="prof-modal-header" style="margin-bottom:10px; align-items:flex-start;">
+          <div>
+            <div class="prof-modal-title" id="auth-modal-title">WortCoach Hesabı</div>
+            <div class="auth-modal-subtitle">Bulut senkronizasyonu ve sosyal özellikler · E-posta gerekmez</div>
+          </div>
+          <button type="button" id="btn-close-auth-modal" class="prof-close-btn" aria-label="Kapat">
+            <svg class="svg-icon"><use href="#icon-close"></use></svg>
+          </button>
+        </div>
 
-      <!-- Auth Switch: [Giriş Yap] [Kayıt Ol] -->
-      <div class="profile-subtab-bar" style="margin-bottom:16px;">
-        <button type="button" id="tab-btn-auth-login" class="profile-subtab-btn active">Giriş Yap</button>
-        <button type="button" id="tab-btn-auth-register" class="profile-subtab-btn">Kayıt Ol</button>
+        <!-- Auth Switch: [Giriş Yap] [Kayıt Ol] -->
+        <div class="auth-mode-switch">
+          <button type="button" id="tab-btn-auth-login" class="profile-subtab-btn active">Giriş Yap</button>
+          <button type="button" id="tab-btn-auth-register" class="profile-subtab-btn">Kayıt Ol</button>
+        </div>
       </div>
 
       <!-- GİRİŞ FORMU -->
       <form id="form-auth-login" class="auth-form" onsubmit="return false;">
-        <div class="auth-input-group">
-          <label for="auth-login-username">Kullanıcı Adı</label>
-          <input type="text" id="auth-login-username" class="form-control" placeholder="Kullanıcı adınız..." required autocomplete="username" />
+        <div class="auth-form-fields">
+          <div class="auth-input-group">
+            <label for="auth-login-username">Kullanıcı Adı</label>
+            <input type="text" id="auth-login-username" class="form-control" placeholder="Kullanıcı adınız..." required autocomplete="username" />
+          </div>
+          <div class="auth-input-group">
+            <label for="auth-login-password">Şifre</label>
+            <input type="password" id="auth-login-password" class="form-control" placeholder="Şifreniz..." required autocomplete="current-password" />
+          </div>
         </div>
-        <div class="auth-input-group">
-          <label for="auth-login-password">Şifre</label>
-          <input type="password" id="auth-login-password" class="form-control" placeholder="Şifreniz..." required autocomplete="current-password" />
+        <div class="auth-form-footer">
+          <div id="auth-login-error" class="auth-error-msg hidden"></div>
+          <button type="button" id="btn-submit-login" class="btn-coach-build-full">
+            <span>Giriş Yap</span>
+          </button>
         </div>
-        <div id="auth-login-error" class="auth-error-msg hidden"></div>
-        <button type="button" id="btn-submit-login" class="btn-coach-build-full" style="margin-top:8px;">
-          <span>Giriş Yap</span>
-        </button>
       </form>
 
       <!-- KAYIT FORMU -->
       <form id="form-auth-register" class="auth-form hidden" onsubmit="return false;">
-        <div class="auth-input-group">
-          <label for="auth-reg-username">Kullanıcı Adı</label>
-          <input type="text" id="auth-reg-username" class="form-control" placeholder="Benzersiz bir kullanıcı adı..." required autocomplete="username" />
+        <div class="auth-form-fields">
+          <div class="auth-input-group">
+            <label for="auth-reg-username">Kullanıcı Adı</label>
+            <input type="text" id="auth-reg-username" class="form-control" placeholder="Benzersiz bir kullanıcı adı..." required autocomplete="username" />
+          </div>
+          <div class="auth-password-grid">
+            <div class="auth-input-group">
+              <label for="auth-reg-password">Şifre</label>
+              <input type="password" id="auth-reg-password" class="form-control" placeholder="En az 6 karakter..." required autocomplete="new-password" />
+            </div>
+            <div class="auth-input-group">
+              <label for="auth-reg-password-confirm">Şifreyi Doğrula</label>
+              <input type="password" id="auth-reg-password-confirm" class="form-control" placeholder="Şifreyi tekrar yazın..." required autocomplete="new-password" />
+            </div>
+          </div>
+          <div class="auth-privacy-summary">
+            <div class="auth-privacy-title">Veri İşleme ve Yapay Zeka Bilgilendirmesi</div>
+            Hesap ve bulut desteleriniz <strong>Supabase</strong> üzerinde tutulur; AI Koç, OCR ve Sätze bilden girdileri <strong>Cloudflare Worker</strong> üzerinden <strong>Google Gemini Flash API</strong>'ye iletilir. Kişisel e-posta gerekmez.
+          </div>
+          <div class="auth-consent-row">
+            <input type="checkbox" id="auth-reg-consent" class="auth-consent-checkbox" required />
+            <label for="auth-reg-consent" class="auth-consent-label">
+              <button type="button" id="btn-open-privacy-modal" class="auth-consent-link">KVKK &amp; GDPR Aydınlatma Metni</button>'ni okudum; hesap verilerimin <strong>Supabase</strong>'de saklanmasını ve yapay zeka özelliklerinde girdiğim içeriklerin <strong>Google Gemini Flash</strong> ile paylaşılmasını kabul ediyorum.
+            </label>
+          </div>
         </div>
-        <div class="auth-input-group">
-          <label for="auth-reg-password">Şifre</label>
-          <input type="password" id="auth-reg-password" class="form-control" placeholder="En az 6 karakterli şifre..." required autocomplete="new-password" />
+        <div class="auth-form-footer">
+          <div id="auth-reg-error" class="auth-error-msg hidden"></div>
+          <button type="button" id="btn-submit-register" class="btn-coach-build-full">
+            <span>Kayıt Ol</span>
+          </button>
         </div>
-        <div class="auth-input-group">
-          <label for="auth-reg-password-confirm">Şifreyi Doğrula</label>
-          <input type="password" id="auth-reg-password-confirm" class="form-control" placeholder="Şifrenizi tekrar yazın..." required autocomplete="new-password" />
-        </div>
-        <div class="auth-privacy-summary">
-          <div class="auth-privacy-title">Veri İşleme ve Yapay Zeka Bilgilendirmesi</div>
-          Hesap, istatistik ve bulut desteleriniz <strong>Supabase</strong> veritabanında saklanır. AI Koç, Deste Oluşturucu, Görsel/PDF OCR ve Sätze bilden kontrollerinde girdiğiniz metin, cümle ve belgeler <strong>Cloudflare Worker</strong> üzerinden <strong>Google Gemini Flash API</strong> servisine iletilir. Kayıt aşamasında kişisel e-posta/kimlik bilgisi kullanmayınız.
-        </div>
-        <div class="auth-consent-row">
-          <input type="checkbox" id="auth-reg-consent" class="auth-consent-checkbox" required />
-          <label for="auth-reg-consent" class="auth-consent-label">
-            <button type="button" id="btn-open-privacy-modal" class="auth-consent-link">KVKK &amp; GDPR Aydınlatma Metni</button>'ni okudum; hesap verilerimin <strong>Supabase</strong>'de saklanmasını ve yapay zeka özelliklerinde girdiğim içeriklerin <strong>Google Gemini Flash</strong> ile paylaşılmasını kabul ediyorum.
-          </label>
-        </div>
-        <div id="auth-reg-error" class="auth-error-msg hidden"></div>
-        <button type="button" id="btn-submit-register" class="btn-coach-build-full" style="margin-top:8px;">
-          <span>Kayıt Ol</span>
-        </button>
       </form>
     </div>
   </div>
@@ -3416,26 +3431,26 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script defer src="js/config.js?v=3.13.0"></script>
-  <script defer src="js/db.js?v=3.13.0"></script>
-  <script defer src="js/verbHelper.js?v=3.13.0"></script>
-  <script defer src="js/grammarEnrichment.js?v=3.13.0"></script>
-  <script defer src="js/offlineDictionary.js?v=3.13.0"></script>
-  <script defer src="js/dictionary.js?v=3.13.0"></script>
-  <script defer src="js/seeder.js?v=3.13.0"></script>
-  <script defer src="js/tts.js?v=3.13.0"></script>
-  <script defer src="js/translator.js?v=3.13.0"></script>
-  <script defer src="js/game.js?v=3.13.0"></script>
-  <script defer src="js/study.js?v=3.13.0"></script>
-  <script defer src="js/stats.js?v=3.13.0"></script>
-  <script defer src="js/coach.js?v=3.13.0"></script>
-  <script defer src="js/deckBuilder.js?v=3.13.0"></script>
-  <script defer src="js/satzBuilder.js?v=3.13.0"></script>
-  <script defer src="js/social.js?v=3.13.0"></script>
-  <script defer src="js/readerUI.js?v=3.13.0"></script>
-  <script defer src="js/gamesUI.js?v=3.13.0"></script>
-  <script defer src="js/pronunciationUI.js?v=3.13.0"></script>
-  <script defer src="js/app.js?v=3.13.0"></script>
+  <script defer src="js/config.js?v=3.13.1"></script>
+  <script defer src="js/db.js?v=3.13.1"></script>
+  <script defer src="js/verbHelper.js?v=3.13.1"></script>
+  <script defer src="js/grammarEnrichment.js?v=3.13.1"></script>
+  <script defer src="js/offlineDictionary.js?v=3.13.1"></script>
+  <script defer src="js/dictionary.js?v=3.13.1"></script>
+  <script defer src="js/seeder.js?v=3.13.1"></script>
+  <script defer src="js/tts.js?v=3.13.1"></script>
+  <script defer src="js/translator.js?v=3.13.1"></script>
+  <script defer src="js/game.js?v=3.13.1"></script>
+  <script defer src="js/study.js?v=3.13.1"></script>
+  <script defer src="js/stats.js?v=3.13.1"></script>
+  <script defer src="js/coach.js?v=3.13.1"></script>
+  <script defer src="js/deckBuilder.js?v=3.13.1"></script>
+  <script defer src="js/satzBuilder.js?v=3.13.1"></script>
+  <script defer src="js/social.js?v=3.13.1"></script>
+  <script defer src="js/readerUI.js?v=3.13.1"></script>
+  <script defer src="js/gamesUI.js?v=3.13.1"></script>
+  <script defer src="js/pronunciationUI.js?v=3.13.1"></script>
+  <script defer src="js/app.js?v=3.13.1"></script>
 </body>
 </html>
 
