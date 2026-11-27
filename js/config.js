@@ -102,7 +102,7 @@ window.WortCoachLoader = (() => {
     },
     async ensureCuratedPacks() {
       return loadScriptOnce(
-        'js/curatedPacks.js?v=3.12.0',
+        'js/curatedPacks.js?v=3.13.0',
         () => (Array.isArray(window.CURATED_CEFR_PACKS) && window.CURATED_CEFR_PACKS[0] && Array.isArray(window.CURATED_CEFR_PACKS[0].cards)
           ? window.CURATED_CEFR_PACKS
           : null)
@@ -110,7 +110,7 @@ window.WortCoachLoader = (() => {
     },
     async ensurePronunciation() {
       return loadScriptOnce(
-        'js/pronunciation.js?v=3.12.0',
+        'js/pronunciation.js?v=3.13.0',
         () => window.wmPronunciation
       );
     },

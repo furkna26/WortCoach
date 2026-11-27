@@ -77,9 +77,11 @@ Her kart, kullanıcının hatırlama zorluğuna göre dört değerlendirme buton
 - **İyi (`3 gün` ve katları):** Standart SM-2 artış çarpanıyla kartı bir sonraki uzun süreli aralığa taşır.
 - **Kolay (`8 gün` ve üstü):** Güçlü bellek izi olan kartların kolaylık faktörünü yükselterek aralığı hızla genişletir.
 
-### 3.2. Çalışma Akışı, Olgunluk Rozetleri ve Cloze Modu
+### 3.2. Çalışma Akışı, Olgunluk Rozetleri, Cloze Modu ve Kullanıcı Ölçümü
 - Her kart ilerlemesine göre **Yeni**, **Öğreniliyor**, **Genç** veya **Olgun** rozetleriyle sınıflandırılır.
 - **Cloze (Boşluk Doldurma) Modu:** Örnek cümledeki hedef kelime gizlenerek bağlam içinde hatırlama pratiği yapılır.
+- **Kullanıcı Ölçüm Motoru ve Zorlananlar Destesi:** SM-2 `Tekrar` / `Zor` oylamaları ile kelime oyunları ve Kablo Eşleştirme hataları kart bazında ölçülür; zorlanılan kelimeler analiz edilip `İyi` / `Kolay` seçilenler hariç tutularak tek tıkla ayrı bir **Zorlananlar Destesi** oluşturulabilir.
+- **Akıllı Karışık Sıralama ve Kolay/İyi Filtresi:** Bir desteye her girişte kartlar yeniden karıştırılır; zorlanılan ve yeni kartlar öne alınırken `İyi` / `Kolay` seçilen öğrenilmiş kelimeler sıranın sonuna taşınır veya `Kolay / İyi Hariç` / `Sadece Zorlananlar` filtreleriyle çalışma oturumundan çıkarılır.
 - Ana sayfa üzerindeki gösterge paneli; o gün tekrar zamanı gelmiş (*Due*) kart sayısını, günlük hedef ilerlemesini ve kesintisiz çalışma serisini (*Streak*) gerçek zamanlı olarak takip eder.
 
 ---
@@ -176,9 +178,10 @@ Bireysel çalışmaları topluluk etkileşimiyle destekleyen çok oyunculu modü
 
 ---
 
-## 10. Teknik Mimari ve v3.12.0 Özellikleri
+## 10. Teknik Mimari ve v3.13.0 Özellikleri
 
 - **Modüler UI Mimarisi:** Ana uygulama orkestratörü (`app.js`), bağımsız yüklenen [readerUI.js](js/readerUI.js), [gamesUI.js](js/gamesUI.js) ve [pronunciationUI.js](js/pronunciationUI.js) modüllerine ayrılmıştır; tüm dinamik arayüz çıktıları XSS kaçışıyla (`escapeHtml`) korunur.
+- **Kullanıcı Ölçüm ve Akıllı Deste Motoru:** `getCardMasteryProfile`, `recordGameResult`, `getMasterySummary` ve `createStrugglingDeck` API'leri ile kart bazında zorluk skoru ölçümü, her açılışta Fisher-Yates karıştırmalı katmanlı sıralama (Zorlanan/Öncelikli -> Öğreniliyor -> Öğrenilmiş) ve `İyi` / `Kolay` hariç tutma filtreleri uygulanır.
 - **Tam Kütüphane Yedekleme ve Geri Yükleme:** Ayarlar menüsünden tüm desteler, kartlar, SM-2 tekrar verileri ve çalışma günlükleri tek `.json` dosyası olarak dışa ve içe aktarılabilir.
 - **Masaüstü Klavye Kısayolları:** Tekrar oturumlarında `Space`/`Enter` (kart çevir), `1–4` (Tekrar/Zor/İyi/Kolay), `R` (telaffuz seslendir), `P` (öncelik işaretçi); kelime oyunlarında `1–4` / `A–D` (şık seçimi) ve `Enter`/`Space` (sonraki soru) desteği.
 - **PWA Kısayolları ve Doğrudan Paylaşım (`share_target`):** Mobil ana ekranda uygulama simgesine uzun basıldığında açılan hızlı kısayollar (*Tekrar Yap*, *Akıllı Okuma*, *Almanca Koçu*) ve diğer uygulamalardan paylaşılan Almanca metinleri doğrudan Akıllı Okuma modunda açma desteği.

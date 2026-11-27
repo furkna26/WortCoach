@@ -620,6 +620,10 @@ class WordGameService {
 
     this.saveHighScore(this.currentGameType, this.score.points);
 
+    if (typeof window !== 'undefined' && currentQ.card && currentQ.card.id && window.wmDB && typeof window.wmDB.recordGameResult === 'function') {
+      window.wmDB.recordGameResult(currentQ.card.id, isCorrect).catch(() => {});
+    }
+
     // Supabase ELO & Daily Stats Hook
     if (window.wmSocial && window.wmSocial.recordActivity) {
       const isHardWord = !!(currentQ.card && (currentQ.card.srsStage === 0 || (currentQ.card.failCount || 0) > 0));

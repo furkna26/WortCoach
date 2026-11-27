@@ -115,7 +115,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.12.0) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.0) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -129,21 +129,28 @@ async function run() {
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
   check(scriptTags.length === 20 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.12.0') && html.includes('js/app.js?v=3.12.0'), 'Assets bumped cleanly to v3.12.0');
-  check(html.includes('js/readerUI.js?v=3.12.0') && html.includes('js/gamesUI.js?v=3.12.0') && html.includes('js/pronunciationUI.js?v=3.12.0'), 'Modular UI scripts included cleanly in index.html');
+  check(html.includes('css/components.css?v=3.13.0') && html.includes('js/app.js?v=3.13.0'), 'Assets bumped cleanly to v3.13.0');
+  check(html.includes('js/readerUI.js?v=3.13.0') && html.includes('js/gamesUI.js?v=3.13.0') && html.includes('js/pronunciationUI.js?v=3.13.0'), 'Modular UI scripts included cleanly in index.html');
   check(html.includes('id="btn-export-full-backup"') && html.includes('id="btn-import-full-backup"'), 'Full library backup/restore controls present in settings modal');
+  check(
+    html.includes('id="modal-mastery-analyzer"') &&
+      html.includes('id="study-filter-bar"') &&
+      html.includes('id="btn-open-struggling-analyzer"') &&
+      html.includes('id="btn-create-struggling-deck"'),
+    'User measurement analyzer modal and study filter controls present in index.html'
+  );
 
   // 2. Service Worker & Manifest Audit
   console.log('\n[2] Service Worker & Manifest Audit');
   const swCode = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.12.0'"), 'SW cache version updated to v3.12.0');
-  check(swCode.includes('./js/readerUI.js?v=3.12.0') && swCode.includes('./js/gamesUI.js?v=3.12.0') && swCode.includes('./js/pronunciationUI.js?v=3.12.0'), 'SW caches modular UI scripts');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.0'"), 'SW cache version updated to v3.13.0');
+  check(swCode.includes('./js/readerUI.js?v=3.13.0') && swCode.includes('./js/gamesUI.js?v=3.13.0') && swCode.includes('./js/pronunciationUI.js?v=3.13.0'), 'SW caches modular UI scripts');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');
   check(swCode.includes('__active_access_token') && swCode.includes('Authorization'), 'SW stores and sends Bearer token for background push fetch');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.12.0'), 'manifest.json uses v3.12.0 asset URLs without stale v3.8.9');
+  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.0'), 'manifest.json uses v3.13.0 asset URLs without stale v3.8.9');
   check(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest.json defines PWA shortcuts');
   check(Boolean(manifest.share_target && manifest.share_target.params && manifest.share_target.params.text), 'manifest.json defines share_target');
 
@@ -231,6 +238,98 @@ async function run() {
   const cardsRestored = await wmDB.getAllCards();
   check(restoreRes.decksAdded === 1 && restoreRes.cardsAdded === 50 && cardsRestored.length === 50, 'importFullBackup cleanly restores exported decks and cards');
 
+  // 4b. User Measurement, Struggling Deck & Smart Shuffle Audit
+  console.log('\n[4b] User Measurement, Struggling Deck & Smart Shuffle Unit Tests');
+  const mDeck = await wmDB.createDeck('Olcum Test Deste');
+  const mCards = await wmDB.addCardsBatch([
+    { deckId: mDeck.id, germanWord: 'ZorKelime', turkishMeaning: 'zor' },
+    { deckId: mDeck.id, germanWord: 'OyunHata', turkishMeaning: 'hata' },
+    { deckId: mDeck.id, germanWord: 'YeniKelime', turkishMeaning: 'yeni' },
+    { deckId: mDeck.id, germanWord: 'IyiKelime', turkishMeaning: 'iyi' },
+    { deckId: mDeck.id, germanWord: 'KolayKelime', turkishMeaning: 'kolay' }
+  ]);
+  const [cZor, cOyun, cYeni, cIyi, cKolay] = mCards;
+
+  await wmDB.applySM2Review(cZor.id, 'again');
+  const cZorAfterHard = await wmDB.applySM2Review(cZor.id, 'hard');
+  const cIyiUpdated = await wmDB.applySM2Review(cIyi.id, 'good');
+  const cKolayUpdated = await wmDB.applySM2Review(cKolay.id, 'easy');
+  check(
+    cZorAfterHard.hardCount === 1 && cZorAfterHard.lapses >= 1 && cZorAfterHard.lastRating === 'hard' &&
+    cIyiUpdated.goodCount === 1 && cIyiUpdated.lastRating === 'good' &&
+    cKolayUpdated.easyCount === 1 && cKolayUpdated.lastRating === 'easy',
+    'applySM2Review tracks hardCount, goodCount, easyCount and lastRating'
+  );
+
+  const syntheticIgnore = await wmDB.recordGameResult(800050, false);
+  const cOyunWrong = await wmDB.recordGameResult(cOyun.id, false);
+  const cOyunProfile = wmDB.getCardMasteryProfile(cOyunWrong);
+  check(syntheticIgnore === null && cOyunWrong.gameWrongCount === 1 && cOyunProfile.tier === 'struggling', 'recordGameResult ignores synthetic IDs and marks missed words struggling');
+
+  const summary = await wmDB.getMasterySummary(mDeck.id);
+  const strugglingWords = summary.strugglingCards.map((c) => c.germanWord);
+  check(
+    summary.strugglingCount === 2 &&
+    summary.learningCount === 1 &&
+    summary.masteredCount === 2 &&
+    strugglingWords.includes('ZorKelime') &&
+    strugglingWords.includes('OyunHata') &&
+    !strugglingWords.includes('IyiKelime') &&
+    !strugglingWords.includes('KolayKelime'),
+    'getMasterySummary identifies struggling words and excludes Iyi/Kolay cards'
+  );
+
+  const smartQueue = await wmDB.getDueCards(mDeck.id, true, { filterMode: 'smart' });
+  const smartWords = smartQueue.map((c) => c.germanWord);
+  check(
+    smartWords.length === 5 &&
+    ['IyiKelime', 'KolayKelime'].includes(smartWords[3]) &&
+    ['IyiKelime', 'KolayKelime'].includes(smartWords[4]),
+    'getDueCards (smart) puts Iyi/Kolay learned cards at the very end'
+  );
+
+  const hideMasteredQueue = await wmDB.getDueCards(mDeck.id, true, { filterMode: 'hide_mastered' });
+  const hideWords = hideMasteredQueue.map((c) => c.germanWord);
+  check(
+    hideWords.length === 3 && !hideWords.includes('IyiKelime') && !hideWords.includes('KolayKelime'),
+    'getDueCards (hide_mastered) excludes Iyi and Kolay cards'
+  );
+
+  const strugglingOnlyQueue = await wmDB.getDueCards(mDeck.id, true, { filterMode: 'struggling_only' });
+  const onlyWords = strugglingOnlyQueue.map((c) => c.germanWord);
+  check(
+    onlyWords.length === 2 && onlyWords.includes('ZorKelime') && onlyWords.includes('OyunHata'),
+    'getDueCards (struggling_only) returns only struggling cards'
+  );
+
+  const shuffleDeck = await wmDB.createDeck('Shuffle Test');
+  await wmDB.addCardsBatch(Array.from({ length: 15 }, (_, idx) => ({
+    deckId: shuffleDeck.id,
+    germanWord: `Mix${idx}`,
+    turkishMeaning: `Karisik ${idx}`
+  })));
+  const orders = new Set();
+  for (let i = 0; i < 6; i++) {
+    const q = await wmDB.getDueCards(shuffleDeck.id, true, { filterMode: 'smart' });
+    orders.add(q.map((c) => c.germanWord).join(','));
+  }
+  check(orders.size > 1, `getDueCards returns freshly shuffled order across entries (${orders.size} distinct orders in 6 runs)`);
+
+  const createdStruggling = await wmDB.createStrugglingDeck('Zorlananlarim Test', [cZor.id, cOyun.id, cIyi.id, cKolay.id]);
+  const allCardsAfterStruggling = await wmDB.getAllCards();
+  const createdCards = allCardsAfterStruggling.filter((c) => Number(c.deckId) === Number(createdStruggling.deck.id));
+  const origCardsAfter = allCardsAfterStruggling.filter((c) => Number(c.deckId) === Number(mDeck.id));
+  const createdWords = createdCards.map((c) => c.germanWord);
+  check(
+    createdStruggling.addedCount === 2 &&
+    createdWords.includes('ZorKelime') &&
+    createdWords.includes('OyunHata') &&
+    !createdWords.includes('IyiKelime') &&
+    !createdWords.includes('KolayKelime') &&
+    origCardsAfter.length === 5,
+    'createStrugglingDeck builds separate deck excluding Iyi/Kolay while preserving original deck'
+  );
+
   // 5. Cards Render, Modular UI, Backup UI, XSS & Keyboard Shortcuts Audit
   console.log('\n[5] app.js, Modular UI Mixins, study.js, deckBuilder.js & Keyboard Shortcuts Audit');
   const appJs = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
@@ -238,6 +337,7 @@ async function run() {
   const gamesUiJs = fs.readFileSync(path.join(ROOT, 'js', 'gamesUI.js'), 'utf8');
   const pronUiJs = fs.readFileSync(path.join(ROOT, 'js', 'pronunciationUI.js'), 'utf8');
   const studyJs = fs.readFileSync(path.join(ROOT, 'js', 'study.js'), 'utf8');
+  const gameJs = fs.readFileSync(path.join(ROOT, 'js', 'game.js'), 'utf8');
   const deckBuilderJs = fs.readFileSync(path.join(ROOT, 'js', 'deckBuilder.js'), 'utf8');
   check(readerUiJs.includes('WortCoachReaderUIMixin') && readerUiJs.includes('bindSmartReader()'), 'js/readerUI.js exports WortCoachReaderUIMixin');
   check(gamesUiJs.includes('WortCoachGamesUIMixin') && gamesUiJs.includes('renderGameCurrentQuestion()') && gamesUiJs.includes('this.escapeHtml(optText)'), 'js/gamesUI.js exports WortCoachGamesUIMixin and escapes options');
@@ -250,6 +350,14 @@ async function run() {
   check(gamesUiJs.includes('_gameKbBound') && studyJs.includes('bindKeyboardShortcuts'), 'Keyboard shortcuts implemented in study.js and gamesUI.js quiz modal');
   check(appJs.includes('shared_text') && appJs.includes('btn-export-full-backup'), 'app.js handles PWA share_target and full backup UI');
   check(deckBuilderJs.includes('escapeHtml') && deckBuilderJs.includes('${escapeHtml(w.lemma)}'), 'deckBuilder.js escapes AI/remote fields with escapeHtml');
+  check(
+    appJs.includes('openMasteryAnalyzerModal') &&
+      appJs.includes('createStrugglingDeck') &&
+      studyJs.includes('setFilterMode') &&
+      gameJs.includes('recordGameResult') &&
+      gamesUiJs.includes('recordGameResult'),
+    'User measurement analyzer, study filter modes, and game failure tracking wired across app/study/game modules'
+  );
 
   // 6. Dictionary Parallelism & Cache Test
   console.log('\n[6] Dictionary Live + Cache Audit');

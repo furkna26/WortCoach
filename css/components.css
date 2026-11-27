@@ -6351,6 +6351,96 @@ body.coach-chat-focused .coach-chat-app-container {
   padding: 4px 0;
 }
 
+/* Akıllı Tekrar Filtre Çubuğu & Zorlananlar Ölçüm Modalı */
+.study-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.study-filter-pill {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.study-filter-pill.active {
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
+  color: #fff;
+}
+.study-filter-action {
+  margin-left: auto;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #FBBF24;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.mastery-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.mastery-stat-box {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mastery-stat-num {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+.mastery-stat-box.is-struggling .mastery-stat-num {
+  color: #F87171;
+}
+.mastery-stat-box.is-learning .mastery-stat-num {
+  color: #60A5FA;
+}
+.mastery-stat-box.is-mastered .mastery-stat-num {
+  color: #34D399;
+}
+.mastery-stat-lbl {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.mastery-word-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+.mastery-score-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.16);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    SOSYAL & TOPLULUK MERKEZİ STİLLERİ (tab-social)
    ========================================================================== */
@@ -7560,4 +7650,94 @@ body.coach-chat-focused .coach-chat-app-container {
   font-weight: 800;
   cursor: pointer;
   padding: 4px 0;
+}
+
+/* Akıllı Tekrar Filtre Çubuğu & Zorlananlar Ölçüm Modalı */
+.study-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.study-filter-pill {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.study-filter-pill.active {
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
+  color: #fff;
+}
+.study-filter-action {
+  margin-left: auto;
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #FBBF24;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.mastery-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.mastery-stat-box {
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mastery-stat-num {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+.mastery-stat-box.is-struggling .mastery-stat-num {
+  color: #F87171;
+}
+.mastery-stat-box.is-learning .mastery-stat-num {
+  color: #60A5FA;
+}
+.mastery-stat-box.is-mastered .mastery-stat-num {
+  color: #34D399;
+}
+.mastery-stat-lbl {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.mastery-word-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-inner);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+.mastery-score-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.16);
+  color: #F87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  flex-shrink: 0;
 }

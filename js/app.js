@@ -47,6 +47,7 @@ class WortCoachApp {
     this.initUmlautBars();
 
     this.bindSettingsModal();
+    this.bindMasteryAnalyzerModal();
     this.bindGames();
     this.bindPronunciationCoach();
     const deferIdle = window.requestIdleCallback || ((cb) => setTimeout(cb, 50));
@@ -587,8 +588,10 @@ class WortCoachApp {
       await this.refreshHomeDashboard();
       if (window.wmSocial) window.wmSocial.updateUI();
     } else if (tabId === 'tab-study') {
-      if (window.wmStudy) {
-        await window.wmStudy.loadSession(window.wmStudy.deckSelect ? window.wmStudy.deckSelect.value : 'all', false);
+      if (window.wmStudy && !options.skipStudyLoad) {
+        const curDeckId = window.wmStudy.deckSelect ? window.wmStudy.deckSelect.value : 'all';
+        const forceAll = curDeckId !== 'all' || window.wmStudy.filterMode !== 'smart';
+        await window.wmStudy.loadSession(curDeckId, forceAll);
       }
     } else if (tabId === 'tab-games') {
       // Kelime Oyunları sekmesi aktif
@@ -2256,8 +2259,8 @@ class WortCoachApp {
     recentContainer.querySelectorAll('.btn-quick-study-deck').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const dId = btn.getAttribute('data-deck-id');
-        await this.switchTab('tab-study');
-        await window.wmStudy.loadSession(dId, false);
+        await this.switchTab('tab-study', { skipStudyLoad: true });
+        await window.wmStudy.loadSession(dId, true);
       });
     });
   }
@@ -2283,6 +2286,9 @@ class WortCoachApp {
 
     document.getElementById('btn-fab-new-deck')?.addEventListener('click', openCreateModal);
     document.getElementById('btn-create-deck-top')?.addEventListener('click', openCreateModal);
+    document.getElementById('btn-open-struggling-analyzer')?.addEventListener('click', () => {
+      this.openMasteryAnalyzerModal('all');
+    });
 
     document.getElementById('btn-close-deck-modal')?.addEventListener('click', () => {
       modal.classList.add('hidden');
@@ -2366,6 +2372,160 @@ class WortCoachApp {
     document.addEventListener('click', () => {
       document.querySelectorAll('#user-decks-list .deck-actions-dropdown').forEach((m) => m.classList.add('hidden'));
     });
+  }
+
+  // --- KULLANICI ÖLÇÜMÜ & ZORLANANLAR DESTESİ MODALI ---
+  bindMasteryAnalyzerModal() {
+    const modal = document.getElementById('modal-mastery-analyzer');
+    if (!modal || this._masteryModalBound) return;
+    this._masteryModalBound = true;
+
+    const closeModal = () => modal.classList.add('hidden');
+    document.getElementById('btn-close-mastery-modal')?.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.getElementById('mastery-deck-filter')?.addEventListener('change', async (e) => {
+      const val = e.target.value || 'all';
+      const nameInput = document.getElementById('input-struggling-deck-name');
+      if (nameInput) {
+        if (val === 'all') {
+          nameInput.value = 'Zorlanan Kelimeler';
+        } else {
+          const selText = e.target.options[e.target.selectedIndex]?.textContent?.trim() || 'Deste';
+          nameInput.value = `${selText} - Zorlananlar`.slice(0, 60);
+        }
+      }
+      await this.renderMasteryAnalyzer(val);
+    });
+
+    document.getElementById('btn-create-struggling-deck')?.addEventListener('click', async () => {
+      const selectedIds = Array.from(document.querySelectorAll('#mastery-struggling-list .mastery-word-cb:checked'))
+        .map((cb) => Number(cb.value))
+        .filter((id) => Number.isFinite(id) && id > 0);
+
+      if (selectedIds.length === 0) {
+        this.showToast('Lütfen yeni desteye eklenecek en az bir zorlanan kelime seçin.');
+        return;
+      }
+
+      const nameInput = document.getElementById('input-struggling-deck-name');
+      const deckName = nameInput?.value?.trim() || 'Zorlanan Kelimeler';
+      const btn = document.getElementById('btn-create-struggling-deck');
+      if (btn) btn.disabled = true;
+
+      try {
+        const { deck, addedCount } = await window.wmDB.createStrugglingDeck(deckName, selectedIds);
+        if (!addedCount) {
+          this.showToast('Seçilen kelimeler zaten öğrenilmiş (İyi/Kolay) veya eklenemedi.');
+          return;
+        }
+        closeModal();
+        this.showToast(`"${deck.name}" destesi (${addedCount} zorlanan kelime) oluşturuldu.`);
+        await this.renderDecksTab();
+        await this.refreshHomeDashboard();
+        await this.renderCardsList();
+        await this.switchTab('tab-study', { skipStudyLoad: true });
+        if (window.wmStudy) {
+          window.wmStudy.filterMode = 'smart';
+          localStorage.setItem('wortcoach_study_filter', 'smart');
+          window.wmStudy.updateFilterBarUI();
+          await window.wmStudy.loadSession(deck.id, true);
+        }
+      } catch (err) {
+        this.showToast(`Deste oluşturulamadı: ${err.message || 'Hata'}`);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-study-struggling-now')?.addEventListener('click', async () => {
+      const deckId = document.getElementById('mastery-deck-filter')?.value || 'all';
+      closeModal();
+      if (window.wmStudy) {
+        window.wmStudy.filterMode = 'struggling_only';
+        localStorage.setItem('wortcoach_study_filter', 'struggling_only');
+        window.wmStudy.updateFilterBarUI();
+      }
+      await this.switchTab('tab-study', { skipStudyLoad: true });
+      if (window.wmStudy) {
+        await window.wmStudy.loadSession(deckId, true);
+      }
+    });
+  }
+
+  async openMasteryAnalyzerModal(initialDeckId = 'all') {
+    const modal = document.getElementById('modal-mastery-analyzer');
+    if (!modal) return;
+    this.bindMasteryAnalyzerModal();
+
+    const filterSelect = document.getElementById('mastery-deck-filter');
+    const decks = await window.wmDB.getAllDecks();
+    if (filterSelect) {
+      filterSelect.innerHTML = `<option value="all">Tüm Desteler</option>` +
+        decks.map((d) => `<option value="${this.escapeHtml(d.id)}">${this.escapeHtml(d.name)}</option>`).join('');
+      const hasDeck = decks.some((d) => String(d.id) === String(initialDeckId));
+      filterSelect.value = hasDeck ? String(initialDeckId) : 'all';
+
+      const nameInput = document.getElementById('input-struggling-deck-name');
+      if (nameInput) {
+        if (filterSelect.value === 'all') {
+          nameInput.value = 'Zorlanan Kelimeler';
+        } else {
+          const activeDeck = decks.find((d) => String(d.id) === filterSelect.value);
+          nameInput.value = activeDeck ? `${activeDeck.name} - Zorlananlar`.slice(0, 60) : 'Zorlanan Kelimeler';
+        }
+      }
+    }
+
+    modal.classList.remove('hidden');
+    await this.renderMasteryAnalyzer(filterSelect?.value || 'all');
+  }
+
+  async renderMasteryAnalyzer(deckId = 'all') {
+    const summary = await window.wmDB.getMasterySummary(deckId);
+    const elStruggling = document.getElementById('mastery-stat-struggling');
+    const elLearning = document.getElementById('mastery-stat-learning');
+    const elMastered = document.getElementById('mastery-stat-mastered');
+    const elPct = document.getElementById('mastery-pct-label');
+    const elFill = document.getElementById('mastery-progress-fill');
+    const elList = document.getElementById('mastery-struggling-list');
+
+    if (elStruggling) elStruggling.textContent = String(summary.strugglingCount);
+    if (elLearning) elLearning.textContent = String(summary.learningCount);
+    if (elMastered) elMastered.textContent = String(summary.masteredCount);
+    if (elPct) elPct.textContent = `%${summary.masteryPct}`;
+    if (elFill) elFill.style.width = `${summary.masteryPct}%`;
+
+    if (!elList) return;
+    if (!summary.strugglingCards || summary.strugglingCards.length === 0) {
+      elList.innerHTML = `<div style="padding:14px; text-align:center; color:var(--text-muted); font-size:0.84rem;">Bu kapsamda zorlanan kelime bulunamadı. Tekrar veya oyunlarda hata yapılan kelimeler burada listelenir.</div>`;
+      return;
+    }
+
+    elList.innerHTML = summary.strugglingCards.map((card) => {
+      const m = card._mastery || {};
+      const artPrefix = card.article ? `${this.escapeHtml(card.article)} ` : '';
+      const wordText = this.escapeHtml(card.germanWord || '');
+      const meaningText = this.escapeHtml(card.turkishMeaning || '');
+      const reasons = [];
+      if (m.lapses > 0) reasons.push(`${m.lapses} tekrar`);
+      if (m.hardCount > 0) reasons.push(`${m.hardCount} zor`);
+      if (m.gameWrong > 0) reasons.push(`${m.gameWrong} oyun hata`);
+      if (reasons.length === 0) reasons.push('Tekrar gerekli');
+
+      return `
+        <label class="mastery-word-row">
+          <input type="checkbox" class="mastery-word-cb" value="${Number(card.id)}" checked />
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:0.88rem; font-weight:800; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${artPrefix}${wordText}</div>
+            <div style="font-size:0.76rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${meaningText} &middot; ${this.escapeHtml(reasons.join(', '))}</div>
+          </div>
+          <span class="mastery-score-badge">Zorluk ${Number(m.difficultyScore || 0)}</span>
+        </label>
+      `;
+    }).join('');
   }
 
   async renderCuratedPacksModal() {
@@ -2491,8 +2651,8 @@ class WortCoachApp {
       cardEl.addEventListener('click', async (e) => {
         if (e.target.closest('.deck-item-actions')) return;
         const dId = cardEl.getAttribute('data-deck-id');
-        await this.switchTab('tab-study');
-        await window.wmStudy.loadSession(dId, false);
+        await this.switchTab('tab-study', { skipStudyLoad: true });
+        await window.wmStudy.loadSession(dId, true);
       });
     });
 

@@ -103,6 +103,14 @@ class WortMeisterDatabase {
       srsStage: repetitions,
       nextReviewDate: dueDate,
       intervalDays: interval,
+      // Kullanıcı ölçüm & zorluk metrikleri
+      hardCount: Number(cardData.hardCount ?? 0),
+      goodCount: Number(cardData.goodCount ?? 0),
+      easyCount: Number(cardData.easyCount ?? 0),
+      gameWrongCount: Number(cardData.gameWrongCount ?? 0),
+      gameCorrectCount: Number(cardData.gameCorrectCount ?? 0),
+      lastRating: cardData.lastRating || null,
+      lastReviewedAt: Number(cardData.lastReviewedAt ?? 0),
       isPriority: Boolean(cardData.isPriority),
       isQuizCard: Boolean(cardData.isQuizCard),
       createdAt: now
@@ -541,7 +549,70 @@ class WortMeisterDatabase {
     return updated;
   }
 
-  async getDueCards(deckId = 'all', includeAllIfEmpty = false) {
+  _shuffle(arr) {
+    const out = Array.isArray(arr) ? arr.slice() : [];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = out[i];
+      out[i] = out[j];
+      out[j] = tmp;
+    }
+    return out;
+  }
+
+  getCardMasteryProfile(card) {
+    const c = card || {};
+    const lapses = Number(c.lapses ?? 0);
+    const hardCount = Number(c.hardCount ?? 0);
+    const goodCount = Number(c.goodCount ?? 0);
+    const easyCount = Number(c.easyCount ?? 0);
+    const gameWrong = Number(c.gameWrongCount ?? 0);
+    const gameCorrect = Number(c.gameCorrectCount ?? 0);
+    const ef = Number(c.easeFactor ?? 2.5);
+    const reps = Number(c.repetitions ?? (c.srsStage ?? 0));
+    const interval = Number(c.interval ?? (c.intervalDays ?? 0));
+    const lastRating = c.lastRating || null;
+
+    const isMastered =
+      lastRating === 'easy' ||
+      (lastRating === 'good' && reps >= 1) ||
+      (!lastRating && reps >= 2 && interval >= 3 && lapses === 0);
+
+    const isStruggling =
+      !isMastered &&
+      (lastRating === 'again' ||
+        lastRating === 'hard' ||
+        lapses >= 1 ||
+        hardCount >= 1 ||
+        gameWrong >= 1 ||
+        ef < 2.3);
+
+    const tier = isMastered ? 'mastered' : (isStruggling ? 'struggling' : 'learning');
+    const difficultyScore = isMastered
+      ? 0
+      : Math.min(
+          100,
+          lapses * 30 +
+            hardCount * 16 +
+            gameWrong * 18 +
+            Math.max(0, Math.round((2.5 - ef) * 40)) +
+            (lastRating === 'again' ? 20 : lastRating === 'hard' ? 10 : 0)
+        );
+
+    return {
+      tier,
+      difficultyScore,
+      lapses,
+      hardCount,
+      goodCount,
+      easyCount,
+      gameWrong,
+      gameCorrect,
+      lastRating
+    };
+  }
+
+  async getDueCards(deckId = 'all', includeAllIfEmpty = false, options = {}) {
     const now = Date.now();
     const allCards = await this.getAllCards();
     const filteredByDeck =
@@ -549,23 +620,176 @@ class WortMeisterDatabase {
         ? allCards
         : allCards.filter((c) => Number(c.deckId) === Number(deckId));
 
-    const due = filteredByDeck.filter((c) => {
-      const dueTime = Number(c.dueDate ?? (c.nextReviewDate ?? 0));
-      return dueTime <= now;
-    });
+    const filterMode = (options && options.filterMode) || 'smart';
+    let candidates = [];
 
-    // Önce öncelikli (yıldızlı) kartlar, ardından en eski tekrar tarihi
-    due.sort((a, b) => {
-      if (a.isPriority !== b.isPriority) return a.isPriority ? -1 : 1;
-      const timeA = Number(a.dueDate ?? (a.nextReviewDate ?? 0));
-      const timeB = Number(b.dueDate ?? (b.nextReviewDate ?? 0));
-      return timeA - timeB;
-    });
-
-    if (due.length === 0 && includeAllIfEmpty) {
-      return filteredByDeck;
+    if (filterMode === 'struggling_only') {
+      candidates = filteredByDeck.filter((c) => this.getCardMasteryProfile(c).tier === 'struggling');
+    } else if (filterMode === 'hide_mastered') {
+      const nonMastered = filteredByDeck.filter((c) => this.getCardMasteryProfile(c).tier !== 'mastered');
+      if (includeAllIfEmpty) {
+        candidates = nonMastered;
+      } else {
+        candidates = nonMastered.filter((c) => Number(c.dueDate ?? (c.nextReviewDate ?? 0)) <= now);
+      }
+    } else {
+      if (includeAllIfEmpty) {
+        candidates = filteredByDeck;
+      } else {
+        candidates = filteredByDeck.filter((c) => {
+          const dueTime = Number(c.dueDate ?? (c.nextReviewDate ?? 0));
+          return dueTime <= now;
+        });
+      }
     }
-    return due;
+
+    // Zorlanan/yıldızlı kartlar başta (karışık), yeni/öğreniliyor ortada (karışık), İyi/Kolay en sonda (karışık)
+    const tier1 = [];
+    const tier2 = [];
+    const tier3 = [];
+
+    for (const c of candidates) {
+      const prof = this.getCardMasteryProfile(c);
+      if (prof.tier === 'mastered' && !c.isPriority) {
+        tier3.push(c);
+      } else if (prof.tier === 'struggling' || c.isPriority) {
+        tier1.push(c);
+      } else {
+        tier2.push(c);
+      }
+    }
+
+    return [...this._shuffle(tier1), ...this._shuffle(tier2), ...this._shuffle(tier3)];
+  }
+
+  async recordGameResult(cardId, isCorrect) {
+    if (!cardId || Number(cardId) >= 800000) return null;
+    const allCards = await this.getAllCards();
+    const found = allCards.find((c) => Number(c.id) === Number(cardId));
+    if (!found) return null;
+
+    const card = { ...found };
+    const now = Date.now();
+    if (isCorrect) {
+      card.gameCorrectCount = Number(card.gameCorrectCount ?? 0) + 1;
+    } else {
+      card.gameWrongCount = Number(card.gameWrongCount ?? 0) + 1;
+      card.easeFactor = Math.max(1.3, Math.round((Number(card.easeFactor ?? 2.5) - 0.1) * 100) / 100);
+      const pulledDue = Math.min(Number(card.dueDate ?? now), now);
+      card.dueDate = pulledDue;
+      card.nextReviewDate = pulledDue;
+      if (card.lastRating === 'easy' || card.lastRating === 'good') {
+        card.lastRating = 'hard';
+      }
+    }
+    card.lastReviewedAt = now;
+    return this.updateCard(card);
+  }
+
+  async getMasterySummary(deckId = 'all') {
+    const allCards = await this.getAllCards();
+    const scoped =
+      deckId === 'all'
+        ? allCards
+        : allCards.filter((c) => Number(c.deckId) === Number(deckId));
+
+    let strugglingCount = 0;
+    let learningCount = 0;
+    let masteredCount = 0;
+    const bestByWord = new Map();
+
+    for (const c of scoped) {
+      const prof = this.getCardMasteryProfile(c);
+      if (prof.tier === 'mastered') {
+        masteredCount++;
+      } else if (prof.tier === 'struggling') {
+        strugglingCount++;
+        const wordKey = (c.germanWordLower || (c.germanWord || '').trim().toLowerCase());
+        if (wordKey) {
+          const enriched = { ...c, _mastery: prof };
+          const prev = bestByWord.get(wordKey);
+          if (!prev || enriched._mastery.difficultyScore > prev._mastery.difficultyScore) {
+            bestByWord.set(wordKey, enriched);
+          }
+        }
+      } else {
+        learningCount++;
+      }
+    }
+
+    const strugglingCards = Array.from(bestByWord.values()).sort(
+      (a, b) => b._mastery.difficultyScore - a._mastery.difficultyScore
+    );
+    const total = scoped.length;
+    const masteryPct = total > 0 ? Math.round((masteredCount / total) * 100) : 0;
+
+    return {
+      total,
+      strugglingCount,
+      learningCount,
+      masteredCount,
+      masteryPct,
+      strugglingCards
+    };
+  }
+
+  async createStrugglingDeck(deckName = 'Zorlanan Kelimeler', cardIds = null) {
+    const allCards = await this.getAllCards();
+    let selectedCards = [];
+
+    if (Array.isArray(cardIds) && cardIds.length > 0) {
+      const idSet = new Set(cardIds.map((id) => Number(id)));
+      selectedCards = allCards.filter(
+        (c) => idSet.has(Number(c.id)) && this.getCardMasteryProfile(c).tier !== 'mastered'
+      );
+    } else {
+      const summary = await this.getMasterySummary('all');
+      selectedCards = summary.strugglingCards;
+    }
+
+    if (!selectedCards || selectedCards.length === 0) {
+      throw new Error('Zorlanan kelime bulunamadı.');
+    }
+
+    const cleanName = (deckName || '').trim() || 'Zorlanan Kelimeler';
+    const newDeck = await this.createDeck(cleanName);
+    const now = Date.now();
+
+    await this.init();
+    const addedCount = await new Promise((resolve, reject) => {
+      const tx = this.db.transaction('cards', 'readwrite');
+      const store = tx.objectStore('cards');
+      const seenWords = new Set();
+      let inserted = 0;
+
+      for (let i = 0; i < selectedCards.length; i++) {
+        const orig = selectedCards[i];
+        const wordKey = (orig.germanWord || '').trim().toLowerCase();
+        if (!wordKey || seenWords.has(wordKey)) continue;
+        seenWords.add(wordKey);
+
+        const clone = { ...orig };
+        delete clone.id;
+        delete clone._mastery;
+        clone.deckId = Number(newDeck.id);
+        clone.sourceCardId = Number(orig.id) || null;
+        clone.dueDate = now;
+        clone.nextReviewDate = now;
+        clone.createdAt = now + i;
+        clone.germanWordLower = wordKey;
+        store.add(clone);
+        inserted++;
+      }
+
+      tx.oncomplete = () => {
+        this._invalidateCache('cards');
+        resolve(inserted);
+      };
+      tx.onerror = (e) => reject(e.target.error);
+      tx.onabort = (e) => reject(e.target.error || new Error('Struggling deck transaction aborted'));
+    });
+
+    return { deck: newDeck, addedCount };
   }
 
   /**
@@ -589,6 +813,9 @@ class WortMeisterDatabase {
     let interval = Number(card.interval ?? (card.intervalDays ?? 0));
     let repetitions = Number(card.repetitions ?? (card.srsStage ?? 0));
     let lapses = Number(card.lapses ?? 0);
+    let hardCount = Number(card.hardCount ?? 0);
+    let goodCount = Number(card.goodCount ?? 0);
+    let easyCount = Number(card.easyCount ?? 0);
 
     const now = Date.now();
     const TEN_MINUTES = 10 * 60 * 1000;
@@ -602,16 +829,19 @@ class WortMeisterDatabase {
       easeFactor = Math.max(1.3, easeFactor - 0.20);
       dueDate = now + TEN_MINUTES;
     } else if (r === 1) {
+      hardCount += 1;
       interval = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
       easeFactor = Math.max(1.3, easeFactor - 0.15);
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;
     } else if (r === 2) {
+      goodCount += 1;
       const hardDays = repetitions === 0 ? 1 : Math.max(1, Math.round(interval * 1.2));
       interval = repetitions === 0 ? 3 : Math.max(hardDays + 1, Math.round(interval * easeFactor));
       repetitions += 1;
       dueDate = now + interval * ONE_DAY;
     } else if (r === 3) {
+      easyCount += 1;
       const goodDays = repetitions === 0 ? 3 : Math.round(interval * easeFactor);
       interval = repetitions === 0 ? 8 : Math.max(goodDays + 2, Math.round(interval * easeFactor * 1.35));
       easeFactor += 0.15;
@@ -625,6 +855,11 @@ class WortMeisterDatabase {
     card.interval = interval;
     card.repetitions = repetitions;
     card.lapses = lapses;
+    card.hardCount = hardCount;
+    card.goodCount = goodCount;
+    card.easyCount = easyCount;
+    card.lastRating = ['again', 'hard', 'good', 'easy'][r] || 'good';
+    card.lastReviewedAt = now;
     card.dueDate = dueDate;
 
     card.intervalDays = interval;

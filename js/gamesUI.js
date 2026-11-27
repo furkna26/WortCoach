@@ -534,6 +534,9 @@ window.WortCoachGamesUIMixin = {
       if (leftItem && window.wmTTS) {
         window.wmTTS.speak(leftItem.germanWord, 'de-DE');
       }
+      if (window.wmDB && typeof window.wmDB.recordGameResult === 'function' && leftNode.cardId) {
+        window.wmDB.recordGameResult(Number(leftNode.cardId), true).catch(() => {});
+      }
       if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
 
       state.matchedCount++;
@@ -562,6 +565,10 @@ window.WortCoachGamesUIMixin = {
 
       leftNode.cardEl.classList.add('shake-wrong');
       rightNode.cardEl.classList.add('shake-wrong');
+
+      if (window.wmDB && typeof window.wmDB.recordGameResult === 'function' && leftNode.cardId) {
+        window.wmDB.recordGameResult(Number(leftNode.cardId), false).catch(() => {});
+      }
 
       if (navigator.vibrate) navigator.vibrate(100);
 

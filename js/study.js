@@ -16,6 +16,7 @@ class WortMeisterStudy {
     this.currentIndex = 0;
     this.isFlipped = false;
     this.studyMode = 'standard';
+    this.filterMode = localStorage.getItem('wortcoach_study_filter') || 'smart';
   }
 
   init() {
@@ -29,7 +30,8 @@ class WortMeisterStudy {
 
     // Deste seçici
     this.deckSelect?.addEventListener('change', () => {
-      this.loadSession(this.deckSelect.value, false);
+      const deckId = this.deckSelect.value;
+      this.loadSession(deckId, deckId !== 'all' || this.filterMode !== 'smart');
     });
 
     // Çalışma Modu Seçici Butonları: Standart vs Cloze
@@ -108,6 +110,11 @@ class WortMeisterStudy {
     });
 
     document.getElementById('btn-study-force-all')?.addEventListener('click', () => {
+      if (this.queue.length === 0 && this.filterMode !== 'smart') {
+        this.filterMode = 'smart';
+        localStorage.setItem('wortcoach_study_filter', 'smart');
+        this.updateFilterBarUI();
+      }
       this.loadSession(this.deckSelect.value, true);
     });
 
@@ -115,7 +122,19 @@ class WortMeisterStudy {
       if (window.wmApp) window.wmApp.openAddCardModal();
     });
 
+    document.querySelectorAll('.study-filter-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const mode = pill.getAttribute('data-study-filter') || 'smart';
+        this.setFilterMode(mode);
+      });
+    });
+
+    document.getElementById('btn-study-open-mastery')?.addEventListener('click', () => {
+      window.wmApp?.openMasteryAnalyzerModal(this.deckSelect?.value || 'all');
+    });
+
     this.updateModeToggleUI();
+    this.updateFilterBarUI();
     this.bindKeyboardShortcuts();
   }
 
@@ -178,6 +197,23 @@ class WortMeisterStudy {
     }
   }
 
+  setFilterMode(mode) {
+    const allowed = ['smart', 'hide_mastered', 'struggling_only'];
+    this.filterMode = allowed.includes(mode) ? mode : 'smart';
+    localStorage.setItem('wortcoach_study_filter', this.filterMode);
+    this.updateFilterBarUI();
+    const deckId = this.deckSelect?.value || 'all';
+    const forceAll = this.filterMode !== 'smart' || deckId !== 'all';
+    return this.loadSession(deckId, forceAll);
+  }
+
+  updateFilterBarUI() {
+    document.querySelectorAll('.study-filter-pill').forEach((pill) => {
+      const mode = pill.getAttribute('data-study-filter');
+      pill.classList.toggle('active', mode === this.filterMode);
+    });
+  }
+
   async populateDeckSelector(selectedDeckId = 'all') {
     const decks = await window.wmDB.getAllDecks();
     if (!this.deckSelect) this.deckSelect = document.getElementById('study-deck-select');
@@ -203,7 +239,8 @@ class WortMeisterStudy {
     if (!this.cardWrapper) this.cardWrapper = document.getElementById('flashcard-3d-wrapper');
 
     await this.populateDeckSelector(deckId);
-    this.queue = await window.wmDB.getDueCards(deckId, forceAll);
+    this.updateFilterBarUI();
+    this.queue = await window.wmDB.getDueCards(deckId, forceAll, { filterMode: this.filterMode });
     this.currentIndex = 0;
     this.isFlipped = false;
     if (this.cardInner) this.cardInner.classList.remove('is-flipped');
@@ -211,6 +248,18 @@ class WortMeisterStudy {
     this.updateProgress();
 
     if (this.queue.length === 0) {
+      const emptyTitle = document.getElementById('study-empty-title');
+      const emptyDesc = document.getElementById('study-empty-desc');
+      if (this.filterMode === 'struggling_only') {
+        if (emptyTitle) emptyTitle.textContent = 'Zorlanan Kart Bulunamadı';
+        if (emptyDesc) emptyDesc.textContent = 'Bu destede henüz Zor/Tekrar edilen veya oyunda yanlış yapılan kelime yok.';
+      } else if (this.filterMode === 'hide_mastered') {
+        if (emptyTitle) emptyTitle.textContent = 'Tüm Kartları Öğrenmişsin';
+        if (emptyDesc) emptyDesc.textContent = 'İyi ve Kolay seçilen kelimeler gizlendi. İstersen tüm desteyi tekrar edebilirsin.';
+      } else {
+        if (emptyTitle) emptyTitle.textContent = 'Bugünlük Harika Gidiyorsun!';
+        if (emptyDesc) emptyDesc.textContent = 'Şu an için tekrar etmen gereken vadesi gelmiş kelime kalmadı.';
+      }
       if (this.arena) this.arena.classList.add('hidden');
       if (this.emptyState) this.emptyState.classList.remove('hidden');
     } else {
