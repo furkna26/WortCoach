@@ -77,7 +77,11 @@ class WortMeisterStudy {
     });
 
     document.getElementById('btn-study-stats-shortcut')?.addEventListener('click', () => {
-      if (window.wmApp) window.wmApp.switchTab('tab-cards');
+      if (window.wmStats && typeof window.wmStats.openModal === 'function') {
+        window.wmStats.openModal();
+      } else if (window.wmApp) {
+        window.wmApp.openMasteryAnalyzerModal?.(this.deckSelect?.value || 'all');
+      }
     });
 
     document.getElementById('btn-fc-priority')?.addEventListener('click', async (e) => {
@@ -127,10 +131,6 @@ class WortMeisterStudy {
         const mode = pill.getAttribute('data-study-filter') || 'smart';
         this.setFilterMode(mode);
       });
-    });
-
-    document.getElementById('btn-study-open-mastery')?.addEventListener('click', () => {
-      window.wmApp?.openMasteryAnalyzerModal(this.deckSelect?.value || 'all');
     });
 
     this.updateModeToggleUI();

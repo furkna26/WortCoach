@@ -1343,10 +1343,10 @@ class WortCoachApp {
         deckId: targetDeckId,
         germanWord: cleanWord,
         article: selectedArticle || null,
-        pluralForm: null,
+        pluralForm: this.currentSearchEntry?.germanWord?.toLowerCase() === cleanWord.toLowerCase() ? (this.currentSearchEntry.pluralForm || '') : '',
         partOfSpeech: selectedPos || 'OTHER',
         meaningsTr: finalMeaningsTr,
-        meaningsEn: '',
+        meaningsEn: this.currentSearchEntry?.germanWord?.toLowerCase() === cleanWord.toLowerCase() ? (this.currentSearchEntry.meaningsEn || '') : '',
         exampleSentence: '',
         targetLanguage: 'de',
         isManual: true,
@@ -1368,6 +1368,7 @@ class WortCoachApp {
 
       this.showToast(`"${cleanWord}" desteye ve yerel sözlüğe kaydedildi.`);
       await this.refreshHomeDashboard();
+      await this.renderDecksTab?.();
       this.executeSearch(cleanWord);
     });
   }

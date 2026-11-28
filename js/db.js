@@ -380,6 +380,38 @@ class WortMeisterDatabase {
     return this.getCardByWord(word);
   }
 
+  _enrichVerbCardFields(cardData) {
+    if (!cardData || cardData.isQuizCard) return cardData;
+    const pos = String(cardData.partOfSpeech || '').toUpperCase();
+    const cleanWord = (cardData.germanWord || '').trim();
+    if (
+      pos === 'VERB' &&
+      cleanWord &&
+      (!cardData.praesens || !cardData.praeteritum || !cardData.partizipZwei || !cardData.imperativ) &&
+      typeof window !== 'undefined' &&
+      window.GermanVerbHelper &&
+      typeof window.GermanVerbHelper.conjugate === 'function'
+    ) {
+      const conj = window.GermanVerbHelper.conjugate(cleanWord);
+      if (conj) {
+        return {
+          ...cardData,
+          praesens: cardData.praesens || conj.praesens || '',
+          praeteritum: cardData.praeteritum || conj.praeteritum || '',
+          partizipZwei: cardData.partizipZwei || conj.partizipZwei || '',
+          hilfsverb: cardData.hilfsverb || conj.hilfsverb || '',
+          imperativ: cardData.imperativ || conj.imperativ || '',
+          isSeparable: Boolean(cardData.isSeparable || conj.isSeparable),
+          separablePrefix: cardData.separablePrefix || conj.separablePrefix || '',
+          regularity: cardData.regularity || conj.regularity || '',
+          isReflexive: Boolean(cardData.isReflexive || conj.isReflexive),
+          reflexiveType: cardData.reflexiveType || conj.reflexiveType || null
+        };
+      }
+    }
+    return cardData;
+  }
+
   async addCard(cardData) {
     if (!cardData || typeof cardData !== 'object') {
       return null;
@@ -390,27 +422,28 @@ class WortMeisterDatabase {
       return null;
     }
 
-    const rawDeckId = cardData.deckId && typeof cardData.deckId === 'object' ? cardData.deckId.id : cardData.deckId;
+    const preparedData = this._enrichVerbCardFields(cardData);
+    const rawDeckId = preparedData.deckId && typeof preparedData.deckId === 'object' ? preparedData.deckId.id : preparedData.deckId;
     const resolvedDeckId = Number(rawDeckId) || 1;
 
     // Üst üste binmeyi ve mükerrer kart kaydını O(1) önbellek üzerinden engelle
     const existing = await this.getCardByWord(cleanWord);
     if (existing) {
-      const merged = {
-        ...existing,
-        ...cardData,
-        deckId: resolvedDeckId,
-        germanWord: cleanWord,
-        germanWordLower: cleanWord.toLowerCase(),
-        id: existing.id,
-        updatedAt: Date.now()
-      };
+      const merged = { ...existing, ...preparedData };
+      for (const k of ['article', 'pluralForm', 'exampleSentence', 'meaningsEn', 'praesens', 'praeteritum', 'partizipZwei', 'hilfsverb', 'imperativ', 'separablePrefix', 'regularity', 'reflexiveType']) {
+        if (!merged[k] && existing[k]) merged[k] = existing[k];
+      }
+      merged.deckId = resolvedDeckId;
+      merged.germanWord = cleanWord;
+      merged.germanWordLower = cleanWord.toLowerCase();
+      merged.id = existing.id;
+      merged.updatedAt = Date.now();
       return this.updateCard(merged);
     }
 
     const store = await this._tx('cards', 'readwrite');
     const now = Date.now();
-    const record = this._buildCardRecord(cardData, resolvedDeckId, now);
+    const record = this._buildCardRecord(preparedData, resolvedDeckId, now);
 
     return new Promise((resolve, reject) => {
       const req = store.add(record);
@@ -421,6 +454,10 @@ class WortMeisterDatabase {
       };
       req.onerror = (e) => reject(e.target.error);
     });
+  }
+
+  async createCard(cardData) {
+    return this.addCard(cardData);
   }
 
   async addCardsBatch(cardsArray) {

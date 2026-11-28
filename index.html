@@ -9,14 +9,14 @@
   <meta name="description" content="WortCoach — Hesaplamalı Almanca Morfolojik Sözlük, Akustik Fonetik Değerlendirme, Aralıklı Tekrarlama (Leitner SRS) ve Çok Oyunculu Dil Edinimi Platformu" />
   <meta name="apple-mobile-web-app-title" content="WortCoach" />
   <title>WortCoach — Morfolojik Almanca Sözlük ve Dil Edinimi Platformu</title>
-  <link rel="manifest" href="manifest.json?v=3.13.2" />
-  <link rel="shortcut icon" href="favicon.ico?v=3.13.2" />
-  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.13.2" />
-  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.13.2" />
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.13.2" />
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.13.2" />
-  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.13.2" />
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.13.2" />
+  <link rel="manifest" href="manifest.json?v=3.13.3" />
+  <link rel="shortcut icon" href="favicon.ico?v=3.13.3" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico?v=3.13.3" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg?v=3.13.3" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=3.13.3" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png?v=3.13.3" />
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon.png?v=3.13.3" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3.13.3" />
   <script>
     // Doğrudan Tek Tıkla PWA Kurulum İstemini (beforeinstallprompt) Sayfa Yüklenirken Anında Yakala
     window.__deferredPwaPrompt = null;
@@ -29,8 +29,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/app.css?v=3.13.2" />
-  <link rel="stylesheet" href="css/components.css?v=3.13.2" />
+  <link rel="stylesheet" href="css/app.css?v=3.13.3" />
+  <link rel="stylesheet" href="css/components.css?v=3.13.3" />
 </head>
 <body>
   <!-- INLINE SVG SEMBOL DEPOSU (SIFIR EMOJİ, %100 VEKTÖR) -->
@@ -381,7 +381,7 @@
     <!-- ÜST BAR (HEADER: Academic Crest + Typography) -->
     <header class="app-header">
       <div class="brand-group" id="brand-home-trigger" title="WortCoach Ana Sayfa">
-        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.13.2" alt="WortCoach Logo" width="34" height="34" />
+        <img class="brand-crest-logo" src="icons/icon-192.svg?v=3.13.3" alt="WortCoach Logo" width="34" height="34" />
         <div class="brand-text-block">
           <div class="brand-logo" style="line-height:1.15;">
             Wort<span style="color:var(--brand-blue)">Coach</span>
@@ -834,7 +834,6 @@
           <button type="button" class="study-filter-pill active" data-study-filter="smart">Akıllı Karışık</button>
           <button type="button" class="study-filter-pill" data-study-filter="hide_mastered">Kolay / İyi Hariç</button>
           <button type="button" class="study-filter-pill" data-study-filter="struggling_only">Sadece Zorlananlar</button>
-          <button type="button" class="study-filter-action" id="btn-study-open-mastery">Zorlananlar Ölçümü</button>
         </div>
 
         
@@ -2140,7 +2139,7 @@
       <div class="modal-header">
         <div style="display:flex; align-items:center; gap:8px;">
           <div class="brand-logo" style="font-size:1.4rem;">Wort<span style="color:var(--brand-blue)">Coach</span></div>
-          <span class="status-pill-green" style="font-size:0.72rem;">v3.13.2</span>
+          <span class="status-pill-green" style="font-size:0.72rem;">v3.13.3</span>
         </div>
         <button id="btn-close-settings-modal" class="icon-btn-ghost" aria-label="Kapat">
           <svg class="svg-icon"><use href="#icon-close"></use></svg>
@@ -2270,6 +2269,62 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ÇALIŞMA İSTATİSTİKLERİ & ANALİZ (modal-study-stats) -->
+  <div id="modal-study-stats" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-label="Çalışma İstatistikleri">
+    <div class="modal-sheet" style="max-width: 540px; border-radius: var(--radius-xl);">
+      <div class="modal-header">
+        <div>
+          <h3 style="margin:0; font-size:1.12rem; font-weight:900; color:var(--text-primary);">Çalışma İstatistikleri</h3>
+          <span style="font-size:0.76rem; color:var(--text-muted);">SM-2 tekrar performansı, günlük aktivite ve seviye dağılımı</span>
+        </div>
+        <button type="button" id="btn-close-stats-modal" class="icon-btn-ghost" aria-label="Kapat">
+          <svg class="svg-icon"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px; padding:10px 0;">
+        <div id="stats-range-selector" class="stats-range-bar">
+          <button type="button" class="range-pill active" data-range="7">Son 7 Gün</button>
+          <button type="button" class="range-pill" data-range="30">Son 30 Gün</button>
+          <button type="button" class="range-pill" data-range="all">Tüm Zamanlar</button>
+        </div>
+
+        <div class="stats-kpi-grid">
+          <div class="stats-kpi-card">
+            <span class="stats-kpi-num" id="stat-learned-count">0</span>
+            <span class="stats-kpi-lbl">Öğrenilen Kart</span>
+          </div>
+          <div class="stats-kpi-card">
+            <span class="stats-kpi-num" id="stat-total-cards">0</span>
+            <span class="stats-kpi-lbl">Toplam Kart</span>
+          </div>
+          <div class="stats-kpi-card is-accent">
+            <span class="stats-kpi-num" id="stat-accuracy-rate">%0</span>
+            <span class="stats-kpi-lbl">Başarı Oranı</span>
+          </div>
+          <div class="stats-kpi-card is-streak">
+            <span class="stats-kpi-num" id="stat-streak-days">0 Gün</span>
+            <span class="stats-kpi-lbl">Kesintisiz Seri</span>
+          </div>
+        </div>
+
+        <div class="stats-section-box">
+          <div class="stats-section-title">Son 7 Gün Tekrar Aktivitesi</div>
+          <div id="stats-bar-chart" class="stats-bar-chart"></div>
+        </div>
+
+        <div class="stats-section-box">
+          <div class="stats-section-title">CEFR Seviye Dağılımı</div>
+          <div id="stats-cefr-bars" class="stats-cefr-list"></div>
+        </div>
+
+        <button type="button" id="btn-stats-open-mastery" class="btn-secondary" style="width:100%; justify-content:center; padding:11px 14px; font-weight:800;">
+          <span>Zorlananlar Destesi Oluştur</span>
+        </button>
       </div>
     </div>
   </div>
@@ -3431,26 +3486,26 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!-- SCRIPTLER -->
-  <script defer src="js/config.js?v=3.13.2"></script>
-  <script defer src="js/db.js?v=3.13.2"></script>
-  <script defer src="js/verbHelper.js?v=3.13.2"></script>
-  <script defer src="js/grammarEnrichment.js?v=3.13.2"></script>
-  <script defer src="js/offlineDictionary.js?v=3.13.2"></script>
-  <script defer src="js/dictionary.js?v=3.13.2"></script>
-  <script defer src="js/seeder.js?v=3.13.2"></script>
-  <script defer src="js/tts.js?v=3.13.2"></script>
-  <script defer src="js/translator.js?v=3.13.2"></script>
-  <script defer src="js/game.js?v=3.13.2"></script>
-  <script defer src="js/study.js?v=3.13.2"></script>
-  <script defer src="js/stats.js?v=3.13.2"></script>
-  <script defer src="js/coach.js?v=3.13.2"></script>
-  <script defer src="js/deckBuilder.js?v=3.13.2"></script>
-  <script defer src="js/satzBuilder.js?v=3.13.2"></script>
-  <script defer src="js/social.js?v=3.13.2"></script>
-  <script defer src="js/readerUI.js?v=3.13.2"></script>
-  <script defer src="js/gamesUI.js?v=3.13.2"></script>
-  <script defer src="js/pronunciationUI.js?v=3.13.2"></script>
-  <script defer src="js/app.js?v=3.13.2"></script>
+  <script defer src="js/config.js?v=3.13.3"></script>
+  <script defer src="js/db.js?v=3.13.3"></script>
+  <script defer src="js/verbHelper.js?v=3.13.3"></script>
+  <script defer src="js/grammarEnrichment.js?v=3.13.3"></script>
+  <script defer src="js/offlineDictionary.js?v=3.13.3"></script>
+  <script defer src="js/dictionary.js?v=3.13.3"></script>
+  <script defer src="js/seeder.js?v=3.13.3"></script>
+  <script defer src="js/tts.js?v=3.13.3"></script>
+  <script defer src="js/translator.js?v=3.13.3"></script>
+  <script defer src="js/game.js?v=3.13.3"></script>
+  <script defer src="js/study.js?v=3.13.3"></script>
+  <script defer src="js/stats.js?v=3.13.3"></script>
+  <script defer src="js/coach.js?v=3.13.3"></script>
+  <script defer src="js/deckBuilder.js?v=3.13.3"></script>
+  <script defer src="js/satzBuilder.js?v=3.13.3"></script>
+  <script defer src="js/social.js?v=3.13.3"></script>
+  <script defer src="js/readerUI.js?v=3.13.3"></script>
+  <script defer src="js/gamesUI.js?v=3.13.3"></script>
+  <script defer src="js/pronunciationUI.js?v=3.13.3"></script>
+  <script defer src="js/app.js?v=3.13.3"></script>
 </body>
 </html>
 

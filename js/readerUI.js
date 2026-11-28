@@ -385,11 +385,26 @@ window.WortCoachReaderUIMixin = {
       });
     };
 
+    const extractReaderContextSentence = (text, offset = 0) => {
+      const clean = String(text || '').trim();
+      if (!clean) return '';
+      const idx = Math.max(0, Math.min(Number(offset) || 0, clean.length - 1));
+      let start = idx;
+      while (start > 0 && !/[.!?\n\r]/.test(clean[start - 1])) start--;
+      let end = idx;
+      while (end < clean.length && !/[.!?\n\r]/.test(clean[end])) end++;
+      if (end < clean.length && /[.!?]/.test(clean[end])) end++;
+      const sentence = clean.slice(start, end).replace(/\s+/g, ' ').trim();
+      return sentence.length > 260 ? sentence.slice(0, 257).trim() + '...' : sentence;
+    };
+
     // --- 5. KART EKLEME (TARAMA BİTMEDEN EKLENİRSE ARKA PLANDA ÇÖZÜMLEME DESTEĞİ) ---
     btnReaderSaveCard?.addEventListener('click', async () => {
       if (!currentSelectedTokenWord) return;
       const targetDeckId = Number(modalDeckSelect?.value || 1);
       const wordOrPhrase = currentSelectedTokenWord;
+      const savedOffset = currentSelectedTokenOffset;
+      const contextSentence = extractReaderContextSentence(readerInput?.value || readerDisplay?.innerText || '', savedOffset);
 
       // Kullanıcı tarama devam ederken ekle butonuna bastıysa:
       if (isPipelinePending && activePipelinePromise) {
@@ -425,6 +440,7 @@ window.WortCoachReaderUIMixin = {
             partOfSpeech: pos,
             meaningsTr: finalTr || wordOrPhrase,
             meaningsEn: finalEn || '',
+            exampleSentence: contextSentence,
             targetLanguage: 'de',
             source: 'smart_reader'
           });
@@ -441,7 +457,8 @@ window.WortCoachReaderUIMixin = {
 
           this.showToast(`"${wordOrPhrase}" desteye kaydedildi.`);
           await this.renderDecksTab?.();
-          await this.renderCardsTab?.();
+          await this.renderCardsList?.('', true);
+          await this.refreshHomeDashboard?.();
         }).catch((err) => {
           console.error('Background card save error:', err);
           this.showToast(`"${wordOrPhrase}" kaydedilirken bir hata oluştu.`);
@@ -463,8 +480,9 @@ window.WortCoachReaderUIMixin = {
         .map((c) => c.getAttribute('data-val') || c.innerText.replace(/^\s*/, '').trim())
         .filter(Boolean);
 
-      const article = currentSelectedPipelineResult?.entry?.article || null;
-      const pos = currentSelectedPipelineResult?.entry?.partOfSpeech || (wordOrPhrase.includes(' ') ? 'PHRASE' : 'OTHER');
+      const ent = currentSelectedPipelineResult?.entry;
+      const article = ent?.article || null;
+      const pos = ent?.partOfSpeech || (wordOrPhrase.includes(' ') ? 'PHRASE' : 'OTHER');
       const finalTr = selectedMeanings.join(', ');
       const finalEn = selectedEnMeanings.join(', ');
 
@@ -472,9 +490,16 @@ window.WortCoachReaderUIMixin = {
         deckId: targetDeckId,
         germanWord: wordOrPhrase,
         article,
+        pluralForm: ent?.pluralForm || '',
         partOfSpeech: pos,
         meaningsTr: finalTr,
         meaningsEn: finalEn,
+        exampleSentence: contextSentence,
+        praesens: ent?.praesens || '',
+        praeteritum: ent?.praeteritum || '',
+        partizipZwei: ent?.partizipZwei || '',
+        hilfsverb: ent?.hilfsverb || '',
+        imperativ: ent?.imperativ || '',
         targetLanguage: 'de',
         source: 'smart_reader'
       });
@@ -492,7 +517,8 @@ window.WortCoachReaderUIMixin = {
       this.showToast(`"${wordOrPhrase}" desteye ve yerel sözlüğe kaydedildi.`);
       closeReaderModal();
       await this.renderDecksTab?.();
-      await this.renderCardsTab?.();
+      await this.renderCardsList?.('', true);
+      await this.refreshHomeDashboard?.();
     });
 
     const renderReaderGrammarRow = (ent, cleanTarget, stemNoteText = '') => {

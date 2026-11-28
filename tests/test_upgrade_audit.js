@@ -115,7 +115,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.2) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.3) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -129,8 +129,8 @@ async function run() {
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
   check(scriptTags.length === 20 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.13.2') && html.includes('js/app.js?v=3.13.2'), 'Assets bumped cleanly to v3.13.2');
-  check(html.includes('js/readerUI.js?v=3.13.2') && html.includes('js/gamesUI.js?v=3.13.2') && html.includes('js/pronunciationUI.js?v=3.13.2'), 'Modular UI scripts included cleanly in index.html');
+  check(html.includes('css/components.css?v=3.13.3') && html.includes('js/app.js?v=3.13.3'), 'Assets bumped cleanly to v3.13.3');
+  check(html.includes('js/readerUI.js?v=3.13.3') && html.includes('js/gamesUI.js?v=3.13.3') && html.includes('js/pronunciationUI.js?v=3.13.3'), 'Modular UI scripts included cleanly in index.html');
   check(html.includes('id="btn-export-full-backup"') && html.includes('id="btn-import-full-backup"'), 'Full library backup/restore controls present in settings modal');
   check(
     html.includes('id="modal-mastery-analyzer"') &&
@@ -138,6 +138,15 @@ async function run() {
       html.includes('id="btn-open-struggling-analyzer"') &&
       html.includes('id="btn-create-struggling-deck"'),
     'User measurement analyzer modal and study filter controls present in index.html'
+  );
+  check(
+    html.includes('id="modal-study-stats"') &&
+      html.includes('id="stats-range-selector"') &&
+      html.includes('id="stat-learned-count"') &&
+      html.includes('id="stat-accuracy-rate"') &&
+      html.includes('id="stats-bar-chart"') &&
+      html.includes('id="stats-cefr-bars"'),
+    'Study statistics modal and KPI/chart targets present in index.html'
   );
   check(
     html.includes('class="prof-auth-box auth-modal-card"') &&
@@ -151,14 +160,14 @@ async function run() {
   // 2. Service Worker & Manifest Audit
   console.log('\n[2] Service Worker & Manifest Audit');
   const swCode = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.2'"), 'SW cache version updated to v3.13.2');
-  check(swCode.includes('./js/readerUI.js?v=3.13.2') && swCode.includes('./js/gamesUI.js?v=3.13.2') && swCode.includes('./js/pronunciationUI.js?v=3.13.2'), 'SW caches modular UI scripts');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.3'"), 'SW cache version updated to v3.13.3');
+  check(swCode.includes('./js/readerUI.js?v=3.13.3') && swCode.includes('./js/gamesUI.js?v=3.13.3') && swCode.includes('./js/pronunciationUI.js?v=3.13.3'), 'SW caches modular UI scripts');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');
   check(swCode.includes('__active_access_token') && swCode.includes('Authorization'), 'SW stores and sends Bearer token for background push fetch');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.2'), 'manifest.json uses v3.13.2 asset URLs without stale v3.8.9');
+  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.3'), 'manifest.json uses v3.13.3 asset URLs without stale v3.8.9');
   check(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest.json defines PWA shortcuts');
   check(Boolean(manifest.share_target && manifest.share_target.params && manifest.share_target.params.text), 'manifest.json defines share_target');
 
@@ -338,6 +347,57 @@ async function run() {
     'createStrugglingDeck builds separate deck excluding Iyi/Kolay while preserving original deck'
   );
 
+  const createdDirect = await wmDB.createCard({
+    deckId: mDeck.id,
+    germanWord: 'anfangen',
+    meaningsTr: 'baslamak',
+    partOfSpeech: 'VERB'
+  });
+  check(
+    typeof wmDB.createCard === 'function' && Boolean(createdDirect && createdDirect.germanWord === 'anfangen'),
+    'wmDB.createCard alias creates and stores cards cleanly'
+  );
+
+  const statElements = {
+    'stat-learned-count': { textContent: '' },
+    'stat-total-cards': { textContent: '' },
+    'stat-accuracy-rate': { textContent: '' },
+    'stat-streak-days': { textContent: '' },
+    'stats-bar-chart': { innerHTML: '' },
+    'stats-cefr-bars': { innerHTML: '' }
+  };
+  const nowMs = Date.now();
+  const statsSandbox = {
+    window: {
+      wmDB: {
+        getAllCards: async () => [cIyiUpdated, cKolayUpdated, cZorAfterHard],
+        getAllStudyLogs: async () => [
+          { cardId: cIyiUpdated.id, rating: 'good', reviewedAt: nowMs },
+          { cardId: cKolayUpdated.id, rating: 'easy', reviewedAt: nowMs },
+          { cardId: cZorAfterHard.id, rating: 'again', reviewedAt: nowMs },
+          { cardId: cZorAfterHard.id, rating: 'hard', reviewedAt: nowMs }
+        ],
+        getCardMasteryProfile: (card) => wmDB.getCardMasteryProfile(card)
+      }
+    },
+    document: {
+      getElementById: (id) => statElements[id] || null
+    },
+    console
+  };
+  statsSandbox.window.window = statsSandbox.window;
+  vm.createContext(statsSandbox);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', 'stats.js'), 'utf8'), statsSandbox);
+  await statsSandbox.window.wmStats.renderStats();
+  check(
+    statElements['stat-accuracy-rate'].textContent === '%50' &&
+      statElements['stat-learned-count'].textContent === '2' &&
+      statElements['stat-total-cards'].textContent === '3' &&
+      statElements['stats-bar-chart'].innerHTML.includes('bar-col') &&
+      statElements['stats-cefr-bars'].innerHTML.includes('cefr-row'),
+    'WortMeisterStats counts good + easy in accuracy and renders charts/KPIs'
+  );
+
   // 5. Cards Render, Modular UI, Backup UI, XSS & Keyboard Shortcuts Audit
   console.log('\n[5] app.js, Modular UI Mixins, study.js, deckBuilder.js & Keyboard Shortcuts Audit');
   const appJs = fs.readFileSync(path.join(ROOT, 'js', 'app.js'), 'utf8');
@@ -348,6 +408,7 @@ async function run() {
   const gameJs = fs.readFileSync(path.join(ROOT, 'js', 'game.js'), 'utf8');
   const deckBuilderJs = fs.readFileSync(path.join(ROOT, 'js', 'deckBuilder.js'), 'utf8');
   check(readerUiJs.includes('WortCoachReaderUIMixin') && readerUiJs.includes('bindSmartReader()'), 'js/readerUI.js exports WortCoachReaderUIMixin');
+  check(readerUiJs.includes('extractReaderContextSentence') && !readerUiJs.includes('renderCardsTab') && readerUiJs.includes('renderCardsList'), 'readerUI captures example sentences and refreshes renderCardsList cleanly');
   check(gamesUiJs.includes('WortCoachGamesUIMixin') && gamesUiJs.includes('renderGameCurrentQuestion()') && gamesUiJs.includes('this.escapeHtml(optText)'), 'js/gamesUI.js exports WortCoachGamesUIMixin and escapes options');
   check(pronUiJs.includes('WortCoachPronunciationUIMixin') && pronUiJs.includes('renderPronunciationEvaluation(') && pronUiJs.includes('this.escapeHtml(syl.text)'), 'js/pronunciationUI.js exports WortCoachPronunciationUIMixin and escapes UI');
   check(appJs.includes('Object.assign(') && appJs.includes('WortCoachReaderUIMixin') && appJs.includes('WortCoachGamesUIMixin') && appJs.includes('WortCoachPronunciationUIMixin'), 'js/app.js composes UI mixins onto WortCoachApp.prototype');
@@ -362,9 +423,12 @@ async function run() {
     appJs.includes('openMasteryAnalyzerModal') &&
       appJs.includes('createStrugglingDeck') &&
       studyJs.includes('setFilterMode') &&
+      studyJs.includes('wmStats.openModal()') &&
+      !html.includes('btn-study-open-mastery') &&
+      !studyJs.includes('btn-study-open-mastery') &&
       gameJs.includes('recordGameResult') &&
       gamesUiJs.includes('recordGameResult'),
-    'User measurement analyzer, study filter modes, and game failure tracking wired across app/study/game modules'
+    'Mastery analyzer, study filters, stats modal shortcut, and game failure tracking wired without study-bar measurement box'
   );
   check(
     studyJs.includes('GermanVerbHelper.conjugate'),

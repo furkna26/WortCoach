@@ -5,20 +5,45 @@
 class WortMeisterStats {
   constructor() {
     this.currentRange = '7';
+    this._bound = false;
   }
 
   init() {
+    if (this._bound) return;
     const container = document.getElementById('stats-range-selector');
-    if (!container) return;
+    const modal = document.getElementById('modal-study-stats');
+    if (!container && !modal) return;
+    this._bound = true;
 
-    container.querySelectorAll('.range-pill').forEach((btn) => {
+    container?.querySelectorAll('.range-pill').forEach((btn) => {
       btn.addEventListener('click', () => {
         container.querySelectorAll('.range-pill').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        this.currentRange = btn.getAttribute('data-range');
+        this.currentRange = btn.getAttribute('data-range') || '7';
         this.renderStats();
       });
     });
+
+    const closeModal = () => modal?.classList.add('hidden');
+    document.getElementById('btn-close-stats-modal')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    document.getElementById('btn-stats-open-mastery')?.addEventListener('click', () => {
+      closeModal();
+      const deckId = window.wmStudy?.deckSelect?.value || 'all';
+      window.wmApp?.openMasteryAnalyzerModal?.(deckId);
+    });
+  }
+
+  async openModal() {
+    this.init();
+    const modal = document.getElementById('modal-study-stats');
+    if (modal) {
+      modal.classList.remove('hidden');
+    }
+    await this.renderStats();
   }
 
   calculateStreak(logs) {
@@ -56,11 +81,16 @@ class WortMeisterStats {
     const cutoff = now - rangeDays * ONE_DAY;
 
     const filteredLogs = logs.filter((l) => l.reviewedAt >= cutoff);
-    const goodLogs = filteredLogs.filter((l) => l.rating === 'good');
+    const passLogs = filteredLogs.filter((l) => l.rating === 'good' || l.rating === 'easy');
     const accuracy =
-      filteredLogs.length > 0 ? Math.round((goodLogs.length / filteredLogs.length) * 100) : 0;
+      filteredLogs.length > 0 ? Math.round((passLogs.length / filteredLogs.length) * 100) : 0;
 
-    const learnedCards = cards.filter((c) => (Number(c.srsStage) || 0) >= 3);
+    const learnedCards = cards.filter((c) => {
+      if (window.wmDB && typeof window.wmDB.getCardMasteryProfile === 'function') {
+        return window.wmDB.getCardMasteryProfile(c).tier === 'mastered';
+      }
+      return (Number(c.srsStage) || 0) >= 3;
+    });
     const streak = this.calculateStreak(logs);
 
     const learnedEl = document.getElementById('stat-learned-count');
@@ -116,17 +146,21 @@ class WortMeisterStats {
     const cefrEl = document.getElementById('stats-cefr-bars');
     if (!cefrEl) return;
 
-    const levels = ['A1', 'A2', 'B1', 'B2'];
+    const levels = ['A1', 'A2', 'B1', 'B2', 'C1'];
     const total = Math.max(1, cards.length);
 
     cefrEl.innerHTML = levels
       .map((lvl) => {
-        const count = cards.filter((c) => (c.cefr || 'A1') === lvl).length;
+        const count = cards.filter((c) => {
+          const raw = String(c.cefr || 'A1').trim().toUpperCase();
+          if (lvl === 'C1') return raw === 'C1' || raw === 'C2';
+          return raw === lvl;
+        }).length;
         const pct = Math.round((count / total) * 100);
         return `
           <div class="cefr-row">
             <div class="cefr-row-top">
-              <span>Seviye ${lvl}</span>
+              <span>Seviye ${lvl === 'C1' ? 'C1 / C2' : lvl}</span>
               <span>${count} Kart (%${pct})</span>
             </div>
             <div class="progress-track">
