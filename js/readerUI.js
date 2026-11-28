@@ -47,14 +47,28 @@ window.WortCoachReaderUIMixin = {
     const btnReaderWordTTS = document.getElementById('btn-reader-word-tts');
     const btnReaderWordPronounce = document.getElementById('btn-reader-word-pronounce');
     const btnReaderSaveCard = document.getElementById('btn-reader-save-card');
+    const btnCombinePair = document.getElementById('btn-reader-combine-pair');
+    const combineBanner = document.getElementById('reader-combine-banner');
+    const combineTextEl = document.getElementById('reader-combine-text');
+    const btnCancelCombine = document.getElementById('btn-reader-cancel-combine');
 
     let currentSelectedTokenWord = '';
+    let currentSelectedRawWord = '';
+    let currentSelectedTokenIndex = -1;
     let currentSelectedTokenOffset = 0;
     let currentSelectedPipelineResult = null;
+    let pendingCombineAnchor = null;
     let isPipelinePending = false;
     let activePipelinePromise = null;
     let readerLookupAbortCtrl = null;
     let readerLookupSeq = 0;
+
+    const clearCombineMode = () => {
+      pendingCombineAnchor = null;
+      readerDisplay?.querySelectorAll('.reader-token.combine-anchor').forEach((t) => t.classList.remove('combine-anchor'));
+      if (combineBanner) combineBanner.classList.add('hidden');
+      if (combineTextEl) combineTextEl.textContent = '';
+    };
 
     const sampleTexts = {
       sample_a1: `Guten Tag! Mein Name ist Lukas und ich wohne in Berlin. Jeden Tag stehe ich um sieben Uhr auf und trinke einen heißen Kaffee mit Milch. Danach fahre ich mit der U-Bahn zur Arbeit. Ich lerne gern Deutsch und treffe meine Freunde am Abend im Park.`,
@@ -185,6 +199,7 @@ window.WortCoachReaderUIMixin = {
 
     btnBackSetup?.addEventListener('click', () => {
       window.wmTTS.stop();
+      clearCombineMode();
       document.body.classList.remove('reader-active-mode');
       readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
       readerFsView?.classList.add('hidden');
@@ -201,6 +216,7 @@ window.WortCoachReaderUIMixin = {
         this.showToast('Lütfen önce bir metin girin veya belge yükleyin.');
         return;
       }
+      clearCombineMode();
       document.body.classList.add('reader-active-mode');
       readerSetupPane?.classList.add('hidden');
       readerFsView?.classList.remove('hidden');
@@ -212,8 +228,15 @@ window.WortCoachReaderUIMixin = {
       renderParsedTokens(clean);
     };
 
+    const escapeHtmlToken = (str) => String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
     const renderParsedTokens = (text) => {
       if (!readerDisplay) return;
+      clearCombineMode();
       readerDisplay.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
       const clean = (text || '').trim();
       if (!clean) {
@@ -221,28 +244,120 @@ window.WortCoachReaderUIMixin = {
         return;
       }
 
+      const verbHelper = window.GermanVerbHelper;
+      const isKnownVerbFn = window.DictionaryService?.findOfflineEntry
+        ? (cand) => {
+            const hit = window.DictionaryService.findOfflineEntry(cand);
+            if (!hit) return false;
+            const pos = (hit.pos || '').trim().toUpperCase();
+            return !pos || pos.startsWith('V') || pos.includes('VERB');
+          }
+        : null;
+
+      const applySeparablePairDetection = (clauseItems) => {
+        if (!verbHelper?.detectSeparablePairInClause || !clauseItems || clauseItems.length < 2) return;
+        const coordRegex = /^(und|oder|aber|denn|sondern)$/;
+        const subClauses = [];
+        let bucket = [];
+        for (const item of clauseItems) {
+          if (coordRegex.test(item.word)) {
+            if (bucket.length >= 2) subClauses.push(bucket);
+            bucket = [];
+          } else {
+            bucket.push(item);
+          }
+        }
+        if (bucket.length >= 2) subClauses.push(bucket);
+
+        let anyMatched = false;
+        for (const sub of subClauses) {
+          const match = verbHelper.detectSeparablePairInClause(sub, isKnownVerbFn);
+          if (match) {
+            const vItem = sub[match.verbIndex];
+            const pItem = sub[match.prefixIndex];
+            if (vItem && pItem) {
+              vItem.pairInfinitive = match.infinitive;
+              vItem.pairPartnerIndex = pItem.index;
+              pItem.pairInfinitive = match.infinitive;
+              pItem.pairPartnerIndex = vItem.index;
+              anyMatched = true;
+            }
+          }
+        }
+
+        // Bağlaç nesneleri bağlıyorsa (ör. "Er kauft Brot und Käse ein.") tüm tümceyi dene
+        if (!anyMatched && subClauses.length > 1) {
+          const fullMatch = verbHelper.detectSeparablePairInClause(clauseItems, isKnownVerbFn);
+          if (fullMatch) {
+            const vItem = clauseItems[fullMatch.verbIndex];
+            const pItem = clauseItems[fullMatch.prefixIndex];
+            if (vItem && pItem) {
+              vItem.pairInfinitive = fullMatch.infinitive;
+              vItem.pairPartnerIndex = pItem.index;
+              pItem.pairInfinitive = fullMatch.infinitive;
+              pItem.pairPartnerIndex = vItem.index;
+            }
+          }
+        }
+      };
+
       const paragraphs = clean.split(/\n\s*\n/);
       let globalOffset = 0;
       let tokenIndexCounter = 0;
-      let html = '';
+      const renderedParagraphs = [];
 
       for (const para of paragraphs) {
-        html += '<p style="margin: 0 0 16px 0;">';
         const tokens = para.match(/([a-zA-ZäöüÄÖÜß]+|[^a-zA-ZäöüÄÖÜß\s]+|\s+)/g) || [para];
+        const parsedItems = [];
+        let activeClause = [];
 
         for (const token of tokens) {
           if (/^[a-zA-ZäöüÄÖÜß]+$/.test(token)) {
             const wordOffset = clean.indexOf(token, globalOffset);
             const resolvedOffset = wordOffset >= 0 ? wordOffset : globalOffset;
-            html += `<span class="reader-token" data-word="${token}" data-offset="${resolvedOffset}" data-index="${tokenIndexCounter}">${token}</span>`;
-            tokenIndexCounter++;
+            const item = {
+              type: 'word',
+              word: token,
+              offset: resolvedOffset,
+              index: tokenIndexCounter++,
+              pairInfinitive: null,
+              pairPartnerIndex: -1
+            };
+            parsedItems.push(item);
+            activeClause.push(item);
             globalOffset = resolvedOffset + token.length;
           } else if (token.includes('\n')) {
-            html += '<br/>';
+            applySeparablePairDetection(activeClause);
+            activeClause = [];
+            parsedItems.push({ type: 'br' });
             globalOffset += token.length;
           } else {
-            html += token.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (/[.!?,;:\u2014\u2013]/.test(token)) {
+              applySeparablePairDetection(activeClause);
+              activeClause = [];
+            }
+            parsedItems.push({ type: 'raw', text: token });
             globalOffset += token.length;
+          }
+        }
+        applySeparablePairDetection(activeClause);
+        renderedParagraphs.push(parsedItems);
+      }
+
+      let html = '';
+      for (const items of renderedParagraphs) {
+        html += '<p style="margin: 0 0 16px 0;">';
+        for (const item of items) {
+          if (item.type === 'word') {
+            const pairAttrs = item.pairInfinitive
+              ? ` data-pair-infinitive="${escapeHtmlToken(item.pairInfinitive)}" data-pair-partner-index="${item.pairPartnerIndex}"`
+              : '';
+            const pairCls = item.pairInfinitive ? ' separable-pair-member' : '';
+            html += `<span class="reader-token${pairCls}" data-word="${escapeHtmlToken(item.word)}" data-offset="${item.offset}" data-index="${item.index}"${pairAttrs}>${escapeHtmlToken(item.word)}</span>`;
+          } else if (item.type === 'br') {
+            html += '<br/>';
+          } else {
+            html += item.text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
           }
         }
         html += '</p>';
@@ -263,6 +378,7 @@ window.WortCoachReaderUIMixin = {
     // Temizle Butonu
     clearBtn?.addEventListener('click', () => {
       window.wmTTS.stop();
+      clearCombineMode();
       if (readerInput) readerInput.value = '';
       if (sampleSelect) sampleSelect.value = '';
       readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
@@ -307,6 +423,31 @@ window.WortCoachReaderUIMixin = {
     };
 
     btnCloseReaderModal?.addEventListener('click', closeReaderModal);
+
+    btnCombinePair?.addEventListener('click', () => {
+      const anchorWord = (currentSelectedRawWord || currentSelectedTokenWord || '').trim();
+      if (!anchorWord) return;
+      const savedAnchor = {
+        rawWord: anchorWord,
+        offset: currentSelectedTokenOffset,
+        index: currentSelectedTokenIndex
+      };
+      clearCombineMode();
+      pendingCombineAnchor = savedAnchor;
+      closeReaderModal();
+      if (savedAnchor.index >= 0) {
+        const anchorEl = readerDisplay?.querySelector(`.reader-token[data-index="${savedAnchor.index}"]`);
+        anchorEl?.classList.add('combine-anchor');
+      }
+      if (combineTextEl) {
+        combineTextEl.textContent = `"${anchorWord}" seçili — birleştirmek istediğiniz ikinci parçaya dokunun`;
+      }
+      combineBanner?.classList.remove('hidden');
+    });
+
+    btnCancelCombine?.addEventListener('click', () => {
+      clearCombineMode();
+    });
 
     modalReader?.addEventListener('click', (e) => {
       if (e.target === modalReader) {
@@ -571,7 +712,7 @@ window.WortCoachReaderUIMixin = {
     };
 
     // --- 6. HEDEF KELİME VEYA KALIP İÇİN ANLIK GOOGLE TRANSLATE + EN MODAL AÇICI ---
-    const openReaderModalForTarget = async (wordOrPhrase, offset = 0) => {
+    const openReaderModalForTarget = async (wordOrPhrase, offset = 0, meta = {}) => {
       const cleanTarget = (wordOrPhrase || '').trim();
       if (!cleanTarget) return;
 
@@ -582,14 +723,50 @@ window.WortCoachReaderUIMixin = {
       const mySeq = ++readerLookupSeq;
       const mySignal = readerLookupAbortCtrl.signal;
 
+      const activePairInfo = meta?.pairInfo || null;
       currentSelectedTokenWord = cleanTarget;
+      currentSelectedRawWord = (meta?.rawWord || cleanTarget).trim();
+      currentSelectedTokenIndex = Number.isFinite(meta?.tokenIndex) ? meta.tokenIndex : -1;
       currentSelectedTokenOffset = offset;
       currentSelectedPipelineResult = null;
       isPipelinePending = true;
 
+      const renderModalBannerArea = (sourceText) => {
+        if (!modalBannerContainer) return;
+        let bannerHtml = `<div class="reader-source-badge">${escapeHtmlAttr(sourceText || 'Google Translate (Canlı Çeviri)')}</div>`;
+        if (activePairInfo && activePairInfo.rawWord && activePairInfo.rawWord.toLowerCase() !== cleanTarget.toLowerCase()) {
+          const titleTag = activePairInfo.sourceType === 'manual' ? 'Manuel Birleştirildi' : 'Ayrılabilir Fiil Eşleşti';
+          const detailText = activePairInfo.label
+            ? `${titleTag}: ${activePairInfo.label} -> ${cleanTarget}`
+            : `${titleTag}: ${cleanTarget}`;
+          bannerHtml += `
+            <div class="reader-pair-banner">
+              <span>${escapeHtmlAttr(detailText)}</span>
+              <button type="button" class="reader-pair-switch-btn" id="btn-reader-lookup-single">
+                Sadece "${escapeHtmlAttr(activePairInfo.rawWord)}" kelimesine bak
+              </button>
+            </div>
+          `;
+        }
+        modalBannerContainer.innerHTML = bannerHtml;
+        if (activePairInfo) {
+          const singleBtn = document.getElementById('btn-reader-lookup-single');
+          singleBtn?.addEventListener('click', () => {
+            readerDisplay?.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
+            if (activePairInfo.tokenIndex >= 0) {
+              readerDisplay?.querySelector(`.reader-token[data-index="${activePairInfo.tokenIndex}"]`)?.classList.add('active-inspect');
+            }
+            openReaderModalForTarget(activePairInfo.rawWord, activePairInfo.offset ?? offset, {
+              rawWord: activePairInfo.rawWord,
+              tokenIndex: activePairInfo.tokenIndex
+            });
+          });
+        }
+      };
+
       if (modalWordTitle) modalWordTitle.textContent = cleanTarget;
       if (modalArticleBadge) modalArticleBadge.innerHTML = '';
-      if (modalBannerContainer) modalBannerContainer.innerHTML = '<div class="reader-source-badge">Google Translate (Canlı Çeviri)</div>';
+      renderModalBannerArea('Google Translate (Canlı Çeviri)');
 
       // 0ms Senkron ön izleme (varsa yerel artikel + anlamları beklemeden göster)
       const instantEntry = window.DictionaryService?.synthesizeInstantEntry
@@ -648,9 +825,7 @@ window.WortCoachReaderUIMixin = {
           modalArticleBadge.innerHTML = st ? st.badgeHtml : `<span class="badge badge-${safeArt.toLowerCase()}">${safeArt.toUpperCase()}</span>`;
         }
 
-        if (modalBannerContainer && res.sourceLabel) {
-          modalBannerContainer.innerHTML = `<div class="reader-source-badge">${escapeHtmlAttr(res.sourceLabel)}</div>`;
-        }
+        renderModalBannerArea(res.sourceLabel || 'Google Translate (Canlı Çeviri)');
 
         renderReaderGrammarRow(ent, cleanTarget, res.stem || '');
 
@@ -675,20 +850,96 @@ window.WortCoachReaderUIMixin = {
     const bindReaderTokens = () => {
       if (!readerDisplay || isReaderDelegationBound) return;
       isReaderDelegationBound = true;
+
+      readerDisplay.addEventListener('contextmenu', (e) => {
+        const tokenEl = e.target?.closest?.('.reader-token');
+        if (tokenEl && readerDisplay.contains(tokenEl)) {
+          e.preventDefault();
+        }
+      });
+
       readerDisplay.addEventListener('click', (e) => {
         const tokenEl = e.target?.closest?.('.reader-token');
         if (!tokenEl || !readerDisplay.contains(tokenEl)) return;
         e.preventDefault();
         e.stopPropagation();
 
+        const word = tokenEl.getAttribute('data-word');
+        const offset = parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
+        const tokenIndex = parseInt(tokenEl.getAttribute('data-index') || '-1', 10);
+        if (!word) return;
+
+        if (pendingCombineAnchor) {
+          const firstAnchor = pendingCombineAnchor;
+          clearCombineMode();
+
+          readerDisplay.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
+
+          if (tokenIndex === firstAnchor.index) {
+            tokenEl.classList.add('active-inspect');
+            openReaderModalForTarget(word, offset, { rawWord: word, tokenIndex });
+            return;
+          }
+
+          const combined = window.GermanVerbHelper?.combinePairWords
+            ? window.GermanVerbHelper.combinePairWords(firstAnchor.rawWord, word)
+            : `${firstAnchor.rawWord} ${word}`.trim();
+
+          if (firstAnchor.index >= 0) {
+            readerDisplay.querySelector(`.reader-token[data-index="${firstAnchor.index}"]`)?.classList.add('active-inspect');
+          }
+          tokenEl.classList.add('active-inspect');
+
+          const orderedLabel = firstAnchor.index >= 0 && tokenIndex >= 0 && tokenIndex < firstAnchor.index
+            ? `${word} + ${firstAnchor.rawWord}`
+            : `${firstAnchor.rawWord} + ${word}`;
+
+          openReaderModalForTarget(combined, firstAnchor.offset ?? offset, {
+            rawWord: word,
+            tokenIndex,
+            pairInfo: {
+              infinitive: combined,
+              rawWord: word,
+              tokenIndex,
+              offset,
+              sourceType: 'manual',
+              label: orderedLabel
+            }
+          });
+          return;
+        }
+
         readerDisplay.querySelectorAll('.reader-token.active-inspect').forEach((t) => t.classList.remove('active-inspect'));
         tokenEl.classList.add('active-inspect');
 
-        const word = tokenEl.getAttribute('data-word');
-        const offset = parseInt(tokenEl.getAttribute('data-offset') || '0', 10);
-        if (word) {
-          openReaderModalForTarget(word, offset);
+        const autoPairInf = tokenEl.getAttribute('data-pair-infinitive');
+        if (autoPairInf) {
+          const partnerIdx = parseInt(tokenEl.getAttribute('data-pair-partner-index') || '-1', 10);
+          const partnerEl = partnerIdx >= 0
+            ? readerDisplay.querySelector(`.reader-token[data-index="${partnerIdx}"]`)
+            : null;
+          partnerEl?.classList.add('active-inspect');
+          const partnerWord = partnerEl?.getAttribute('data-word') || '';
+          const orderedLabel = partnerWord
+            ? (partnerIdx >= 0 && tokenIndex > partnerIdx ? `${partnerWord} ... ${word}` : `${word} ... ${partnerWord}`)
+            : autoPairInf;
+
+          openReaderModalForTarget(autoPairInf, offset, {
+            rawWord: word,
+            tokenIndex,
+            pairInfo: {
+              infinitive: autoPairInf,
+              rawWord: word,
+              tokenIndex,
+              offset,
+              sourceType: 'auto',
+              label: orderedLabel
+            }
+          });
+          return;
         }
+
+        openReaderModalForTarget(word, offset, { rawWord: word, tokenIndex });
       });
     };
 

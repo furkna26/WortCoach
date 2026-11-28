@@ -1081,6 +1081,221 @@ class GermanVerbHelper {
       reflexiveType
     };
   }
+
+  static get SEPARABLE_PREFIXES() {
+    return SEPARABLE_PREFIXES;
+  }
+
+  static isSeparablePrefixToken(tok) {
+    const t = String(tok || '').trim();
+    return Boolean(t && t === t.toLowerCase() && SEPARABLE_PREFIXES.includes(t));
+  }
+
+  static _getFormToInfinitiveMap() {
+    if (this._formToInfMap) return this._formToInfMap;
+    const map = new Map();
+    const addForm = (form, inf) => {
+      const f = String(form || '').trim().toLowerCase();
+      if (!f || f.length < 2) return;
+      if (!map.has(f)) map.set(f, new Set());
+      map.get(f).add(inf);
+    };
+
+    for (const [inf, data] of Object.entries(IRREGULAR_VERBS)) {
+      addForm(inf, inf);
+      const baseInfStem = inf.endsWith('en') ? inf.slice(0, -2) : (inf.endsWith('n') ? inf.slice(0, -1) : inf);
+      if (baseInfStem.length >= 2) {
+        ['e', 'st', 'est', 't', 'et', 'en'].forEach((s) => addForm(baseInfStem + s, inf));
+      }
+
+      if (data.praesens) {
+        const prs = data.praesens.toLowerCase();
+        addForm(prs, inf);
+        if (prs.endsWith('t') && prs.length > 3) {
+          const pStem = prs.slice(0, -1);
+          addForm(pStem, inf);
+          addForm(pStem + 'st', inf);
+          addForm(pStem + 'est', inf);
+        }
+      }
+
+      if (data.praeteritum) {
+        const prt = data.praeteritum.toLowerCase();
+        addForm(prt, inf);
+        ['e', 'st', 'est', 't', 'en', 'te', 'ten'].forEach((s) => {
+          if (!prt.endsWith('e') || (s !== 'e' && !s.startsWith('te'))) {
+            addForm(prt + s, inf);
+          }
+        });
+        if (prt.endsWith('e') && prt.length > 3) {
+          addForm(prt + 'st', inf);
+          addForm(prt + 'n', inf);
+          addForm(prt + 't', inf);
+        }
+      }
+
+      if (data.partizipZwei && data.partizipZwei !== '-') {
+        addForm(data.partizipZwei, inf);
+      }
+
+      if (data.imperativ && data.imperativ !== '-') {
+        data.imperativ.split('/').forEach((p) => {
+          const cleanImp = p.replace(/!/g, '').trim().toLowerCase();
+          if (cleanImp) addForm(cleanImp, inf);
+        });
+      }
+    }
+
+    // Temel duzensiz & yardimci ekstra formlar
+    const extraForms = {
+      bin: 'sein', bist: 'sein', ist: 'sein', sind: 'sein', seid: 'sein', war: 'sein', warst: 'sein', waren: 'sein', wart: 'sein',
+      habe: 'haben', hast: 'haben', hat: 'haben', haben: 'haben', habt: 'haben', hatte: 'haben', hattest: 'haben', hatten: 'haben',
+      werde: 'werden', wirst: 'werden', wird: 'werden', wurden: 'werden', wurde: 'werden', wurdest: 'werden',
+      kann: 'können', kannst: 'können', können: 'können', könnt: 'können', konnte: 'können',
+      muss: 'müssen', musst: 'müssen', müssen: 'müssen', müsst: 'müssen', musste: 'müssen',
+      darf: 'dürfen', darfst: 'dürfen', dürfen: 'dürfen', dürft: 'dürfen', durfte: 'dürfen',
+      soll: 'sollen', sollst: 'sollen', sollen: 'sollen', sollt: 'sollen', sollte: 'sollen',
+      will: 'wollen', willst: 'wollen', wollen: 'wollen', wollt: 'wollen', wollte: 'wollen',
+      mag: 'mögen', magst: 'mögen', mögen: 'mögen', mochte: 'mögen'
+    };
+    for (const [f, inf] of Object.entries(extraForms)) {
+      addForm(f, inf);
+    }
+
+    this._formToInfMap = map;
+    return map;
+  }
+
+  static resolveInfinitiveCandidates(rawToken, isClauseStart = false) {
+    const raw = String(rawToken || '').trim();
+    if (!raw || !/^[a-zA-ZäöüÄÖÜß]+$/.test(raw)) return [];
+    const lower = raw.toLowerCase();
+    if (/^[A-ZÄÖÜ]/.test(raw) && !isClauseStart) return [];
+
+    const NON_VERB_STOPWORDS = new Set([
+      'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'man', 'mich', 'dich', 'sich', 'uns', 'euch', 'mir', 'dir', 'ihm', 'ihnen',
+      'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einen', 'einem', 'einer', 'eines',
+      'kein', 'keine', 'keinen', 'keinem', 'keiner', 'mein', 'meine', 'meinen', 'dein', 'deine', 'sein', 'seine', 'unser', 'unsere',
+      'und', 'oder', 'aber', 'denn', 'weil', 'dass', 'wenn', 'als', 'ob', 'wie', 'wo', 'was', 'wer', 'wen', 'wem', 'wann', 'warum',
+      'hier', 'dort', 'da', 'dann', 'danach', 'heute', 'morgen', 'gestern', 'jetzt', 'immer', 'oft', 'nie', 'schon', 'noch', 'nicht',
+      'sehr', 'auch', 'nur', 'mal', 'so', 'zu', 'in', 'im', 'an', 'am', 'auf', 'aus', 'bei', 'beim', 'mit', 'nach', 'von', 'vom',
+      'vor', 'für', 'über', 'unter', 'durch', 'ohne', 'gegen', 'wegen', 'um', 'zwischen', 'hinter', 'neben', 'viel', 'mehr', 'alle'
+    ]);
+    if (NON_VERB_STOPWORDS.has(lower)) return [];
+
+    const out = new Set();
+    const formMap = this._getFormToInfinitiveMap();
+    const directHits = formMap.get(lower);
+    if (directHits) {
+      directHits.forEach((inf) => out.add(inf));
+    }
+
+    if (this.looksLikeVerbInfinitive(lower)) {
+      out.add(lower);
+    }
+
+    const NOUN_OR_ADJ_ENDINGS = /(heit|keit|ung|schaft|chen|lein|lich|ig|isch|bar|sam)$/;
+    const suffixes = ['test', 'ten', 'tet', 'est', 'en', 'st', 'te', 'et', 'e', 't'];
+    for (const suf of suffixes) {
+      if (lower.endsWith(suf) && lower.length - suf.length >= 2) {
+        const stem = lower.slice(0, lower.length - suf.length);
+        if (NOUN_OR_ADJ_ENDINGS.test(stem)) continue;
+        out.add(stem + 'en');
+        if (stem.endsWith('el') || stem.endsWith('er') || stem.endsWith('l') || stem.endsWith('r')) {
+          out.add(stem + 'n');
+        }
+      }
+    }
+
+    return Array.from(out);
+  }
+
+  static combinePairWords(firstWord, secondWord) {
+    const w1 = String(firstWord || '').trim();
+    const w2 = String(secondWord || '').trim();
+    if (!w1) return w2;
+    if (!w2) return w1;
+
+    const l1 = w1.toLowerCase();
+    const l2 = w2.toLowerCase();
+
+    if (this.isSeparablePrefixToken(l2)) {
+      const cands = this.resolveInfinitiveCandidates(w1, true);
+      if (cands.length > 0) return `${l2}${cands[0]}`;
+    }
+    if (this.isSeparablePrefixToken(l1)) {
+      const cands = this.resolveInfinitiveCandidates(w2, true);
+      if (cands.length > 0) return `${l1}${cands[0]}`;
+    }
+    return `${w1} ${w2}`;
+  }
+
+  static detectSeparablePairInClause(clauseTokens, isKnownVerbFn = null) {
+    if (!Array.isArray(clauseTokens) || clauseTokens.length < 2) return null;
+    const lastTok = clauseTokens[clauseTokens.length - 1];
+    const prefix = String(lastTok?.word || '').trim();
+    if (!this.isSeparablePrefixToken(prefix)) return null;
+
+    const SKIP_MODALS = new Set(['können', 'müssen', 'dürfen', 'sollen', 'mögen', 'wollen']);
+    const AUX_VERBS = new Set(['sein', 'haben', 'werden']);
+    const ALLOWED_AUX_COMPOUNDS = new Set(['vorhaben', 'aufhaben', 'anhaben', 'abhaben', 'loswerden', 'vorsein', 'aufsein', 'dasein']);
+
+    // Fiil konumlarini oncelikle V2 (indeks 1), V1 (indeks 0), V3 (indeks 2), sonra kalanlari kontrol et
+    const order = [];
+    for (const prefIdx of [1, 0, 2]) {
+      if (prefIdx < clauseTokens.length - 1) order.push(prefIdx);
+    }
+    for (let i = 3; i < clauseTokens.length - 1; i++) {
+      order.push(i);
+    }
+
+    let fallbackMatch = null;
+    for (const pos of order) {
+      const tok = clauseTokens[pos];
+      if (!tok || !tok.word) continue;
+      const cands = this.resolveInfinitiveCandidates(tok.word, pos === 0);
+      for (const baseVerb of cands) {
+        if (SKIP_MODALS.has(baseVerb)) continue;
+        const combined = `${prefix}${baseVerb}`;
+        const isCombinedValid =
+          Boolean(IRREGULAR_VERBS[combined]) ||
+          SEIN_FULL_VERBS.has(combined) ||
+          ALLOWED_AUX_COMPOUNDS.has(combined) ||
+          (typeof isKnownVerbFn === 'function' && Boolean(isKnownVerbFn(combined, true)));
+
+        if (AUX_VERBS.has(baseVerb) && !isCombinedValid) continue;
+
+        if (isCombinedValid) {
+          return {
+            verbIndex: tok.index,
+            prefixIndex: lastTok.index,
+            verbWord: tok.word,
+            prefix,
+            baseVerb,
+            infinitive: combined
+          };
+        }
+
+        const isBaseKnownVerb =
+          Boolean(IRREGULAR_VERBS[baseVerb]) ||
+          SEIN_FULL_VERBS.has(baseVerb) ||
+          (typeof isKnownVerbFn === 'function' && Boolean(isKnownVerbFn(baseVerb, false)));
+
+        if (isBaseKnownVerb && pos <= 2 && !fallbackMatch) {
+          fallbackMatch = {
+            verbIndex: tok.index,
+            prefixIndex: lastTok.index,
+            verbWord: tok.word,
+            prefix,
+            baseVerb,
+            infinitive: combined
+          };
+        }
+      }
+    }
+
+    return fallbackMatch;
+  }
 }
 
 class GermanNounHelper {

@@ -115,7 +115,7 @@ function createMockIndexedDB() {
 }
 
 async function run() {
-  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.4) ===');
+  console.log('=== WORTCOACH UPGRADE AUDIT (v3.13.5) ===');
 
   // 1. HTML & CSS Audit
   console.log('\n[1] HTML & CSS Optimization Audit');
@@ -129,8 +129,8 @@ async function run() {
   check(compCss.includes('.coach-switch') && compCss.includes('#modal-auth'), 'Extracted Coach styles present in css/components.css');
   const scriptTags = html.match(/<script\s+[^>]*src="js\/[^"]+"[^>]*>/g) || [];
   check(scriptTags.length === 20 && scriptTags.every((t) => /\bdefer\b/.test(t)), `All ${scriptTags.length} local scripts use defer`);
-  check(html.includes('css/components.css?v=3.13.4') && html.includes('js/app.js?v=3.13.4'), 'Assets bumped cleanly to v3.13.4');
-  check(html.includes('js/readerUI.js?v=3.13.4') && html.includes('js/gamesUI.js?v=3.13.4') && html.includes('js/pronunciationUI.js?v=3.13.4'), 'Modular UI scripts included cleanly in index.html');
+  check(html.includes('css/components.css?v=3.13.5') && html.includes('js/app.js?v=3.13.5'), 'Assets bumped cleanly to v3.13.5');
+  check(html.includes('js/readerUI.js?v=3.13.5') && html.includes('js/gamesUI.js?v=3.13.5') && html.includes('js/pronunciationUI.js?v=3.13.5'), 'Modular UI scripts included cleanly in index.html');
   check(html.includes('id="btn-export-full-backup"') && html.includes('id="btn-import-full-backup"'), 'Full library backup/restore controls present in settings modal');
   check(
     html.includes('id="modal-mastery-analyzer"') &&
@@ -166,18 +166,26 @@ async function run() {
       compCss.includes('overflow-x: hidden'),
     'Satze bilden matches study cards theme, removes SB badge/missing icon-upload, styles upload button and constrains mobile overflow'
   );
+  check(
+    html.includes('id="reader-combine-banner"') &&
+      html.includes('id="btn-reader-combine-pair"') &&
+      compCss.includes('-webkit-touch-callout: none') &&
+      compCss.includes('user-select: none') &&
+      compCss.includes('.separable-pair-member'),
+    'Smart Reader includes Tap-to-Combine UI, separable pair styles and PWA touch-callout protection'
+  );
 
   // 2. Service Worker & Manifest Audit
   console.log('\n[2] Service Worker & Manifest Audit');
   const swCode = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.4'"), 'SW cache version updated to v3.13.4');
-  check(swCode.includes('./js/readerUI.js?v=3.13.4') && swCode.includes('./js/gamesUI.js?v=3.13.4') && swCode.includes('./js/pronunciationUI.js?v=3.13.4'), 'SW caches modular UI scripts');
+  check(swCode.includes("CACHE_NAME = 'wortcoach-v3.13.5'"), 'SW cache version updated to v3.13.5');
+  check(swCode.includes('./js/readerUI.js?v=3.13.5') && swCode.includes('./js/gamesUI.js?v=3.13.5') && swCode.includes('./js/pronunciationUI.js?v=3.13.5'), 'SW caches modular UI scripts');
   check(swCode.includes("key !== 'wortcoach-user-meta'"), 'SW activate preserves wortcoach-user-meta push store');
   check(swCode.includes('isNavOrShell') && swCode.includes('caches.match(request)'), 'SW uses Network-First for HTML/shell and Cache-First for versioned assets');
   check(!swCode.includes("icon: 'icons/icon-192.svg'"), 'SW push notifications use PNG icon instead of SVG');
   check(swCode.includes('__active_access_token') && swCode.includes('Authorization'), 'SW stores and sends Bearer token for background push fetch');
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
-  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.4'), 'manifest.json uses v3.13.4 asset URLs without stale v3.8.9');
+  check(!JSON.stringify(manifest).includes('3.8.9') && JSON.stringify(manifest).includes('v=3.13.5'), 'manifest.json uses v3.13.5 asset URLs without stale v3.8.9');
   check(Array.isArray(manifest.shortcuts) && manifest.shortcuts.length >= 3, 'manifest.json defines PWA shortcuts');
   check(Boolean(manifest.share_target && manifest.share_target.params && manifest.share_target.params.text), 'manifest.json defines share_target');
 
@@ -419,6 +427,14 @@ async function run() {
   const deckBuilderJs = fs.readFileSync(path.join(ROOT, 'js', 'deckBuilder.js'), 'utf8');
   check(readerUiJs.includes('WortCoachReaderUIMixin') && readerUiJs.includes('bindSmartReader()'), 'js/readerUI.js exports WortCoachReaderUIMixin');
   check(readerUiJs.includes('extractReaderContextSentence') && !readerUiJs.includes('renderCardsTab') && readerUiJs.includes('renderCardsList'), 'readerUI captures example sentences and refreshes renderCardsList cleanly');
+  check(
+    readerUiJs.includes('detectSeparablePairInClause') &&
+      readerUiJs.includes('combinePairWords') &&
+      readerUiJs.includes('pendingCombineAnchor') &&
+      readerUiJs.includes('btn-reader-lookup-single') &&
+      readerUiJs.includes('contextmenu'),
+    'readerUI wires automatic separable verb pairing, Tap-to-Combine mode, single-word escape chip, and PWA contextmenu suppression'
+  );
   check(gamesUiJs.includes('WortCoachGamesUIMixin') && gamesUiJs.includes('renderGameCurrentQuestion()') && gamesUiJs.includes('this.escapeHtml(optText)'), 'js/gamesUI.js exports WortCoachGamesUIMixin and escapes options');
   check(pronUiJs.includes('WortCoachPronunciationUIMixin') && pronUiJs.includes('renderPronunciationEvaluation(') && pronUiJs.includes('this.escapeHtml(syl.text)'), 'js/pronunciationUI.js exports WortCoachPronunciationUIMixin and escapes UI');
   check(appJs.includes('Object.assign(') && appJs.includes('WortCoachReaderUIMixin') && appJs.includes('WortCoachGamesUIMixin') && appJs.includes('WortCoachPronunciationUIMixin'), 'js/app.js composes UI mixins onto WortCoachApp.prototype');
@@ -477,6 +493,52 @@ async function run() {
       zubringenConj.hilfsverb === 'hat' &&
       zubringenConj.imperativ === 'bring zu!',
     'GermanVerbHelper.conjugate resolves separable verb zubringen with clean imperative'
+  );
+
+  const vh = dictSandbox.window.GermanVerbHelper;
+  const toClause = (words) => words.map((word, index) => ({ word, index, offset: index * 10 }));
+  const dictCheckFn = dictSandbox.window.DictionaryService?.findOfflineEntry
+    ? (cand) => {
+        const hit = dictSandbox.window.DictionaryService.findOfflineEntry(cand);
+        if (!hit) return false;
+        const pos = (hit.pos || '').trim().toUpperCase();
+        return !pos || pos.startsWith('V') || pos.includes('VERB');
+      }
+    : null;
+
+  const pairAufstehen = vh.detectSeparablePairInClause(toClause(['Jeden', 'Tag', 'stehe', 'ich', 'um', 'sieben', 'Uhr', 'auf']), dictCheckFn);
+  check(
+    pairAufstehen?.infinitive === 'aufstehen' && pairAufstehen.verbIndex === 2 && pairAufstehen.prefixIndex === 7,
+    'detectSeparablePairInClause pairs "stehe ... auf" -> aufstehen'
+  );
+
+  const pairZubringen = vh.detectSeparablePairInClause(toClause(['Er', 'brachte', 'viel', 'Zeit', 'im', 'Büro', 'zu']), dictCheckFn);
+  check(
+    pairZubringen?.infinitive === 'zubringen' && pairZubringen.verbIndex === 1 && pairZubringen.prefixIndex === 6,
+    'detectSeparablePairInClause pairs past-tense "brachte ... zu" -> zubringen'
+  );
+
+  const pairEinkaufen = vh.detectSeparablePairInClause(toClause(['Wir', 'kaufen', 'heute', 'im', 'Supermarkt', 'ein']), dictCheckFn);
+  check(
+    pairEinkaufen?.infinitive === 'einkaufen' && pairEinkaufen.verbIndex === 1 && pairEinkaufen.prefixIndex === 5,
+    'detectSeparablePairInClause pairs plural "kaufen ... ein" -> einkaufen'
+  );
+
+  const pairVorhaben = vh.detectSeparablePairInClause(toClause(['Was', 'hast', 'du', 'heute', 'vor']), dictCheckFn);
+  check(
+    pairVorhaben?.infinitive === 'vorhaben' && pairVorhaben.verbIndex === 1 && pairVorhaben.prefixIndex === 4,
+    'detectSeparablePairInClause pairs question "hast ... vor" -> vorhaben'
+  );
+
+  const negPrep = vh.detectSeparablePairInClause(toClause(['Er', 'geht', 'auf', 'die', 'Straße']), dictCheckFn);
+  check(negPrep === null, 'detectSeparablePairInClause ignores non-clause-final prepositions ("Er geht auf die Straße")');
+
+  const negAux = vh.detectSeparablePairInClause(toClause(['Das', 'Licht', 'ist', 'an']), dictCheckFn);
+  check(negAux === null, 'detectSeparablePairInClause rejects false auxiliary "ist ... an"');
+
+  check(
+    vh.combinePairWords('brachte', 'zu') === 'zubringen' && vh.combinePairWords('auf', 'stehe') === 'aufstehen',
+    'combinePairWords combines verb+prefix or prefix+verb cleanly into infinitive'
   );
 
   // 7. Social.js Polling & JWT Refresh Audit
